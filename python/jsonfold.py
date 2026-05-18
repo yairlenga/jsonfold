@@ -350,7 +350,7 @@ class JSONFoldWriter:
                 lines=[line],
                 pack_limit=self._pack_limit(opener),
                 fold_limit=self._fold_limit(opener),
-                can_pack=depth <= self.cfg.pack_nesting
+                can_pack=True
                 )
             )
 
@@ -456,9 +456,6 @@ class JSONFoldWriter:
         if frame.content_lines > 1:
             frame.fold_ok = False
 
-        if frame.depth > self.cfg.fold_nesting:
-            frame.fold_ok = False
-
         if frame.items > frame.fold_limit:
             frame.fold_ok = False
 
@@ -496,36 +493,20 @@ class JSONFoldWriter:
         if len(frame.lines) != 3:
             return None
 
-        folded_length = (
-            len(frame.lines[0].text)
-            + len(frame.lines[1].text)
-            + len(frame.lines[2].text)
-            + 2
-        )
+        folded_length = sum(1 + len(line.text) for line in frame.lines) - 1
 
         if frame.lines[0].indent + folded_length > self.cfg.width:
             return None
 
+        text = " ".join(line.text for line in frame.lines)
+
         return Line(
             indent=frame.lines[0].indent,
-            text=self._fold_text(frame.lines),
+            text=text,
             parent_kind=self._parent_kind(),
             items=1,
             child_nesting=max(0, frame.child_nesting),
         )
-
-    @staticmethod
-    def _fold_text(lines: list[Line]) -> str:
-        opener = lines[0].text
-        content = lines[1].text
-        closer = lines[2].text
-
-        comma = closer.endswith(",")
-        if comma:
-            closer = closer[:-1]
-
-        text = opener + " " + content + " " + closer
-        return text + ("," if comma else "")
 
     # --------------------------------------------------------- streaming
 
@@ -600,7 +581,7 @@ def main(argv: list[str] | None = None) -> int:
         description="Read JSON from stdin; write folded JSON to stdout.")
     p.add_argument("--demo",   action="store_true")
     p.add_argument("--preset", choices=JSONFold.PRESETS.keys(), default="default")
-    p.add_argument("--width",  type=int, default=None, help="line width limit (default: 80)")
+    p.add_argument("--width",  type=int, default=None, help="line width limit (default: terminal width/80)")
     p.add_argument("--verbose", "-v", action="store_true", help="Enable verbose/debug output")
 
     # Pack phase
@@ -644,9 +625,14 @@ def main(argv: list[str] | None = None) -> int:
         if val is not None:
             overrides[key] = val
 
-    if overrides:
-        cfg = replace(cfg, **overrides)
-    if ( args.verbose):
+    if args.width is None:
+        if sys.stdout.isatty():
+            import shutil
+            overrides["width"] = shutil.get_terminal_size(fallback=(24,80)).columns
+
+    cfg = replace(cfg, **overrides)
+        
+    if args.verbose:
         print(cfg, file= sys.stderr)
 
     if args.demo:
