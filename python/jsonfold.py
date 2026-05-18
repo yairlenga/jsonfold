@@ -223,7 +223,7 @@ class Line:
 
     @classmethod
     def parse(cls, s: str, parent_kind: Kind) -> "Line":
-        stripped = s.lstrip(" ")
+        stripped = s.lstrip()
         body=stripped.rstrip()
         opener= (
              Kind.DICT if body.endswith("{")
@@ -407,6 +407,7 @@ class JSONFoldWriter:
 
         prev.text += " " + line.text
         prev.items += line.items
+        prev.child_nesting = max(prev.child_nesting, line.child_nesting)
 
         if line.parent_kind == frame.kind:
             frame.items += line.items
@@ -416,7 +417,7 @@ class JSONFoldWriter:
 
     def _packable(self, line: Line) -> bool:
         return (
-            line.child_nesting < 0
+            line.child_nesting < self.cfg.pack_nesting
             and line.parent_kind
             and not line.opener
             and not line.closer
@@ -504,7 +505,7 @@ class JSONFoldWriter:
             indent=frame.lines[0].indent,
             text=text,
             parent_kind=self._parent_kind(),
-            items=1,
+            items=frame.items,
             child_nesting=max(0, frame.child_nesting),
         )
 
@@ -580,7 +581,7 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
         description="Read JSON from stdin; write folded JSON to stdout.")
     p.add_argument("--demo",   action="store_true")
-    p.add_argument("--preset", choices=JSONFold.PRESETS.keys(), default="default")
+    p.add_argument("--compact", choices=JSONFold.PRESETS.keys(), default="default")
     p.add_argument("--width",  type=int, default=None, help="line width limit (default: terminal width/80)")
     p.add_argument("--verbose", "-v", action="store_true", help="Enable verbose/debug output")
 
@@ -600,12 +601,12 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--fold-obj-items",   type=int, default=None)
     g.add_argument("--fold-nesting",     type=int, default=None)
 
-    p.add_argument("--indent",    type=int,          default=2)
+    p.add_argument("--indent",    type=int, default=2)
     p.add_argument("--sort-keys", action="store_true")
     args = p.parse_args(argv)
 
     # Start from preset, apply overrides where explicitly given.
-    cfg = JSONFold.PRESETS[args.preset]
+    cfg = JSONFold.PRESETS[args.compact]
 
     overrides: dict[str, int] = {}
 
