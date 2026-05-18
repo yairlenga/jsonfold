@@ -144,11 +144,10 @@ class Frame:
 class JSONFoldWriter:
 
     def __init__(self, fp: TextIO, *,
-                 compact: JSONFold | None = None,
-                 indent_step: int = 2):
+                 compact: JSONFold | None = None
+                 ):
         self.fp           = fp
-        self.cfg          = compact or JSONFold.DEFAULT
-        self.indent_step  = indent_step
+        self.cfg          = compact
         self.pending      = ""
         self.buffer: list[Line]  = []
         self.stack:  list[Frame] = []
@@ -156,6 +155,9 @@ class JSONFoldWriter:
     # ------------------------------------------------------------------ I/O
 
     def write(self, s: str) -> int:
+        if not self.cfg:
+            return self.fp.write(s)
+
         n = len(s)
         if not s:
             return 0
@@ -204,14 +206,25 @@ class JSONFoldWriter:
 
     def _feed(self, line: Line) -> None:
         # Phase 1: try to pack this line onto the previous one.
-        prev_len = len(self.buffer)
-        self._pack(line)
-        appended = len(self.buffer) > prev_len   # False if packed into prev line
+        packed = self._pack(line)
 
-        # Update the parent frame only when a new buffer line was created.
-        # (Packing into an existing line doesn't change content_lines count.)
-        if self.stack and appended:
-            self._update_frame(self.stack[-1], self.buffer[-1])
+        if self.stack:
+            frame = self.stack[-1]
+
+            if not packed:
+                self._update_frame(frame, self.buffer[-1])
+            else:
+                # Packed into previous buffer line. Still count the added item.
+                if line.parent == frame.kind:
+                    frame.items += line.items
+
+                    limit = (
+                        self.cfg.fold_array_items
+                        if frame.kind == "list"
+                        else self.cfg.fold_obj_items
+                    )
+                    if frame.items > limit:
+                        frame.fold_ok = False
 
         # A line that is already over-width can never be folded.
         if self.buffer[-1].width() > self.cfg.width:
@@ -232,16 +245,25 @@ class JSONFoldWriter:
             self._close_frame(closer)
 
         self._flush_safe_prefix()
-
     # --------------------------------------------------------- phase 1: pack
 
-    def _pack(self, line: Line) -> None:
-        """Append line to buffer, merging with previous line if pack rules allow."""
+    def _pack(self, line: Line) -> bool:
+        """
+        Return True if line was packed into previous line.
+        """
         if not self.buffer or not self._packable(line):
             self.buffer.append(line)
-            return
+            return False
 
-        prev  = self.buffer[-1]
+        # Enforce line_nesting here
+        if self.stack:
+            frame = self.stack[-1]
+            depth = len(self.stack) - 1
+            if depth > self.cfg.line_nesting:
+                self.buffer.append(line)
+                return False
+
+        prev = self.buffer[-1]
         limit = self._pack_limit(line.parent)
 
         if (self._packable(prev)
@@ -249,11 +271,12 @@ class JSONFoldWriter:
                 and prev.indent == line.indent
                 and prev.items + line.items <= limit
                 and line.indent + len(prev.text) + 1 + len(line.text) <= self.cfg.width):
-            prev.text  = prev.text + " " + line.text
+            prev.text = prev.text + " " + line.text
             prev.items += line.items
-            return
+            return True
 
         self.buffer.append(line)
+        return False
 
     def _packable(self, line: Line) -> bool:
         """True if line is a candidate for scalar packing."""
@@ -275,7 +298,7 @@ class JSONFoldWriter:
         """Update frame statistics with the latest buffer line."""
         buf_idx = len(self.buffer) - 1
 
-        # Opener line: already counted in frame.start; nothing to track.
+        # Opener line: already counted by frame.start.
         if buf_idx == frame.start:
             return
 
@@ -283,39 +306,47 @@ class JSONFoldWriter:
         if line.is_closer():
             return
 
-        # Content line.
+        # Any non-opener/non-closer line inside the frame is a content line.
         frame.content_lines += 1
 
-        if line.indent == frame.indent + self.indent_step:
-            frame.items += line.items    # one new buffer line at direct-child depth
+        # Direct child item:
+        # line.parent was assigned from the active stack frame before feeding.
+        if line.parent == frame.kind:
+            frame.items += line.items
 
         # Track deepest folded child for fold eligibility.
         if line.child_nesting >= 0:
             frame.child_nesting = max(frame.child_nesting, line.child_nesting + 1)
 
-        # Pack eligibility: nesting exceeded?
-        if frame.pack_ok:
-            depth = self._stack_depth_of(frame)
-            if depth > self.cfg.line_nesting:
-                frame.pack_ok = False
+        depth = self._stack_depth_of(frame)
 
-        # Fold eligibility checks (conservative: mark False as soon as violated).
-        if frame.fold_ok:
-            if line.child_nesting >= 0:
-                # Contains a folded child — check fold_nesting.
-                if frame.child_nesting > self.cfg.fold_nesting:
-                    frame.fold_ok = False
-            limit = (self.cfg.fold_array_items if frame.kind == "list"
-                     else self.cfg.fold_obj_items)
-            if frame.items > limit:
-                frame.fold_ok = False
-            depth = self._stack_depth_of(frame)
-            if depth > self.cfg.fold_nesting:
-                frame.fold_ok = False
+        # Pack eligibility: nesting exceeded.
+        if depth > self.cfg.line_nesting:
+            frame.pack_ok = False
+
+        # Fold eligibility checks.
+        if depth > self.cfg.fold_nesting:
+            frame.fold_ok = False
+
+        limit = (
+            self.cfg.fold_array_items
+            if frame.kind == "list"
+            else self.cfg.fold_obj_items
+        )
+
+        if frame.items > limit:
+            frame.fold_ok = False
+
+        if frame.child_nesting > self.cfg.fold_nesting:
+            frame.fold_ok = False
 
     def _stack_depth_of(self, frame: Frame) -> int:
         """Nesting depth of frame (0 = top-level)."""
-        return self.stack.index(frame)
+        for i, f in enumerate(self.stack):
+            if f is frame:
+                return i
+        raise RuntimeError("frame not found on stack")
+
 
     # --------------------------------------------------------- phase 2: fold
 
@@ -343,16 +374,20 @@ class JSONFoldWriter:
         """Attempt to collapse opener + 1 content line + closer to one line."""
         start = frame.start
         end   = len(self.buffer) - 1
-        lines = self.buffer[start:end + 1]
-
-        # Must be exactly: opener, one content line, closer.
-        if len(lines) != 3:
+        if end - start > 2:
             return False
 
-        text = self._fold_text(lines)
+        folded_length = (
+            len(self.buffer[start].text)
+            + len(self.buffer[start + 1].text)
+            + len(self.buffer[end].text)
+            + 2
+        )
 
-        if frame.indent + len(text) > self.cfg.width:
+        if self.buffer[start].indent + folded_length > self.cfg.width:
             return False
+
+        text = self._fold_text(self.buffer[start:end + 1])
 
         # Replace the three lines with one folded line.
         folded = Line(
@@ -385,14 +420,36 @@ class JSONFoldWriter:
 
     # --------------------------------------------------------- flush helpers
 
+
+    def _last_line_keep_start(self) -> int:
+        """Keep only the last buffered line for phase-1 packing."""
+        return max(0, len(self.buffer) - 1)
+
     def _flush_safe_prefix(self) -> None:
-        """Flush lines that are no longer inside any open frame."""
+        """Flush lines no longer needed for folding or packing."""
         if not self.stack:
             self._flush_all()
             return
-        # All open frames (raw or not) hold their content in the buffer so
-        # packing can accumulate. Only flush lines before the earliest frame.
-        self._flush_prefix(min(f.start for f in self.stack))
+
+        fold_starts = [f.start for f in self.stack if f.fold_ok]
+
+        if fold_starts:
+            keep_from = min(fold_starts)
+        else:
+            keep_from = self._last_line_keep_start()
+
+        for f in self.stack:
+            if f.start < keep_from:
+                f.fold_ok = False
+
+        fold_starts = [f.start for f in self.stack if f.fold_ok]
+
+        if fold_starts:
+            keep_from = min(fold_starts)
+        else:
+            keep_from = self._last_line_keep_start()
+
+        self._flush_prefix(keep_from)
 
     def _flush_prefix(self, n: int) -> None:
         if n <= 0:
@@ -423,22 +480,14 @@ class JSONFoldWriter:
 # Public helpers
 # ---------------------------------------------------------------------------
 
-def _normalize(compact: JSONFold | bool | None) -> JSONFold | None:
-    if compact is False:
-        return None
-    if compact is True or compact is None:
-        return JSONFold.DEFAULT
-    return compact
-
 
 def dump(obj: Any, fp: TextIO, *,
          compact: JSONFold | bool | None = True,
          indent: int = 2, **kwargs: Any) -> None:
-    cfg = _normalize(compact)
-    if cfg is None:
-        json.dump(obj, fp, indent=indent, **kwargs)
-        return
-    with JSONFoldWriter(fp, compact=cfg, indent_step=indent) as out:
+
+    if compact is True:
+        compact = JSONFold.DEFAULT
+    with JSONFoldWriter(fp, compact=compact) as out:
         json.dump(obj, out, indent=indent, **kwargs)
 
 
