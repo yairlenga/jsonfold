@@ -83,6 +83,11 @@ JSONFold.PRESETS = {
 # Internal data structures
 # ---------------------------------------------------------------------------
 
+
+
+K_DICT = "dict"
+K_LIST = "list"
+
 @dataclass
 class Line:
     indent: int
@@ -107,9 +112,9 @@ class Line:
     def is_opener(self) -> str | None:
         """Return container kind if this line ends with an opener, else None."""
         if self.text.endswith("{"):
-            return "dict"
+            return K_DICT
         if self.text.endswith("["):
-            return "list"
+            return K_LIST
         return None
 
     def is_closer(self) -> str | None:
@@ -117,17 +122,21 @@ class Line:
         return _CLOSING_KIND.get(self.text)
 
 
-_CLOSING_KIND: dict[str, str] = {
-    "}":  "dict", "},": "dict",
-    "]":  "list", "],": "list",
-}
 
+_CLOSING_KIND: dict[str, str] = {
+    "}":  K_DICT, "},": K_DICT,
+    "]":  K_LIST, "],": K_LIST,
+}
 
 @dataclass
 class Frame:
     kind: str
     depth: int
     lines: list[Line] = field(default_factory=list)
+
+    line_limit: int = 0
+    fold_limit: int = 0
+    can_pack: bool = True
 
     content_lines: int = 0
     items: int = 0
@@ -154,7 +163,10 @@ class JSONFoldWriter:
         parts = s.splitlines(keepends=True)
 
         if self.pending:
-            parts[0] = self.pending + parts[0] if parts else self.pending
+            if parts:
+                parts[0] = self.pending + parts[0]
+            else:
+                parts = [self.pending]
             self.pending = ""
 
         if parts and not parts[-1].endswith("\n"):
@@ -201,11 +213,16 @@ class JSONFoldWriter:
     def _feed(self, line: Line) -> None:
         opener = line.is_opener()
         if opener:
+            depth = len(self.stack)
             self.stack.append(Frame(
                 kind=opener,
-                depth=len(self.stack),
+                depth=depth,
                 lines=[line],
-            ))
+                line_limit=self._pack_limit(opener),
+                fold_limit=self._fold_limit(opener),
+                can_pack=depth <= self.cfg.line_nesting
+                )
+            )
 
             if line.width() > self.cfg.width:
                 self._mark_no_fold()
@@ -233,30 +250,28 @@ class JSONFoldWriter:
         frame.lines.append(line)
         self._update_frame(frame, line)
 
-        if line.width() > self.cfg.width:
+        if frame.fold_ok and line.width() > self.cfg.width:
             self._mark_no_fold()
 
         if not frame.fold_ok:
             self._stream_frame(frame, keep_last=True)
 
     def _try_pack(self, frame: Frame, line: Line) -> bool:
-        if not frame.lines:
-            return False
-
-        if frame.depth > self.cfg.line_nesting:
-            return False
-
-        if not self._packable(line):
+        if (
+            not frame.lines or
+            not frame.can_pack or
+            frame.line_limit <= 1 or
+            not self._packable(line)
+        ):
             return False
 
         prev = frame.lines[-1]
-        limit = self._pack_limit(line.parent)
 
         if not (
             self._packable(prev)
             and prev.parent == line.parent
             and prev.indent == line.indent
-            and prev.items + line.items <= limit
+            and prev.items + line.items <= frame.line_limit
             and line.indent + len(prev.text) + 1 + len(line.text) <= self.cfg.width
         ):
             return False
@@ -273,17 +288,23 @@ class JSONFoldWriter:
     def _packable(self, line: Line) -> bool:
         return (
             line.child_nesting < 0
-            and line.parent in ("dict", "list")
-            and self._pack_limit(line.parent) > 1
+            and line.parent in (K_DICT, K_LIST)
             and line.is_opener() is None
             and line.is_closer() is None
         )
 
     def _pack_limit(self, kind: str | None) -> int:
-        if kind == "list":
+        if kind == K_LIST:
             return self.cfg.line_array_items
-        if kind == "dict":
+        if kind == K_DICT:
             return self.cfg.line_obj_items
+        return 0
+
+    def _fold_limit(self, kind: str | None) -> int:
+        if kind == K_LIST:
+            return self.cfg.fold_array_items
+        if kind == K_DICT:
+            return self.cfg.fold_obj_items
         return 0
 
     # --------------------------------------------------------- frame tracking
@@ -309,13 +330,7 @@ class JSONFoldWriter:
         if frame.depth > self.cfg.fold_nesting:
             frame.fold_ok = False
 
-        limit = (
-            self.cfg.fold_array_items
-            if frame.kind == "list"
-            else self.cfg.fold_obj_items
-        )
-
-        if frame.items > limit:
+        if frame.items > frame.fold_limit:
             frame.fold_ok = False
 
         if frame.child_nesting > self.cfg.fold_nesting:
@@ -386,26 +401,16 @@ class JSONFoldWriter:
     # --------------------------------------------------------- streaming
 
     def _stream_frame(self, frame: Frame, *, keep_last: bool) -> None:
-        keep = 0
+        keep = 1 if keep_last and frame.lines and self._packable(frame.lines[-1]) else 0
 
-        if keep_last and frame.lines and self._packable(frame.lines[-1]):
-            keep = 1
-
-        if keep:
-            emit_lines = frame.lines[:-1]
-            frame.lines = frame.lines[-1:]
-        else:
-            emit_lines = frame.lines
-            frame.lines = []
+        emit_lines = frame.lines[:-keep] if keep else frame.lines
+        frame.lines = frame.lines[-keep:] if keep else []
 
         for line in emit_lines:
-            self._emit_to_parent(frame, line)
-
-    def _emit_to_parent(self, frame: Frame, line: Line) -> None:
-        if frame.depth == 0:
-            self.fp.write(line.raw())
-        else:
-            self._add_to_frame(self.stack[frame.depth - 1], line)
+            if frame.depth == 0:
+                self.fp.write(line.raw())
+            else:
+                self._add_to_frame(self.stack[frame.depth - 1], line)
 
     # --------------------------------------------------------- misc helpers
 
