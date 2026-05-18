@@ -1,18 +1,127 @@
 #!/usr/bin/env python3
-"""jsonfold.py - streaming compactor for json.dump(..., indent=N).
+"""jsonfold.py - hybrid pretty/compact JSON output.
 
-Two-phase pipeline
+jsonfold wraps Python's standard json.dump/json.dumps output and keeps the
+normal pretty-printed structure, but selectively compacts small containers and
+runs of scalar items when they fit within a configured line width.
+
+The goal is readable JSON:
+    - large or complex structures stay expanded;
+    - small lists and objects can stay on one line;
+    - adjacent scalar items can be packed together;
+    - nested folding is controlled by explicit depth limits.
+
+Public API
+----------
+    dump(obj, fp, *, compact="", indent=2, **kwargs)
+        Serialize obj to fp using json.dump(), then fold the generated stream.
+
+    dumps(obj, *, compact="", indent=2, **kwargs) -> str
+        Return the folded JSON as a string.
+
+    JSONFold(...)
+        Immutable configuration object controlling width, packing, and folding.
+
+    JSONFoldWriter(fp, *, compact="")
+        File-like wrapper used internally by dump(), but also usable directly
+        with json.dump(obj, JSONFoldWriter(fp, compact=cfg), indent=2).
+
+Configuration
+-------------
+    width
+        Maximum target line width. Lines are only packed/folded when the result
+        fits within this width.
+
+    pack_array_items / pack_obj_items
+        Maximum number of scalar list items or object properties that may be
+        packed onto one physical line.
+
+    pack_nesting
+        Maximum container depth where scalar packing is allowed.
+
+    fold_array_items / fold_obj_items
+        Maximum number of items/properties allowed when folding a container
+        onto one line.
+
+    fold_nesting
+        Maximum nested-container depth allowed in a folded line.
+
+Presets
+-------
+    "default"
+        Balanced default settings.
+
+    "none"
+        Disable all packing and folding.
+
+    "max"
+        Enable aggressive packing and folding, still subject to width.
+
+    "pack"
+        Enable packing only; disable folding.
+
+    "fold"
+        Enable folding only; disable packing.
+
+Algorithm
+---------
+The writer receives the tokenized line stream produced by json.dump(...,
+indent=N). It does not re-parse full JSON. Instead, it tracks pretty-printed
+lines and container frames.
+
+Phase 1: Pack
+    Consecutive scalar lines inside the same container may be joined onto one
+    output line, subject to:
+        - width limit,
+        - item limit,
+        - nesting limit,
+        - same indentation level.
+
+Phase 2: Fold
+    A container may be collapsed from:
+
+        [
+          1, 2, 3
+        ]
+
+    into:
+
+        [ 1, 2, 3 ]
+
+    only when it has exactly one content line after packing, and the folded
+    result fits within the configured limits.
+
+Streaming behavior
 ------------------
-Phase 1 – Pack:  merge consecutive scalar lines N-per-line within a container,
-                 subject to pack_array_items / pack_obj_items / pack_nesting.
+The implementation is designed as a streaming filter around json.dump().
+It buffers only the currently open container frames needed to decide whether
+packing/folding is still possible. Once a frame can no longer fold, older lines
+are streamed forward.
 
-Phase 2 – Fold:  if a container was reduced to exactly one content line by
-                 packing (or was already one line), collapse opener + content +
-                 closer onto a single line, subject to fold_array_items /
-                 fold_obj_items / fold_nesting.
+Limitations
+-----------
+    - Input must be normal json.dump(..., indent=N) style output.
+    - The filter assumes standard JSON syntax emitted by Python's json module.
+    - It is a formatting filter, not a validating JSON parser.
+    - Folding decisions are based on physical line structure, indentation,
+      item counts, nesting limits, and width.
 
-The phases are independent: packing always runs; folding is a special case
-that fires only when packing produced exactly one content line.
+Example
+-------
+    from jsonfold import dumps, JSONFold
+
+    data = {
+        "ids": [1, 2, 3, 4],
+        "meta": {"version": 1, "ok": True},
+    }
+
+    print(dumps(data, compact=JSONFold(width=80)))
+
+CLI
+---
+    python jsonfold.py < input.json
+    python jsonfold.py --preset=max --width=100 < input.json
+    python jsonfold.py --pack-items=20 --fold-items=8 < input.json
 """
 
 from __future__ import annotations
@@ -31,6 +140,12 @@ from enum import IntEnum, auto
 
 @dataclass(frozen=True)
 class JSONFold:
+    """Configuration for hybrid pretty/compact JSON formatting.
+
+    A value of 0 disables the corresponding packing or folding rule.
+    Larger values allow more aggressive compaction, but all output remains
+    subject to the configured width limit.
+    """
     width: int = 80
     _: KW_ONLY
     # Phase 1 – pack scalars N-per-line
@@ -56,6 +171,7 @@ JSONFold.DEFAULT = JSONFold()
 
 JSONFold.PRESETS = {
     "default": JSONFold.DEFAULT,
+    "": JSONFold.DEFAULT,
     "none":    JSONFold.NONE,
     "max": replace(JSONFold.NONE,
         pack_array_items = sys.maxsize,
@@ -85,9 +201,9 @@ JSONFold.PRESETS = {
 # ---------------------------------------------------------------------------
 
 class Kind(IntEnum):
-        NONE = 0
-        DICT = auto()
-        LIST = auto()
+    NONE = 0
+    DICT = auto()
+    LIST = auto()
 
 _CLOSING_KIND: dict[str, Kind] = {
     "}":  Kind.DICT, "},": Kind.DICT,
@@ -147,10 +263,22 @@ class Frame:
 
 
 class JSONFoldWriter:
+    """File-like wrapper that folds pretty-printed JSON as it is written.
+
+    JSONFoldWriter is intended to be passed to json.dump() as the output file.
+    It intercepts write() calls, reconstructs complete pretty-printed lines,
+    tracks open list/dict frames, and emits either the original lines or a
+    packed/folded equivalent.
+
+    Most callers should use dump() or dumps() instead of instantiating this
+    class directly.
+    """
 
     def __init__(self, fp: TextIO, *,
-                 compact: JSONFold | None = None):
+                 compact: JSONFold | str = ""):
         self.fp = fp
+        if isinstance(compact, str):
+            compact = JSONFold.PRESETS[compact]
         self.cfg = compact
         self.pending = ""
         self.stack: list[Frame] = []
@@ -195,10 +323,11 @@ class JSONFoldWriter:
 
         # Valid json.dump output should leave the stack empty.
         # If not, stream whatever remains.
-        while self.stack:
-            frame = self.stack.pop()
+        for frame in self.stack:
             for line in frame.lines:
-                self._emit_line(line)
+                self.fp.write(line.raw())
+
+        self.stack.clear()
 
     def __enter__(self) -> "JSONFoldWriter":
         return self
@@ -293,14 +422,14 @@ class JSONFoldWriter:
             and not line.closer
         )
 
-    def _pack_limit(self, kind: str | None) -> int:
+    def _pack_limit(self, kind: Kind) -> int:
         if kind == Kind.LIST:
             return self.cfg.pack_array_items
         if kind == Kind.DICT:
             return self.cfg.pack_obj_items
         return 0
 
-    def _fold_limit(self, kind: str | None) -> int:
+    def _fold_limit(self, kind: Kind) -> int:
         if kind == Kind.LIST:
             return self.cfg.fold_array_items
         if kind == Kind.DICT:
@@ -338,7 +467,7 @@ class JSONFoldWriter:
 
     # --------------------------------------------------------- phase 2: fold
 
-    def _close_frame(self, closer: Line, closing_kind: str) -> None:
+    def _close_frame(self, closer: Line, closing_kind: Kind) -> None:
         if not self.stack:
             self.fp.write(closer.raw())
             return
@@ -429,17 +558,15 @@ class JSONFoldWriter:
 
 
 def dump(obj: Any, fp: TextIO, *,
-         compact: JSONFold | bool | None = True,
+         compact: JSONFold | str = "",
          indent: int = 2, **kwargs: Any) -> None:
 
-    if compact is True:
-        compact = JSONFold.DEFAULT
     with JSONFoldWriter(fp, compact=compact) as out:
         json.dump(obj, out, indent=indent, **kwargs)
 
 
 def dumps(obj: Any, *,
-          compact: JSONFold | bool | None = True,
+          compact: JSONFold | str = "",
           indent: int = 2, **kwargs: Any) -> str:
     out = io.StringIO()
     dump(obj, out, compact=compact, indent=indent, **kwargs)
@@ -474,6 +601,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--demo",   action="store_true")
     p.add_argument("--preset", choices=JSONFold.PRESETS.keys(), default="default")
     p.add_argument("--width",  type=int, default=None, help="line width limit (default: 80)")
+    p.add_argument("--verbose", "-v", action="store_true", help="Enable verbose/debug output")
 
     # Pack phase
     g = p.add_argument_group("pack phase (merge scalars N-per-line)")
@@ -509,16 +637,17 @@ def main(argv: list[str] | None = None) -> int:
         overrides["fold_obj_items"]   = args.fold_items
 
     # Individual flags (higher priority — applied after shorthands).
-    for field in ("width",
+    for key in ("width",
                   "pack_array_items", "pack_obj_items", "pack_nesting",
                   "fold_array_items", "fold_obj_items", "fold_nesting"):
-        val = getattr(args, field)
+        val = getattr(args, key)
         if val is not None:
-            overrides[field] = val
+            overrides[key] = val
 
     if overrides:
         cfg = replace(cfg, **overrides)
-    print(cfg, file= sys.stderr)
+    if ( args.verbose):
+        print(cfg, file= sys.stderr)
 
     if args.demo:
         data = _demo()
