@@ -20,7 +20,7 @@ from __future__ import annotations
 import io
 import json
 import sys
-from dataclasses import dataclass, KW_ONLY, replace
+from dataclasses import dataclass, KW_ONLY, replace, field
 from typing import Any, TextIO
 
 
@@ -125,32 +125,25 @@ _CLOSING_KIND: dict[str, str] = {
 
 @dataclass
 class Frame:
-    kind:   str         # "dict" or "list"
-    start:  int         # index of opener line in buffer
-    indent: int
-    # --- pack tracking ---
-    pack_ok:      bool = True   # False once packing rules are violated
-    content_lines: int = 0      # non-opener, non-closer buffer lines (post-pack)
-    items:         int = 0      # direct child item count (post-pack)
-    # --- fold tracking ---
-    fold_ok:      bool = True   # False once fold rules are violated
-    child_nesting: int = -1     # deepest folded-child nesting seen
+    kind: str
+    depth: int
+    lines: list[Line] = field(default_factory=list)
 
+    content_lines: int = 0
+    items: int = 0
 
-# ---------------------------------------------------------------------------
-# Writer
-# ---------------------------------------------------------------------------
+    fold_ok: bool = True
+    child_nesting: int = -1
+
 
 class JSONFoldWriter:
 
     def __init__(self, fp: TextIO, *,
-                 compact: JSONFold | None = None
-                 ):
-        self.fp           = fp
-        self.cfg          = compact
-        self.pending      = ""
-        self.buffer: list[Line]  = []
-        self.stack:  list[Frame] = []
+                 compact: JSONFold | None = None):
+        self.fp = fp
+        self.cfg = compact
+        self.pending = ""
+        self.stack: list[Frame] = []
 
     # ------------------------------------------------------------------ I/O
 
@@ -158,11 +151,8 @@ class JSONFoldWriter:
         if not self.cfg:
             return self.fp.write(s)
 
-        n = len(s)
-        if not s:
-            return 0
-
         parts = s.splitlines(keepends=True)
+
         if self.pending:
             parts[0] = self.pending + parts[0] if parts else self.pending
             self.pending = ""
@@ -173,12 +163,10 @@ class JSONFoldWriter:
         for part in parts:
             self._feed(Line.parse(part[:-1], self._parent_kind()))
 
-        # If a pending line is already over-width, no folding can save it.
         if self.pending and len(self.pending.rstrip()) > self.cfg.width:
             self._mark_no_fold()
-            self._flush_safe_prefix()
 
-        return n
+        return len(s)
 
     def flush(self) -> None:
         self.finish()
@@ -191,7 +179,13 @@ class JSONFoldWriter:
         if self.pending:
             self._feed(Line.parse(self.pending, self._parent_kind()))
             self.pending = ""
-        self._flush_all()
+
+        # Valid json.dump output should leave the stack empty.
+        # If not, stream whatever remains.
+        while self.stack:
+            frame = self.stack.pop()
+            for line in frame.lines:
+                self._emit_line(line)
 
     def __enter__(self) -> "JSONFoldWriter":
         return self
@@ -205,127 +199,114 @@ class JSONFoldWriter:
     # ------------------------------------------------------------ core feed
 
     def _feed(self, line: Line) -> None:
-        # Phase 1: try to pack this line onto the previous one.
-        packed = self._pack(line)
-
-        if self.stack:
-            frame = self.stack[-1]
-
-            if not packed:
-                self._update_frame(frame, self.buffer[-1])
-            else:
-                # Packed into previous buffer line. Still count the added item.
-                if line.parent == frame.kind:
-                    frame.items += line.items
-
-                    limit = (
-                        self.cfg.fold_array_items
-                        if frame.kind == "list"
-                        else self.cfg.fold_obj_items
-                    )
-                    if frame.items > limit:
-                        frame.fold_ok = False
-
-        # A line that is already over-width can never be folded.
-        if self.buffer[-1].width() > self.cfg.width:
-            self._mark_no_fold()
-
-        # Push a new frame on opener.
-        opener = self.buffer[-1].is_opener()
+        opener = line.is_opener()
         if opener:
             self.stack.append(Frame(
                 kind=opener,
-                start=len(self.buffer) - 1,
-                indent=self.buffer[-1].indent,
+                depth=len(self.stack),
+                lines=[line],
             ))
 
-        # On closer: attempt phase 2 fold, then pop.
-        closer = self.buffer[-1].is_closer()
-        if closer:
-            self._close_frame(closer)
+            if line.width() > self.cfg.width:
+                self._mark_no_fold()
+            return
 
-        self._flush_safe_prefix()
+        closer = line.is_closer()
+        if closer:
+            self._close_frame(line, closer)
+            return
+
+        self._emit_line(line)
+
+    def _emit_line(self, line: Line) -> None:
+        if self.stack:
+            self._add_to_frame(self.stack[-1], line)
+        else:
+            self.fp.write(line.raw())
+
     # --------------------------------------------------------- phase 1: pack
 
-    def _pack(self, line: Line) -> bool:
-        """
-        Return True if line was packed into previous line.
-        """
-        if not self.buffer or not self._packable(line):
-            self.buffer.append(line)
+    def _add_to_frame(self, frame: Frame, line: Line) -> None:
+        if self._try_pack(frame, line):
+            return
+
+        frame.lines.append(line)
+        self._update_frame(frame, line)
+
+        if line.width() > self.cfg.width:
+            self._mark_no_fold()
+
+        if not frame.fold_ok:
+            self._stream_frame(frame, keep_last=True)
+
+    def _try_pack(self, frame: Frame, line: Line) -> bool:
+        if not frame.lines:
             return False
 
-        # Enforce line_nesting here
-        if self.stack:
-            frame = self.stack[-1]
-            depth = len(self.stack) - 1
-            if depth > self.cfg.line_nesting:
-                self.buffer.append(line)
-                return False
+        if frame.depth > self.cfg.line_nesting:
+            return False
 
-        prev = self.buffer[-1]
+        if not self._packable(line):
+            return False
+
+        prev = frame.lines[-1]
         limit = self._pack_limit(line.parent)
 
-        if (self._packable(prev)
-                and prev.parent == line.parent
-                and prev.indent == line.indent
-                and prev.items + line.items <= limit
-                and line.indent + len(prev.text) + 1 + len(line.text) <= self.cfg.width):
-            prev.text = prev.text + " " + line.text
-            prev.items += line.items
-            return True
+        if not (
+            self._packable(prev)
+            and prev.parent == line.parent
+            and prev.indent == line.indent
+            and prev.items + line.items <= limit
+            and line.indent + len(prev.text) + 1 + len(line.text) <= self.cfg.width
+        ):
+            return False
 
-        self.buffer.append(line)
-        return False
+        prev.text += " " + line.text
+        prev.items += line.items
+
+        if line.parent == frame.kind:
+            frame.items += line.items
+
+        self._check_fold_limits(frame)
+        return True
 
     def _packable(self, line: Line) -> bool:
-        """True if line is a candidate for scalar packing."""
-        return (line.child_nesting < 0          # scalar (not a folded container)
-                and line.parent in ("dict", "list")
-                and self._pack_limit(line.parent) > 1
-                and line.is_opener() is None
-                and line.is_closer() is None)
+        return (
+            line.child_nesting < 0
+            and line.parent in ("dict", "list")
+            and self._pack_limit(line.parent) > 1
+            and line.is_opener() is None
+            and line.is_closer() is None
+        )
 
     def _pack_limit(self, kind: str | None) -> int:
-        c = self.cfg
-        if kind == "list": return c.line_array_items
-        if kind == "dict": return c.line_obj_items
+        if kind == "list":
+            return self.cfg.line_array_items
+        if kind == "dict":
+            return self.cfg.line_obj_items
         return 0
 
     # --------------------------------------------------------- frame tracking
 
     def _update_frame(self, frame: Frame, line: Line) -> None:
-        """Update frame statistics with the latest buffer line."""
-        buf_idx = len(self.buffer) - 1
-
-        # Opener line: already counted by frame.start.
-        if buf_idx == frame.start:
-            return
-
-        # Closer line: does not count as content.
         if line.is_closer():
             return
 
-        # Any non-opener/non-closer line inside the frame is a content line.
         frame.content_lines += 1
 
-        # Direct child item:
-        # line.parent was assigned from the active stack frame before feeding.
         if line.parent == frame.kind:
             frame.items += line.items
 
-        # Track deepest folded child for fold eligibility.
         if line.child_nesting >= 0:
             frame.child_nesting = max(frame.child_nesting, line.child_nesting + 1)
 
-        depth = self._stack_depth_of(frame)
+        self._check_fold_limits(frame)
 
-        # Pack eligibility: nesting exceeded.
-        if depth > self.cfg.line_nesting:
-            frame.pack_ok = False
+    def _check_fold_limits(self, frame: Frame) -> None:
+        if frame.content_lines > 1:
+            frame.fold_ok = False
 
-        # Fold eligibility checks.
-        if depth > self.cfg.fold_nesting:
+        if frame.depth > self.cfg.fold_nesting:
             frame.fold_ok = False
 
         limit = (
@@ -340,142 +321,103 @@ class JSONFoldWriter:
         if frame.child_nesting > self.cfg.fold_nesting:
             frame.fold_ok = False
 
-    def _stack_depth_of(self, frame: Frame) -> int:
-        """Nesting depth of frame (0 = top-level)."""
-        for i, f in enumerate(self.stack):
-            if f is frame:
-                return i
-        raise RuntimeError("frame not found on stack")
-
-
     # --------------------------------------------------------- phase 2: fold
 
-    def _close_frame(self, closing_kind: str) -> None:
+    def _close_frame(self, closer: Line, closing_kind: str) -> None:
         if not self.stack:
+            self.fp.write(closer.raw())
             return
 
         frame = self.stack.pop()
+        frame.lines.append(closer)
 
-        # Mismatched closer — should not happen with valid JSON.
         if frame.kind != closing_kind:
             frame.fold_ok = False
 
-        if frame.fold_ok and frame.content_lines == 1:
-            if self._try_fold(frame):
-                # Notify parent frame about the newly folded line.
-                if self.stack:
-                    self._update_frame(self.stack[-1], self.buffer[frame.start])
-                return
+        folded = self._try_fold(frame)
 
-        # Not folded: notify parent about each content line already in buffer.
-        # (parent was updated incrementally, nothing extra needed.)
+        if folded is not None:
+            self._emit_line(folded)
+        else:
+            for line in frame.lines:
+                self._emit_line(line)
 
-    def _try_fold(self, frame: Frame) -> bool:
-        """Attempt to collapse opener + 1 content line + closer to one line."""
-        start = frame.start
-        end   = len(self.buffer) - 1
-        if end - start > 2:
-            return False
+    def _try_fold(self, frame: Frame) -> Line | None:
+        if not frame.fold_ok:
+            return None
+
+        if frame.content_lines != 1:
+            return None
+
+        if len(frame.lines) != 3:
+            return None
 
         folded_length = (
-            len(self.buffer[start].text)
-            + len(self.buffer[start + 1].text)
-            + len(self.buffer[end].text)
+            len(frame.lines[0].text)
+            + len(frame.lines[1].text)
+            + len(frame.lines[2].text)
             + 2
         )
 
-        if self.buffer[start].indent + folded_length > self.cfg.width:
-            return False
+        if frame.lines[0].indent + folded_length > self.cfg.width:
+            return None
 
-        text = self._fold_text(self.buffer[start:end + 1])
-
-        # Replace the three lines with one folded line.
-        folded = Line(
-            indent        = frame.indent,
-            text          = text,
-            parent        = self._parent_kind(),
-            items         = 1,
-            child_nesting = max(0, frame.child_nesting),
+        return Line(
+            indent=frame.lines[0].indent,
+            text=self._fold_text(frame.lines),
+            parent=self._parent_kind(),
+            items=1,
+            child_nesting=max(0, frame.child_nesting),
         )
-        self.buffer[start:end + 1] = [folded]
-
-        removed = end - start          # = 2
-        for f in self.stack:
-            if f.start > start:
-                f.start -= removed
-
-        return True
 
     @staticmethod
     def _fold_text(lines: list[Line]) -> str:
-        """Join opener, content, closer into one line."""
-        opener  = lines[0].text
+        opener = lines[0].text
         content = lines[1].text
-        closer  = lines[2].text
+        closer = lines[2].text
+
         comma = closer.endswith(",")
         if comma:
             closer = closer[:-1]
-        result = opener + " " + content + " " + closer
-        return result + ("," if comma else "")
 
-    # --------------------------------------------------------- flush helpers
+        text = opener + " " + content + " " + closer
+        return text + ("," if comma else "")
 
+    # --------------------------------------------------------- streaming
 
-    def _last_line_keep_start(self) -> int:
-        """Keep only the last buffered line for phase-1 packing."""
-        return max(0, len(self.buffer) - 1)
+    def _stream_frame(self, frame: Frame, *, keep_last: bool) -> None:
+        keep = 0
 
-    def _flush_safe_prefix(self) -> None:
-        """Flush lines no longer needed for folding or packing."""
-        if not self.stack:
-            self._flush_all()
-            return
+        if keep_last and frame.lines and self._packable(frame.lines[-1]):
+            keep = 1
 
-        fold_starts = [f.start for f in self.stack if f.fold_ok]
-
-        if fold_starts:
-            keep_from = min(fold_starts)
+        if keep:
+            emit_lines = frame.lines[:-1]
+            frame.lines = frame.lines[-1:]
         else:
-            keep_from = self._last_line_keep_start()
+            emit_lines = frame.lines
+            frame.lines = []
 
-        for f in self.stack:
-            if f.start < keep_from:
-                f.fold_ok = False
+        for line in emit_lines:
+            self._emit_to_parent(frame, line)
 
-        fold_starts = [f.start for f in self.stack if f.fold_ok]
-
-        if fold_starts:
-            keep_from = min(fold_starts)
+    def _emit_to_parent(self, frame: Frame, line: Line) -> None:
+        if frame.depth == 0:
+            self.fp.write(line.raw())
         else:
-            keep_from = self._last_line_keep_start()
-
-        self._flush_prefix(keep_from)
-
-    def _flush_prefix(self, n: int) -> None:
-        if n <= 0:
-            return
-        for ln in self.buffer[:n]:
-            self.fp.write(ln.raw())
-        del self.buffer[:n]
-        for f in self.stack:
-            f.start -= n
-
-    def _flush_all(self) -> None:
-        for ln in self.buffer:
-            self.fp.write(ln.raw())
-        self.buffer.clear()
-        self.stack.clear()
+            self._add_to_frame(self.stack[frame.depth - 1], line)
 
     # --------------------------------------------------------- misc helpers
 
     def _mark_no_fold(self) -> None:
-        for f in self.stack:
-            f.fold_ok = False
+        for frame in self.stack:
+            frame.fold_ok = False
+
+        if self.stack:
+            self._stream_frame(self.stack[-1], keep_last=True)
 
     def _parent_kind(self) -> str | None:
         return self.stack[-1].kind if self.stack else None
-
-
 # ---------------------------------------------------------------------------
 # Public helpers
 # ---------------------------------------------------------------------------
