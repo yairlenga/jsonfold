@@ -207,12 +207,23 @@ JSONFold.PRESETS = {
     "none":    JSONFold.NONE,
 
     "low": replace(JSONFold.DEFAULT, 
-        pack_array_items = 8,
-        pack_obj_items = 4,
-        pack_nesting = 1,
-        fold_array_items = 8,
-        fold_obj_items = 4,
-        fold_nesting = 1,
+        join_nesting = 0,
+    ),
+
+    "med": replace(JSONFold.DEFAULT,
+        join_nesting = 1,
+    ),
+
+    "high": replace(JSONFold.DEFAULT,
+        pack_array_items = 16,
+        pack_obj_items   = 8,
+        pack_nesting     = 4,
+        fold_array_items = 16,
+        fold_obj_items   = 8,
+        fold_nesting     = 4,
+        join_array_items = 16,
+        join_obj_items   = 8,
+        join_nesting     = 2,
     ),
 
 
@@ -797,10 +808,6 @@ def main(argv: list[str] | None = None) -> int:
          sort_keys=args.sort_keys)
     if args.verbose:
         print(info, file=sys.stderr)
-
-    import pprint
-    pprint.pprint(data)
-
 
     return 0
 
