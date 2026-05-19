@@ -1,0 +1,3 @@
+# Pack nested array scalars
+# category: common
+--compact=pack --pack-nesting=3

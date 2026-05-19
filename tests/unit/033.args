@@ -1,0 +1,3 @@
+# High preset with explicit width
+# category: common
+--compact=high --width=60

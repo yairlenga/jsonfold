@@ -1,0 +1,402 @@
+[
+  {
+    "id": "001",
+    "category": "common",
+    "description": "Small scalar array, default preset",
+    "json": "001.json",
+    "args": "001.args",
+    "command": "python3 jsonfold.py --compact=default < 001.json"
+  },
+  {
+    "id": "002",
+    "category": "common",
+    "description": "Small array with high preset",
+    "json": "002.json",
+    "args": "002.args",
+    "command": "python3 jsonfold.py --compact=high < 002.json"
+  },
+  {
+    "id": "003",
+    "category": "common",
+    "description": "Boolean array packing",
+    "json": "003.json",
+    "args": "003.args",
+    "command": "python3 jsonfold.py --compact=default < 003.json"
+  },
+  {
+    "id": "004",
+    "category": "common",
+    "description": "String array packing",
+    "json": "004.json",
+    "args": "004.args",
+    "command": "python3 jsonfold.py --compact=default < 004.json"
+  },
+  {
+    "id": "005",
+    "category": "common",
+    "description": "Mixed scalar array",
+    "json": "005.json",
+    "args": "005.args",
+    "command": "python3 jsonfold.py --compact=high < 005.json"
+  },
+  {
+    "id": "006",
+    "category": "common",
+    "description": "Small object folding",
+    "json": "006.json",
+    "args": "006.args",
+    "command": "python3 jsonfold.py --compact=default < 006.json"
+  },
+  {
+    "id": "007",
+    "category": "common",
+    "description": "Small object with strings",
+    "json": "007.json",
+    "args": "007.args",
+    "command": "python3 jsonfold.py --compact=high < 007.json"
+  },
+  {
+    "id": "008",
+    "category": "common",
+    "description": "Object with numeric fields",
+    "json": "008.json",
+    "args": "008.args",
+    "command": "python3 jsonfold.py --compact=high --width=60 < 008.json"
+  },
+  {
+    "id": "009",
+    "category": "common",
+    "description": "Object with sort_keys",
+    "json": "009.json",
+    "args": "009.args",
+    "command": "python3 jsonfold.py --compact=default --sort-keys < 009.json"
+  },
+  {
+    "id": "010",
+    "category": "common",
+    "description": "Object using pack-only preset",
+    "json": "010.json",
+    "args": "010.args",
+    "command": "python3 jsonfold.py --compact=pack < 010.json"
+  },
+  {
+    "id": "011",
+    "category": "common",
+    "description": "Ten numbers packed with pack preset",
+    "json": "011.json",
+    "args": "011.args",
+    "command": "python3 jsonfold.py --compact=pack --width=60 < 011.json"
+  },
+  {
+    "id": "012",
+    "category": "common",
+    "description": "Pack limit split",
+    "json": "012.json",
+    "args": "012.args",
+    "command": "python3 jsonfold.py --compact=pack --pack-array-items=4 --width=80 < 012.json"
+  },
+  {
+    "id": "013",
+    "category": "common",
+    "description": "Pack array with narrow width",
+    "json": "013.json",
+    "args": "013.args",
+    "command": "python3 jsonfold.py --compact=pack --width=30 < 013.json"
+  },
+  {
+    "id": "014",
+    "category": "common",
+    "description": "Pack object fields",
+    "json": "014.json",
+    "args": "014.args",
+    "command": "python3 jsonfold.py --compact=pack --pack-obj-items=4 < 014.json"
+  },
+  {
+    "id": "015",
+    "category": "common",
+    "description": "Pack nested array scalars",
+    "json": "015.json",
+    "args": "015.args",
+    "command": "python3 jsonfold.py --compact=pack --pack-nesting=3 < 015.json"
+  },
+  {
+    "id": "016",
+    "category": "common",
+    "description": "Fold simple array",
+    "json": "016.json",
+    "args": "016.args",
+    "command": "python3 jsonfold.py --compact=fold < 016.json"
+  },
+  {
+    "id": "017",
+    "category": "common",
+    "description": "Fold simple object",
+    "json": "017.json",
+    "args": "017.args",
+    "command": "python3 jsonfold.py --compact=fold < 017.json"
+  },
+  {
+    "id": "018",
+    "category": "common",
+    "description": "Fold blocked by item limit",
+    "json": "018.json",
+    "args": "018.args",
+    "command": "python3 jsonfold.py --compact=fold --fold-array-items=3 < 018.json"
+  },
+  {
+    "id": "019",
+    "category": "common",
+    "description": "Fold allowed by larger item limit",
+    "json": "019.json",
+    "args": "019.args",
+    "command": "python3 jsonfold.py --compact=fold --fold-array-items=8 < 019.json"
+  },
+  {
+    "id": "020",
+    "category": "common",
+    "description": "Fold with narrow width",
+    "json": "020.json",
+    "args": "020.args",
+    "command": "python3 jsonfold.py --compact=fold --width=28 < 020.json"
+  },
+  {
+    "id": "021",
+    "category": "common",
+    "description": "Join folded matrix rows",
+    "json": "021.json",
+    "args": "021.args",
+    "command": "python3 jsonfold.py --compact=join < 021.json"
+  },
+  {
+    "id": "022",
+    "category": "common",
+    "description": "Join matrix inside object",
+    "json": "022.json",
+    "args": "022.args",
+    "command": "python3 jsonfold.py --compact=join < 022.json"
+  },
+  {
+    "id": "023",
+    "category": "common",
+    "description": "Join blocked by width",
+    "json": "023.json",
+    "args": "023.args",
+    "command": "python3 jsonfold.py --compact=join --width=30 < 023.json"
+  },
+  {
+    "id": "024",
+    "category": "common",
+    "description": "Join larger matrix with max",
+    "json": "024.json",
+    "args": "024.args",
+    "command": "python3 jsonfold.py --compact=max --width=80 < 024.json"
+  },
+  {
+    "id": "025",
+    "category": "common",
+    "description": "Join nested arrays with high preset",
+    "json": "025.json",
+    "args": "025.args",
+    "command": "python3 jsonfold.py --compact=high --width=50 < 025.json"
+  },
+  {
+    "id": "026",
+    "category": "common",
+    "description": "Array of small objects",
+    "json": "026.json",
+    "args": "026.args",
+    "command": "python3 jsonfold.py --compact=med < 026.json"
+  },
+  {
+    "id": "027",
+    "category": "common",
+    "description": "Array of records, high preset",
+    "json": "027.json",
+    "args": "027.args",
+    "command": "python3 jsonfold.py --compact=high < 027.json"
+  },
+  {
+    "id": "028",
+    "category": "common",
+    "description": "Nested object with array value",
+    "json": "028.json",
+    "args": "028.args",
+    "command": "python3 jsonfold.py --compact=high < 028.json"
+  },
+  {
+    "id": "029",
+    "category": "common",
+    "description": "Object containing multiple small arrays",
+    "json": "029.json",
+    "args": "029.args",
+    "command": "python3 jsonfold.py --compact=high --width=80 < 029.json"
+  },
+  {
+    "id": "030",
+    "category": "common",
+    "description": "Medium preset keeps some nesting expanded",
+    "json": "030.json",
+    "args": "030.args",
+    "command": "python3 jsonfold.py --compact=med < 030.json"
+  },
+  {
+    "id": "031",
+    "category": "common",
+    "description": "Max preset on longer number array",
+    "json": "031.json",
+    "args": "031.args",
+    "command": "python3 jsonfold.py --compact=max --width=80 < 031.json"
+  },
+  {
+    "id": "032",
+    "category": "common",
+    "description": "Default preset on longer number array",
+    "json": "032.json",
+    "args": "032.args",
+    "command": "python3 jsonfold.py --compact=default --width=80 < 032.json"
+  },
+  {
+    "id": "033",
+    "category": "common",
+    "description": "High preset with explicit width",
+    "json": "033.json",
+    "args": "033.args",
+    "command": "python3 jsonfold.py --compact=high --width=60 < 033.json"
+  },
+  {
+    "id": "034",
+    "category": "common",
+    "description": "Pack items override",
+    "json": "034.json",
+    "args": "034.args",
+    "command": "python3 jsonfold.py --compact=default --pack-items=6 --width=80 < 034.json"
+  },
+  {
+    "id": "035",
+    "category": "common",
+    "description": "Fold items override",
+    "json": "035.json",
+    "args": "035.args",
+    "command": "python3 jsonfold.py --compact=default --fold-items=10 --width=80 < 035.json"
+  },
+  {
+    "id": "036",
+    "category": "common",
+    "description": "Deep nested object high preset",
+    "json": "036.json",
+    "args": "036.args",
+    "command": "python3 jsonfold.py --compact=high --join-nesting=2 < 036.json"
+  },
+  {
+    "id": "037",
+    "category": "common",
+    "description": "Deep nested object with default nesting",
+    "json": "037.json",
+    "args": "037.args",
+    "command": "python3 jsonfold.py --compact=default < 037.json"
+  },
+  {
+    "id": "038",
+    "category": "common",
+    "description": "Mixed object realistic sample",
+    "json": "038.json",
+    "args": "038.args",
+    "command": "python3 jsonfold.py --compact=high < 038.json"
+  },
+  {
+    "id": "039",
+    "category": "common",
+    "description": "Demo-like matrix and long field",
+    "json": "039.json",
+    "args": "039.args",
+    "command": "python3 jsonfold.py --compact=high --width=70 < 039.json"
+  },
+  {
+    "id": "040",
+    "category": "common",
+    "description": "Indent override",
+    "json": "040.json",
+    "args": "040.args",
+    "command": "python3 jsonfold.py --compact=high --indent=4 < 040.json"
+  },
+  {
+    "id": "041",
+    "category": "edge",
+    "description": "Empty object, no compaction",
+    "json": "041.json",
+    "args": "041.args",
+    "command": "python3 jsonfold.py --compact=none < 041.json"
+  },
+  {
+    "id": "042",
+    "category": "edge",
+    "description": "Empty array, no compaction",
+    "json": "042.json",
+    "args": "042.args",
+    "command": "python3 jsonfold.py --compact=none < 042.json"
+  },
+  {
+    "id": "043",
+    "category": "edge",
+    "description": "Very long string exceeds width",
+    "json": "043.json",
+    "args": "043.args",
+    "command": "python3 jsonfold.py --width=40 < 043.json"
+  },
+  {
+    "id": "044",
+    "category": "edge",
+    "description": "Unicode and emoji string",
+    "json": "044.json",
+    "args": "044.args",
+    "command": "python3 jsonfold.py --compact=high < 044.json"
+  },
+  {
+    "id": "045",
+    "category": "edge",
+    "description": "Escaped quotes and backslashes",
+    "json": "045.json",
+    "args": "045.args",
+    "command": "python3 jsonfold.py --compact=default < 045.json"
+  },
+  {
+    "id": "046",
+    "category": "edge",
+    "description": "Deeply nested empty arrays",
+    "json": "046.json",
+    "args": "046.args",
+    "command": "python3 jsonfold.py --compact=max < 046.json"
+  },
+  {
+    "id": "047",
+    "category": "edge",
+    "description": "Large scalar array with narrow width",
+    "json": "047.json",
+    "args": "047.args",
+    "command": "python3 jsonfold.py --width=30 < 047.json"
+  },
+  {
+    "id": "048",
+    "category": "edge",
+    "description": "Mixed scalar/object array",
+    "json": "048.json",
+    "args": "048.args",
+    "command": "python3 jsonfold.py --compact=high < 048.json"
+  },
+  {
+    "id": "049",
+    "category": "edge",
+    "description": "Width boundary candidate",
+    "json": "049.json",
+    "args": "049.args",
+    "command": "python3 jsonfold.py --width=20 < 049.json"
+  },
+  {
+    "id": "050",
+    "category": "edge",
+    "description": "Fold nesting disabled",
+    "json": "050.json",
+    "args": "050.args",
+    "command": "python3 jsonfold.py --fold-nesting=0 < 050.json"
+  }
+]

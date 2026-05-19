@@ -1,0 +1,3 @@
+# Empty object, no compaction
+# category: edge
+--compact=none

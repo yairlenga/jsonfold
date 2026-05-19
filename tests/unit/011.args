@@ -1,0 +1,3 @@
+# Ten numbers packed with pack preset
+# category: common
+--compact=pack --width=60

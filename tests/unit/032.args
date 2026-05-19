@@ -1,0 +1,3 @@
+# Default preset on longer number array
+# category: common
+--compact=default --width=80

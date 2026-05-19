@@ -1,0 +1,79 @@
+{
+  "status": "ok", "meta": { "page": 1, "total": 500 },
+  "items": [
+    {
+      "id": 0, "metrics": { "cpu": 0, "mem": 6793 }, "tags": [ "delta", "north", "stage", "delta" ]
+    },
+    { "id": 1, "metrics": { "cpu": 29, "mem": 9892 }, "tags": [ "stage", "omega", "dev", "beta" ] },
+    {
+      "id": 2, "metrics": { "cpu": 27, "mem": 2454 }, "tags": [ "south", "stage", "east", "prod" ]
+    },
+    {
+      "id": 3, "metrics": { "cpu": 22, "mem": 9893 }, "tags": [ "delta", "dev", "alpha", "delta" ]
+    },
+    {
+      "id": 4, "metrics": { "cpu": 0, "mem": 7374 }, "tags": [ "north", "omega", "alpha", "west" ]
+    },
+    { "id": 5, "metrics": { "cpu": 29, "mem": 6812 }, "tags": [ "west", "east", "dev", "omega" ] },
+    {
+      "id": 6, "metrics": { "cpu": 56, "mem": 5224 }, "tags": [ "prod", "north", "stage", "gamma" ]
+    },
+    { "id": 7, "metrics": { "cpu": 44, "mem": 3446 }, "tags": [ "prod", "gamma", "west", "west" ] },
+    { "id": 8, "metrics": { "cpu": 1, "mem": 7665 }, "tags": [ "beta", "alpha", "dev", "stage" ] },
+    { "id": 9, "metrics": { "cpu": 66, "mem": 3334 }, "tags": [ "prod", "dev", "dev", "gamma" ] },
+    {
+      "id": 10, "metrics": { "cpu": 24, "mem": 2786 }, "tags": [ "north", "delta", "west", "prod" ]
+    },
+    {
+      "id": 11, "metrics": { "cpu": 39, "mem": 2890 }, "tags": [ "east", "west", "gamma", "stage" ]
+    },
+    {
+      "id": 12, "metrics": { "cpu": 22, "mem": 7350 },
+      "tags": [ "stage", "alpha", "omega", "south" ]
+    },
+    { "id": 13, "metrics": { "cpu": 20, "mem": 250 }, "tags": [ "prod", "omega", "west", "east" ] },
+    {
+      "id": 14, "metrics": { "cpu": 97, "mem": 6072 }, "tags": [ "east", "alpha", "north", "dev" ]
+    },
+    {
+      "id": 15, "metrics": { "cpu": 96, "mem": 2761 },
+      "tags": [ "stage", "omega", "stage", "delta" ]
+    },
+    {
+      "id": 16, "metrics": { "cpu": 33, "mem": 7003 }, "tags": [ "east", "south", "gamma", "alpha" ]
+    },
+    {
+      "id": 17, "metrics": { "cpu": 37, "mem": 3780 }, "tags": [ "alpha", "south", "south", "prod" ]
+    },
+    {
+      "id": 18, "metrics": { "cpu": 13, "mem": 6641 }, "tags": [ "south", "dev", "beta", "south" ]
+    },
+    { "id": 19, "metrics": { "cpu": 34, "mem": 3454 }, "tags": [ "alpha", "alpha", "dev", "dev" ] },
+    { "id": 20, "metrics": { "cpu": 77, "mem": 3441 }, "tags": [ "dev", "beta", "east", "prod" ] },
+    {
+      "id": 21, "metrics": { "cpu": 69, "mem": 8465 },
+      "tags": [ "south", "gamma", "delta", "gamma" ]
+    },
+    { "id": 22, "metrics": { "cpu": 77, "mem": 6832 }, "tags": [ "prod", "stage", "dev", "prod" ] },
+    {
+      "id": 23, "metrics": { "cpu": 30, "mem": 3000 }, "tags": [ "omega", "west", "alpha", "north" ]
+    },
+    {
+      "id": 24, "metrics": { "cpu": 43, "mem": 7707 }, "tags": [ "west", "prod", "delta", "north" ]
+    },
+    {
+      "id": 25, "metrics": { "cpu": 88, "mem": 8878 }, "tags": [ "dev", "south", "delta", "beta" ]
+    },
+    {
+      "id": 26, "metrics": { "cpu": 91, "mem": 3855 }, "tags": [ "alpha", "beta", "prod", "alpha" ]
+    },
+    {
+      "id": 27, "metrics": { "cpu": 29, "mem": 462 }, "tags": [ "south", "stage", "delta", "dev" ]
+    },
+    { "id": 28, "metrics": { "cpu": 97, "mem": 3298 }, "tags": [ "dev", "north", "beta", "beta" ] },
+    {
+      "id": 29, "metrics": { "cpu": 14, "mem": 5881 },
+      "tags": [ "south", "north", "alpha", "stage" ]
+    }
+  ]
+}

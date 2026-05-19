@@ -1,0 +1,3 @@
+# Large scalar array with narrow width
+# category: edge
+--width=30

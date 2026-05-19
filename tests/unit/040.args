@@ -1,0 +1,3 @@
+# Indent override
+# category: common
+--compact=high --indent=4

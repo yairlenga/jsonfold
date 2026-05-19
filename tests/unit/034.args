@@ -1,0 +1,3 @@
+# Pack items override
+# category: common
+--compact=default --pack-items=6 --width=80

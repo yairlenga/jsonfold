@@ -1,0 +1,3 @@
+# Pack object fields
+# category: common
+--compact=pack --pack-obj-items=4

@@ -1,0 +1,3 @@
+# Long text and escaped strings
+# realistic document test
+--compact=max --width=120

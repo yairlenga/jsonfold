@@ -1,0 +1,9 @@
+{
+  "config": {
+    "ports": [
+      80,
+      443
+    ],
+    "enabled": true
+  }
+}

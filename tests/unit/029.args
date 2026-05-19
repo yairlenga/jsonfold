@@ -1,0 +1,3 @@
+# Object containing multiple small arrays
+# category: common
+--compact=high --width=80

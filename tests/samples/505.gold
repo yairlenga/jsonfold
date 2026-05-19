@@ -1,0 +1,204 @@
+{
+  "users": [
+    {
+      "id": 0, "name": "user0", "roles": [ "beta", "gamma", "delta" ],
+      "active": true
+    },
+    {
+      "id": 1, "name": "user1", "roles": [ "alpha", "gamma", "omega" ],
+      "active": false
+    },
+    {
+      "id": 2, "name": "user2", "roles": [ "north", "omega", "west" ],
+      "active": true
+    },
+    {
+      "id": 3, "name": "user3", "roles": [ "east", "west", "dev" ],
+      "active": false
+    },
+    {
+      "id": 4, "name": "user4", "roles": [ "north", "gamma", "dev" ],
+      "active": true
+    },
+    {
+      "id": 5, "name": "user5", "roles": [ "omega", "stage", "beta" ],
+      "active": false
+    },
+    {
+      "id": 6, "name": "user6", "roles": [ "prod", "alpha", "west" ],
+      "active": true
+    },
+    {
+      "id": 7, "name": "user7", "roles": [ "north", "gamma", "east" ],
+      "active": false
+    },
+    {
+      "id": 8, "name": "user8", "roles": [ "west", "east", "west" ],
+      "active": true
+    },
+    {
+      "id": 9, "name": "user9", "roles": [ "omega", "stage", "beta" ],
+      "active": false
+    },
+    {
+      "id": 10, "name": "user10", "roles": [ "north", "delta", "beta" ],
+      "active": true
+    },
+    {
+      "id": 11, "name": "user11", "roles": [ "stage", "omega", "omega" ],
+      "active": false
+    },
+    {
+      "id": 12, "name": "user12", "roles": [ "west", "gamma", "north" ],
+      "active": true
+    },
+    {
+      "id": 13, "name": "user13", "roles": [ "prod", "stage", "north" ],
+      "active": false
+    },
+    {
+      "id": 14, "name": "user14", "roles": [ "dev", "south", "alpha" ],
+      "active": true
+    },
+    {
+      "id": 15, "name": "user15", "roles": [ "gamma", "gamma", "prod" ],
+      "active": false
+    },
+    {
+      "id": 16, "name": "user16", "roles": [ "delta", "beta", "dev" ],
+      "active": true
+    },
+    {
+      "id": 17, "name": "user17", "roles": [ "alpha", "north", "prod" ],
+      "active": false
+    },
+    {
+      "id": 18, "name": "user18", "roles": [ "west", "omega", "beta" ],
+      "active": true
+    },
+    {
+      "id": 19, "name": "user19", "roles": [ "beta", "west", "stage" ],
+      "active": false
+    },
+    {
+      "id": 20, "name": "user20", "roles": [ "stage", "south", "omega" ],
+      "active": true
+    },
+    {
+      "id": 21, "name": "user21", "roles": [ "beta", "west", "east" ],
+      "active": false
+    },
+    {
+      "id": 22, "name": "user22", "roles": [ "south", "stage", "east" ],
+      "active": true
+    },
+    {
+      "id": 23, "name": "user23", "roles": [ "beta", "north", "stage" ],
+      "active": false
+    },
+    {
+      "id": 24, "name": "user24", "roles": [ "alpha", "stage", "prod" ],
+      "active": true
+    },
+    {
+      "id": 25, "name": "user25", "roles": [ "north", "gamma", "north" ],
+      "active": false
+    },
+    {
+      "id": 26, "name": "user26", "roles": [ "stage", "omega", "beta" ],
+      "active": true
+    },
+    {
+      "id": 27, "name": "user27", "roles": [ "alpha", "north", "gamma" ],
+      "active": false
+    },
+    {
+      "id": 28, "name": "user28", "roles": [ "west", "omega", "north" ],
+      "active": true
+    },
+    {
+      "id": 29, "name": "user29", "roles": [ "omega", "north", "omega" ],
+      "active": false
+    },
+    {
+      "id": 30, "name": "user30", "roles": [ "gamma", "east", "dev" ],
+      "active": true
+    },
+    {
+      "id": 31, "name": "user31", "roles": [ "west", "delta", "omega" ],
+      "active": false
+    },
+    {
+      "id": 32, "name": "user32", "roles": [ "prod", "gamma", "alpha" ],
+      "active": true
+    },
+    {
+      "id": 33, "name": "user33", "roles": [ "west", "stage", "stage" ],
+      "active": false
+    },
+    {
+      "id": 34, "name": "user34", "roles": [ "north", "gamma", "east" ],
+      "active": true
+    },
+    {
+      "id": 35, "name": "user35", "roles": [ "gamma", "south", "prod" ],
+      "active": false
+    },
+    {
+      "id": 36, "name": "user36", "roles": [ "gamma", "delta", "omega" ],
+      "active": true
+    },
+    {
+      "id": 37, "name": "user37", "roles": [ "omega", "prod", "stage" ],
+      "active": false
+    },
+    {
+      "id": 38, "name": "user38", "roles": [ "stage", "gamma", "south" ],
+      "active": true
+    },
+    {
+      "id": 39, "name": "user39", "roles": [ "dev", "alpha", "beta" ],
+      "active": false
+    },
+    {
+      "id": 40, "name": "user40", "roles": [ "east", "delta", "gamma" ],
+      "active": true
+    },
+    {
+      "id": 41, "name": "user41", "roles": [ "prod", "south", "east" ],
+      "active": false
+    },
+    {
+      "id": 42, "name": "user42", "roles": [ "delta", "omega", "alpha" ],
+      "active": true
+    },
+    {
+      "id": 43, "name": "user43", "roles": [ "east", "gamma", "stage" ],
+      "active": false
+    },
+    {
+      "id": 44, "name": "user44", "roles": [ "east", "prod", "dev" ],
+      "active": true
+    },
+    {
+      "id": 45, "name": "user45", "roles": [ "beta", "dev", "east" ],
+      "active": false
+    },
+    {
+      "id": 46, "name": "user46", "roles": [ "prod", "alpha", "beta" ],
+      "active": true
+    },
+    {
+      "id": 47, "name": "user47", "roles": [ "dev", "stage", "omega" ],
+      "active": false
+    },
+    {
+      "id": 48, "name": "user48", "roles": [ "south", "east", "dev" ],
+      "active": true
+    },
+    {
+      "id": 49, "name": "user49", "roles": [ "omega", "omega", "west" ],
+      "active": false
+    }
+  ]
+}

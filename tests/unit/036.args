@@ -1,0 +1,3 @@
+# Deep nested object high preset
+# category: common
+--compact=high --join-nesting=2

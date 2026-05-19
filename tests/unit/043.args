@@ -1,0 +1,3 @@
+# Very long string exceeds width
+# category: edge
+--width=40

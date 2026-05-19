@@ -1,0 +1,4 @@
+{
+  "meta": { "version": 1, "ok": true },
+  "items": [ { "id": 1, "name": "alpha" }, { "id": 2, "name": "beta" } ]
+}

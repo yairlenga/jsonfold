@@ -1,0 +1,3 @@
+# Max preset on longer number array
+# category: common
+--compact=max --width=80

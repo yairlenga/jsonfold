@@ -1,0 +1,3 @@
+# Pack limit split
+# category: common
+--compact=pack --pack-array-items=4 --width=80

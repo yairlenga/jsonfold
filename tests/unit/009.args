@@ -1,0 +1,3 @@
+# Object with sort_keys
+# category: common
+--compact=default --sort-keys

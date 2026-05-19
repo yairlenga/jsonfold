@@ -1,0 +1,3 @@
+# Fold nesting disabled
+# category: edge
+--fold-nesting=0
