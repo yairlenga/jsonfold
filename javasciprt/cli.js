@@ -1,7 +1,4 @@
-import {
-  JSONFold,
-  dumpi,
-} from "./jsonfold.js";
+import * as jsonfold from "./jsonfold.js";
 
 
 function demoData() {
@@ -27,7 +24,7 @@ export async function main(argv = process.argv.slice(2)) {
     return 0;
   }
 
-  let cfg = JSONFold.preset(args.compact);
+  let cfg = jsonfold.JSONFold.preset(args.compact);
   const overrides = {};
 
   if (args.width === undefined) {
@@ -76,15 +73,17 @@ export async function main(argv = process.argv.slice(2)) {
   if (args.verbose) {
     console.error(cfg);
   }
-
-
-
+  // Choose backend
+  let backend = jsonfold
+  if ( args.stream ) {
+    backend = await import ("./jsonfoldstream.js")
+  }
 
   const data = args.demo
     ? demoData()
     : JSON.parse(await readStdin());
 
-  const stats = dumpi(data, process.stdout, {
+  const stats = backend.dumpi(data, process.stdout, {
     compact: cfg,
     indent: args.indent,
     sortKeys: args.sortKeys,
@@ -106,6 +105,7 @@ function parseArgs(argv) {
     verbose: false,
     sortKeys: false,
     help: false,
+    stream: false,
   };
 
   const numeric = new Map([
@@ -140,6 +140,10 @@ function parseArgs(argv) {
       case "--verbose":
       case "-v":
         out.verbose = true;
+        continue;
+
+      case "--stream":
+        out.stream = true;
         continue;
 
       case "--sort-keys":
@@ -211,7 +215,7 @@ function parseInteger(s, name) {
 }
 
 function validateCompact(name) {
-  if (!Object.hasOwn(JSONFold.PRESETS, name)) {
+  if (!Object.hasOwn(jsonfold.JSONFold.PRESETS, name)) {
     throw new Error(`unknown compact preset: ${name}`);
   }
 }
