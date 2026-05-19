@@ -1,0 +1,8 @@
+{
+  "name": "jsonfold",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "jsonfold": "./jsonfold"
+  }
+}
