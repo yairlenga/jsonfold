@@ -91,8 +91,8 @@ Phase 2: Fold
     only when it has exactly one content line after packing, and the folded
     result fits within the configured limits.
 
-Phase 3: Merge
-    Repeat the pack step, allowing folded lines to be merged with scalar items
+Phase 3: Join
+    Repeat the pack step, allowing folded lines to be joined with scalar items
     or other folded lines. subject to same limits
 
     A container may be collaped from:
@@ -183,9 +183,9 @@ class JSONFold:
     fold_obj_items:   int = 4       # max items allowed in a folded dict
     fold_nesting:     int = 1       # max container nesting depth for folding
     # Phase 3 - merging folded lines.
-    merge_array_items: int = 8
-    merge_obj_items:   int = 4
-    merge_nesting:     int = 1
+    join_array_items: int = 8
+    join_obj_items:   int = 4
+    join_nesting:     int = 1
 
 JSONFold.NONE = JSONFold(
     pack_array_items = 0,
@@ -194,9 +194,9 @@ JSONFold.NONE = JSONFold(
     fold_array_items = 0,
     fold_obj_items   = 0,
     fold_nesting     = 0,
-    merge_array_items = 0,
-    merge_obj_items = 0,
-    merge_nesting = 0,
+    join_array_items = 0,
+    join_obj_items = 0,
+    join_nesting = 0,
 )
 
 JSONFold.DEFAULT = JSONFold()
@@ -205,9 +205,16 @@ JSONFold.PRESETS = {
     "default": JSONFold.DEFAULT,
     "": JSONFold.DEFAULT,
     "none":    JSONFold.NONE,
-    "normal": replace(JSONFold.DEFAULT,
-        
-    )
+
+    "low": replace(JSONFold.DEFAULT, 
+        pack_array_items = 8,
+        pack_obj_items = 4,
+        pack_nesting = 1,
+        fold_array_items = 8,
+        fold_obj_items = 4,
+        fold_nesting = 1,
+    ),
+
 
     "max": replace(JSONFold.NONE,
         pack_array_items = MAX_ARRAY_ITEMS,
@@ -216,9 +223,9 @@ JSONFold.PRESETS = {
         fold_array_items = MAX_ARRAY_ITEMS,
         fold_obj_items   = MAX_OBJ_ITEMS,
         fold_nesting     = MAX_NESTING,
-        merge_array_items = MAX_ARRAY_ITEMS,
-        merge_obj_items = MAX_OBJ_ITEMS,
-        merge_nesting    = MAX_NESTING,
+        join_array_items = MAX_ARRAY_ITEMS,
+        join_obj_items = MAX_OBJ_ITEMS,
+        join_nesting    = MAX_NESTING,
     ),
     # pack only – no folding
     "pack": replace(JSONFold.NONE,
@@ -232,13 +239,13 @@ JSONFold.PRESETS = {
         fold_obj_items   = MAX_OBJ_ITEMS,
         fold_nesting     = MAX_NESTING,
     ),
-    "merge": replace(JSONFold.NONE,
+    "join": replace(JSONFold.NONE,
         fold_array_items = MAX_ARRAY_ITEMS,
         fold_obj_items   = MAX_OBJ_ITEMS,
         fold_nesting     = MAX_NESTING,
-        merge_array_items = MAX_ARRAY_ITEMS,
-        merge_obj_items   = MAX_OBJ_ITEMS,
-        merge_nesting     = MAX_NESTING,
+        join_array_items = MAX_ARRAY_ITEMS,
+        join_obj_items   = MAX_OBJ_ITEMS,
+        join_nesting     = MAX_NESTING,
     ),
 
 }
@@ -302,7 +309,7 @@ class Line:
             and not self.closer
         )
     
-    def is_mergeable(self) -> bool:
+    def is_joinable(self) -> bool:
         return (
             self.parent_kind
             and not self.opener
@@ -323,7 +330,7 @@ class Frame:
 
     pack_limit: int = 0
     fold_limit: int = 0
-    merge_limit: int = 0
+    join_limit: int = 0
 
     content_lines: int = 0
     items: int = 0
@@ -438,7 +445,7 @@ class JSONFoldWriter:
                 lines=[line],
                 pack_limit=self._pack_limit(opener),
                 fold_limit=self._fold_limit(opener),
-                merge_limit=self._merge_limit(opener),
+                join_limit=self._join_limit(opener),
                 )
             )
 
@@ -477,10 +484,10 @@ class JSONFoldWriter:
                                  list_limit = self.cfg.fold_array_items,
                                  dict_limit = self.cfg.fold_obj_items)
     
-    def _merge_limit(self, kind: Kind) -> int:
+    def _join_limit(self, kind: Kind) -> int:
         return self._choose_limit(kind,
-                                 list_limit = self.cfg.merge_array_items,
-                                 dict_limit = self.cfg.merge_obj_items)
+                                 list_limit = self.cfg.join_array_items,
+                                 dict_limit = self.cfg.join_obj_items)
 
     # --------------------------------------------------------- phase 1: pack
 
@@ -488,7 +495,7 @@ class JSONFoldWriter:
         if self._try_pack(frame, line):
             return
         
-        if self._try_merge(frame, line):
+        if self._try_join(frame, line):
             return
 
         frame.lines.append(line)
@@ -536,20 +543,20 @@ class JSONFoldWriter:
 
         return True
     
-    def _try_merge(self, frame: Frame, line: Line) -> bool:
+    def _try_join(self, frame: Frame, line: Line) -> bool:
         if (
             not frame.lines
-            or frame.merge_limit <= 1
-            or not line.is_mergeable()
-            or line.child_nesting > self.cfg.merge_nesting
+            or frame.join_limit <= 1
+            or not line.is_joinable()
+            or line.child_nesting > self.cfg.join_nesting
         ):
             return False
 
         prev = frame.lines[-1]
 
-        if not (prev.is_mergeable() and 
-                prev.child_nesting <= self.cfg.merge_nesting and
-                self._can_join(prev, line, frame.merge_limit)
+        if not (prev.is_joinable() and 
+                prev.child_nesting <= self.cfg.join_nesting and
+                self._can_join(prev, line, frame.join_limit)
         ):
             return False
 
@@ -717,7 +724,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--verbose", "-v", action="store_true", help="Enable verbose/debug output")
 
     # Pack phase
-    g = p.add_argument_group("pack phase (merge scalars N-per-line)")
+    g = p.add_argument_group("pack phase (combine scalars N-per-line)")
     g.add_argument("--pack-items",       type=int, default=None,
                    help="set both --pack-array-items and --pack-obj-items")
     g.add_argument("--pack-array-items", type=int, default=None)
@@ -732,13 +739,13 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--fold-obj-items",   type=int, default=None)
     g.add_argument("--fold-nesting",     type=int, default=None)
 
-    # Merge phase
-    g = p.add_argument_group("Merge phase (collapse single-content-line containers)")
-    g.add_argument("--merge-items",       type=int, default=None,
-                   help="set both --merge-array-items and --merge-obj-items")
-    g.add_argument("--merge-array-items", type=int, default=None)
-    g.add_argument("--merge-obj-items",   type=int, default=None)
-    g.add_argument("--merge-nesting",     type=int, default=None)
+    # Join phase
+    g = p.add_argument_group("Join phase (combine scalars/folded containers)")
+    g.add_argument("--join-items",       type=int, default=None,
+                   help="set both --join-array-items and --join-obj-items")
+    g.add_argument("--join-array-items", type=int, default=None)
+    g.add_argument("--join-obj-items",   type=int, default=None)
+    g.add_argument("--join-nesting",     type=int, default=None)
 
 
     p.add_argument("--indent",    type=int, default=2)
@@ -757,15 +764,15 @@ def main(argv: list[str] | None = None) -> int:
     if args.fold_items is not None:
         overrides["fold_array_items"] = args.fold_items
         overrides["fold_obj_items"]   = args.fold_items
-    if args.merge_items is not None:
-        overrides["merge_array_items"] = args.merge_items
-        overrides["merge_obj_items"]   = args.merge_items
+    if args.join_items is not None:
+        overrides["join_array_items"] = args.join_items
+        overrides["join_obj_items"]   = args.join_items
 
     # Individual flags (higher priority — applied after shorthands).
     for key in ("width",
                   "pack_array_items", "pack_obj_items", "pack_nesting",
                   "fold_array_items", "fold_obj_items", "fold_nesting",
-                  "merge_array_items", "merge_obj_items", "merge_nesting",
+                  "join_array_items", "join_obj_items", "join_nesting",
     ):
         val = getattr(args, key)
         if val is not None:
