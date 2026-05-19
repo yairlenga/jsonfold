@@ -1,33 +1,26 @@
 {
     "meta": {
-        "version": 1,
-        "ok": true
+        "version": 1, "ok": true
     },
     "items": [
         {
-            "id": 1,
-            "name": "alpha"
+            "id": 1, "name": "alpha"
         },
         {
-            "id": 2,
-            "name": "beta"
+            "id": 2, "name": "beta"
         }
     ],
     "matrix": [
         [
-            1,
-            2
+            1, 2
         ],
         [
-            3,
-            4
+            3, 4
         ]
     ],
     "long": [
         "this is a long message that may force the block to stay expanded",
-        "second",
-        "third",
-        "fourth"
+        "second", "third", "fourth"
     ],
     "single-array": [
         1

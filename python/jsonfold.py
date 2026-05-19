@@ -91,6 +91,29 @@ Phase 2: Fold
     only when it has exactly one content line after packing, and the folded
     result fits within the configured limits.
 
+Phase 3: Merge
+    Repeat the pack step, allowing folded lines to be merged with scalar items
+    or other folded lines. subject to same limits
+
+    A container may be collaped from:
+    [
+        [ 1, 2, 3],
+        [ 4, 5, 6]
+    ]
+
+    into:
+    [ [ 1, 2, 3], [4, 5, 6] ]
+    
+        - 
+    Consecutive scalar lines inside the same container may be joined onto one
+    output line, subject to:
+        - width limit,
+        - item limit,
+        - nesting limit,
+        - same indentation level.
+
+
+
 Streaming behavior
 ------------------
 The implementation is designed as a streaming filter around json.dump().
@@ -120,7 +143,7 @@ Example
 CLI
 ---
     python jsonfold.py < input.json
-    python jsonfold.py --preset=max --width=100 < input.json
+    python jsonfold.py --compact=max --width=100 < input.json
     python jsonfold.py --pack-items=20 --fold-items=8 < input.json
 """
 
@@ -133,10 +156,13 @@ from dataclasses import dataclass, KW_ONLY, replace, field
 from typing import Any, TextIO
 from enum import IntEnum, auto
 
-
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
+
+MAX_ARRAY_ITEMS = 1000
+MAX_OBJ_ITEMS = 1000
+MAX_NESTING = 10
 
 @dataclass(frozen=True)
 class JSONFold:
@@ -156,7 +182,10 @@ class JSONFold:
     fold_array_items: int = 8       # max items allowed in a folded list
     fold_obj_items:   int = 4       # max items allowed in a folded dict
     fold_nesting:     int = 1       # max container nesting depth for folding
-
+    # Phase 3 - merging folded lines.
+    merge_array_items: int = 8
+    merge_obj_items:   int = 4
+    merge_nesting:     int = 1
 
 JSONFold.NONE = JSONFold(
     pack_array_items = 0,
@@ -165,6 +194,9 @@ JSONFold.NONE = JSONFold(
     fold_array_items = 0,
     fold_obj_items   = 0,
     fold_nesting     = 0,
+    merge_array_items = 0,
+    merge_obj_items = 0,
+    merge_nesting = 0,
 )
 
 JSONFold.DEFAULT = JSONFold()
@@ -173,26 +205,42 @@ JSONFold.PRESETS = {
     "default": JSONFold.DEFAULT,
     "": JSONFold.DEFAULT,
     "none":    JSONFold.NONE,
+    "normal": replace(JSONFold.DEFAULT,
+        
+    )
+
     "max": replace(JSONFold.NONE,
-        pack_array_items = sys.maxsize,
-        pack_obj_items   = sys.maxsize,
-        pack_nesting     = sys.maxsize,
-        fold_array_items = sys.maxsize,
-        fold_obj_items   = sys.maxsize,
-        fold_nesting     = sys.maxsize,
+        pack_array_items = MAX_ARRAY_ITEMS,
+        pack_obj_items   = MAX_OBJ_ITEMS,
+        pack_nesting     = MAX_NESTING,
+        fold_array_items = MAX_ARRAY_ITEMS,
+        fold_obj_items   = MAX_OBJ_ITEMS,
+        fold_nesting     = MAX_NESTING,
+        merge_array_items = MAX_ARRAY_ITEMS,
+        merge_obj_items = MAX_OBJ_ITEMS,
+        merge_nesting    = MAX_NESTING,
     ),
     # pack only – no folding
     "pack": replace(JSONFold.NONE,
-        pack_array_items = sys.maxsize,
-        pack_obj_items   = sys.maxsize,
-        pack_nesting     = sys.maxsize,
+        pack_array_items = MAX_ARRAY_ITEMS,
+        pack_obj_items   = MAX_OBJ_ITEMS,
+        pack_nesting     = MAX_NESTING,
     ),
     # fold only – no packing
     "fold": replace(JSONFold.NONE,
-        fold_array_items = sys.maxsize,
-        fold_obj_items   = sys.maxsize,
-        fold_nesting     = sys.maxsize,
+        fold_array_items = MAX_ARRAY_ITEMS,
+        fold_obj_items   = MAX_OBJ_ITEMS,
+        fold_nesting     = MAX_NESTING,
     ),
+    "merge": replace(JSONFold.NONE,
+        fold_array_items = MAX_ARRAY_ITEMS,
+        fold_obj_items   = MAX_OBJ_ITEMS,
+        fold_nesting     = MAX_NESTING,
+        merge_array_items = MAX_ARRAY_ITEMS,
+        merge_obj_items   = MAX_OBJ_ITEMS,
+        merge_nesting     = MAX_NESTING,
+    ),
+
 }
 
 
@@ -216,6 +264,7 @@ class Line:
     text:   str
     parent_kind: Kind = Kind.NONE   # "dict", "list", or None
     items:  int        = 1      # packed scalar count (>=1)
+    leafs: int         = 1      # Total leaf items
     # nesting of the deepest folded child within this line (-1 = scalar)
     child_nesting: int = -1
     opener: Kind = Kind.NONE
@@ -244,6 +293,27 @@ class Line:
 
     def width(self) -> int:
         return self.indent + len(self.text)
+    
+    def is_packable(self) -> bool:
+        return (
+            self.child_nesting < 0
+            and self.parent_kind
+            and not self.opener
+            and not self.closer
+        )
+    
+    def is_mergeable(self) -> bool:
+        return (
+            self.parent_kind
+            and not self.opener
+            and not self.closer
+        )
+    
+    def join_line(self, other: Line) -> None:
+        self.text += " " + other.text
+        self.items += other.items
+        self.leafs += other.leafs
+        self.child_nesting = max(self.child_nesting, other.child_nesting)
 
 @dataclass
 class Frame:
@@ -253,14 +323,21 @@ class Frame:
 
     pack_limit: int = 0
     fold_limit: int = 0
-    can_pack: bool = True
+    merge_limit: int = 0
 
     content_lines: int = 0
     items: int = 0
+    leafs: int = 0
 
     fold_ok: bool = True
     child_nesting: int = -1
 
+@dataclass
+class JSONFoldStats:
+    bytes_in:  int = 0
+    bytes_out: int = 0
+    lines_in:  int = 0
+    lines_out: int = 0
 
 class JSONFoldWriter:
     """File-like wrapper that folds pretty-printed JSON as it is written.
@@ -277,6 +354,7 @@ class JSONFoldWriter:
     def __init__(self, fp: TextIO, *,
                  compact: JSONFold | str = ""):
         self.fp = fp
+        self.stats = JSONFoldStats()
         if isinstance(compact, str):
             compact = JSONFold.PRESETS[compact]
         self.cfg = compact
@@ -284,10 +362,11 @@ class JSONFoldWriter:
         self.stack: list[Frame] = []
 
     # ------------------------------------------------------------------ I/O
-
     def write(self, s: str) -> int:
+        self.stats.bytes_in += len(s)
+        self.stats.lines_in += s.count("\n")
         if not self.cfg:
-            return self.fp.write(s)
+            return self._write_str(s)
 
         parts = s.splitlines(keepends=True)
 
@@ -321,13 +400,13 @@ class JSONFoldWriter:
             self._feed(Line.parse(self.pending, self._parent_kind()))
             self.pending = ""
 
-        # Valid json.dump output should leave the stack empty.
-        # If not, stream whatever remains.
+        # Should not happen with valid json.dump output.
+        # If it does, flush raw without further processing.
         for frame in self.stack:
             for line in frame.lines:
-                self.fp.write(line.raw())
-
+                self._write_line(line)
         self.stack.clear()
+
 
     def __enter__(self) -> "JSONFoldWriter":
         return self
@@ -338,19 +417,28 @@ class JSONFoldWriter:
     def __getattr__(self, name: str) -> Any:
         return getattr(self.fp, name)
 
+
+    def _write_str(self, s: str):
+        bytes = self.fp.write(s)
+        self.stats.lines_out += 1
+        self.stats.bytes_out += bytes
+        return bytes
+
+    def _write_line(self, line: Line):
+        self._write_str(line.raw())
+
     # ------------------------------------------------------------ core feed
 
     def _feed(self, line: Line) -> None:
         opener = line.opener
         if opener:
-            depth = len(self.stack)
             self.stack.append(Frame(
                 kind=opener,
-                depth=depth,
+                depth=len(self.stack),
                 lines=[line],
                 pack_limit=self._pack_limit(opener),
                 fold_limit=self._fold_limit(opener),
-                can_pack=True
+                merge_limit=self._merge_limit(opener),
                 )
             )
 
@@ -369,12 +457,38 @@ class JSONFoldWriter:
         if self.stack:
             self._add_to_frame(self.stack[-1], line)
         else:
-            self.fp.write(line.raw())
+            self._write_line(line)
+
+    def _choose_limit(self, kind: Kind, *, default: int =0, list_limit: int =0, dict_limit: int):
+        return (
+            list_limit if kind == Kind.LIST else
+            dict_limit if kind == Kind.DICT else
+            default
+        )
+
+    def _pack_limit(self, kind: Kind) -> int:
+        return self._choose_limit(kind,
+                                 list_limit = self.cfg.pack_array_items,
+                                 dict_limit = self.cfg.pack_obj_items )
+
+
+    def _fold_limit(self, kind: Kind) -> int:
+        return self._choose_limit(kind,
+                                 list_limit = self.cfg.fold_array_items,
+                                 dict_limit = self.cfg.fold_obj_items)
+    
+    def _merge_limit(self, kind: Kind) -> int:
+        return self._choose_limit(kind,
+                                 list_limit = self.cfg.merge_array_items,
+                                 dict_limit = self.cfg.merge_obj_items)
 
     # --------------------------------------------------------- phase 1: pack
 
     def _add_to_frame(self, frame: Frame, line: Line) -> None:
         if self._try_pack(frame, line):
+            return
+        
+        if self._try_merge(frame, line):
             return
 
         frame.lines.append(line)
@@ -386,56 +500,63 @@ class JSONFoldWriter:
         if not frame.fold_ok:
             self._stream_frame(frame, keep_last=True)
 
+
+    def _can_join(self, prev: Line, line: Line, limit: int) -> bool:
+        return (
+            prev.indent == line.indent
+            and prev.items + line.items <= limit
+            and prev.indent + len(prev.text) + 1 + len(line.text) <= self.cfg.width
+        )
+
+
+
+    def _join_into_frame(self, frame: Frame, prev: Line, line: Line) -> None:
+        prev.join_line(line)
+
+        if line.parent_kind == frame.kind:
+            frame.items += line.items
+            frame.leafs += line.leafs
+
+        self._check_fold_limits(frame)
+
     def _try_pack(self, frame: Frame, line: Line) -> bool:
         if (
             not frame.lines or
-            not frame.can_pack or
             frame.pack_limit <= 1 or
-            not self._packable(line)
+            not line.is_packable()
         ):
             return False
 
         prev = frame.lines[-1]
 
-        if not (
-            self._packable(prev)
-            and prev.indent == line.indent
-            and prev.items + line.items <= frame.pack_limit
-            and line.indent + len(prev.text) + 1 + len(line.text) <= self.cfg.width
+        if not (prev.is_packable() and self._can_join(prev, line, frame.pack_limit)):
+            return False
+
+        self._join_into_frame(frame, prev, line)
+
+        return True
+    
+    def _try_merge(self, frame: Frame, line: Line) -> bool:
+        if (
+            not frame.lines
+            or frame.merge_limit <= 1
+            or not line.is_mergeable()
+            or line.child_nesting > self.cfg.merge_nesting
         ):
             return False
 
-        prev.text += " " + line.text
-        prev.items += line.items
-        prev.child_nesting = max(prev.child_nesting, line.child_nesting)
+        prev = frame.lines[-1]
 
-        if line.parent_kind == frame.kind:
-            frame.items += line.items
+        if not (prev.is_mergeable() and 
+                prev.child_nesting <= self.cfg.merge_nesting and
+                self._can_join(prev, line, frame.merge_limit)
+        ):
+            return False
 
-        self._check_fold_limits(frame)
+        self._join_into_frame(frame, prev, line)
         return True
 
-    def _packable(self, line: Line) -> bool:
-        return (
-            line.child_nesting < self.cfg.pack_nesting
-            and line.parent_kind
-            and not line.opener
-            and not line.closer
-        )
-
-    def _pack_limit(self, kind: Kind) -> int:
-        if kind == Kind.LIST:
-            return self.cfg.pack_array_items
-        if kind == Kind.DICT:
-            return self.cfg.pack_obj_items
-        return 0
-
-    def _fold_limit(self, kind: Kind) -> int:
-        if kind == Kind.LIST:
-            return self.cfg.fold_array_items
-        if kind == Kind.DICT:
-            return self.cfg.fold_obj_items
-        return 0
+    
 
     # --------------------------------------------------------- frame tracking
 
@@ -446,6 +567,7 @@ class JSONFoldWriter:
         frame.content_lines += 1
 
         if line.parent_kind == frame.kind:
+            frame.leafs += line.leafs
             frame.items += line.items
 
         if line.child_nesting >= 0:
@@ -467,7 +589,7 @@ class JSONFoldWriter:
 
     def _close_frame(self, closer: Line, closing_kind: Kind) -> None:
         if not self.stack:
-            self.fp.write(closer.raw())
+            self._write_line(closer)
             return
 
         frame = self.stack.pop()
@@ -479,19 +601,18 @@ class JSONFoldWriter:
         folded = self._try_fold(frame)
 
         if folded is not None:
-            self._emit_line(folded)
-        else:
-            for line in frame.lines:
-                self._emit_line(line)
+            frame.lines = [ folded]
+
+        for line in frame.lines:
+            self._emit_line(line)
+        frame.lines.clear()
 
     def _try_fold(self, frame: Frame) -> Line | None:
-        if not frame.fold_ok:
-            return None
-
-        if frame.content_lines != 1:
-            return None
-
-        if len(frame.lines) != 3:
+        
+        if (not frame.fold_ok or
+            frame.content_lines != 1 or
+            len(frame.lines) != 3 
+        ):
             return None
 
         folded_length = sum(1 + len(line.text) for line in frame.lines) - 1
@@ -505,21 +626,22 @@ class JSONFoldWriter:
             indent=frame.lines[0].indent,
             text=text,
             parent_kind=self._parent_kind(),
-            items=frame.items,
+            items=1,
+            leafs=frame.leafs,
             child_nesting=max(0, frame.child_nesting),
         )
 
     # --------------------------------------------------------- streaming
 
     def _stream_frame(self, frame: Frame, *, keep_last: bool) -> None:
-        keep = 1 if keep_last and frame.lines and self._packable(frame.lines[-1]) else 0
+        keep = 1 if keep_last and frame.lines and frame.lines[-1].is_packable() else 0
 
         emit_lines = frame.lines[:-keep] if keep else frame.lines
         frame.lines = frame.lines[-keep:] if keep else []
 
         for line in emit_lines:
             if frame.depth == 0:
-                self.fp.write(line.raw())
+                self._write_line(line)
             else:
                 self._add_to_frame(self.stack[frame.depth - 1], line)
 
@@ -546,6 +668,13 @@ def dump(obj: Any, fp: TextIO, *,
     with JSONFoldWriter(fp, compact=compact) as out:
         json.dump(obj, out, indent=indent, **kwargs)
 
+def dumpi(obj: Any, fp: TextIO, *,
+         compact: JSONFold | str = "",
+         indent: int = 2, **kwargs: Any) -> None:
+
+    with JSONFoldWriter(fp, compact=compact) as out:
+        json.dump(obj, out, indent=indent, **kwargs)
+    return out.stats
 
 def dumps(obj: Any, *,
           compact: JSONFold | str = "",
@@ -568,6 +697,8 @@ def _demo() -> dict[str, Any]:
             "this is a long message that may force the block to stay expanded",
             "second", "third", "fourth",
         ],
+        "single-array": [ 1 ],
+        "single-obj": [ 2 ],
     }
 
 
@@ -601,6 +732,15 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--fold-obj-items",   type=int, default=None)
     g.add_argument("--fold-nesting",     type=int, default=None)
 
+    # Merge phase
+    g = p.add_argument_group("Merge phase (collapse single-content-line containers)")
+    g.add_argument("--merge-items",       type=int, default=None,
+                   help="set both --merge-array-items and --merge-obj-items")
+    g.add_argument("--merge-array-items", type=int, default=None)
+    g.add_argument("--merge-obj-items",   type=int, default=None)
+    g.add_argument("--merge-nesting",     type=int, default=None)
+
+
     p.add_argument("--indent",    type=int, default=2)
     p.add_argument("--sort-keys", action="store_true")
     args = p.parse_args(argv)
@@ -617,11 +757,16 @@ def main(argv: list[str] | None = None) -> int:
     if args.fold_items is not None:
         overrides["fold_array_items"] = args.fold_items
         overrides["fold_obj_items"]   = args.fold_items
+    if args.merge_items is not None:
+        overrides["merge_array_items"] = args.merge_items
+        overrides["merge_obj_items"]   = args.merge_items
 
     # Individual flags (higher priority — applied after shorthands).
     for key in ("width",
                   "pack_array_items", "pack_obj_items", "pack_nesting",
-                  "fold_array_items", "fold_obj_items", "fold_nesting"):
+                  "fold_array_items", "fold_obj_items", "fold_nesting",
+                  "merge_array_items", "merge_obj_items", "merge_nesting",
+    ):
         val = getattr(args, key)
         if val is not None:
             overrides[key] = val
@@ -641,8 +786,15 @@ def main(argv: list[str] | None = None) -> int:
     else:
         data = json.load(sys.stdin)
 
-    dump(data, sys.stdout, compact=cfg, indent=args.indent,
+    info = dumpi(data, sys.stdout, compact=cfg, indent=args.indent,
          sort_keys=args.sort_keys)
+    if args.verbose:
+        print(info, file=sys.stderr)
+
+    import pprint
+    pprint.pprint(data)
+
+
     return 0
 
 
