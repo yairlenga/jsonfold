@@ -73,11 +73,11 @@ export async function main(argv = process.argv.slice(2)) {
   if (args.verbose) {
     console.error(cfg);
   }
-  // Choose backend
   let backend = jsonfold
-  if ( args.stream ) {
-    backend = await import ("./jsonfoldstream.js")
-  }
+// TBD: Choose backend
+//  if ( args.stream ) {
+//    backend = await import ("./jsonfoldstream.js")
+//  }
 
   const data = args.demo
     ? demoData()
