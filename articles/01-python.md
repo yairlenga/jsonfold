@@ -67,12 +67,18 @@ jsonfold.dump(data, sys.stdout, compact="default")
 
 Using the geojson file [geojson.xyz: admin 1 states provinces shp](https://geojson.xyz/). You can view the actual output:
 
-* Baseline - raw data (no formatting): 130K, 1 lines, 130,429 columns, 0% overhead
-* Pretty-Printed (indent=2): 285K, 11731 lines, 79 columns, 120% overhead
-* jsonfold compact=low: 181K, 3475 lines, 116 columns, 40% overhead
-* jsonfold compact=default: 180K, 3406 lines, 116 columns, 38% overhead
-* jsonfold compact=high: 179K, 3301 lines, 120 columns, 37% overhead
-* jsonfold compact=max: 175K, 2847 lines, 255 columns, 35% overhead
+* [Baseline - no formatting](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-files/geojson.json)
+  130K, 1 lines, 130,429 columns, 0% overhead
+* [Pretty-Printed, indent=2](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-files/geojson-none.json):
+  285K, 11731 lines, 79 columns, 120% overhead
+* [jsonfold compact=low](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-files/geojson-low.json):
+  167K, 2344 lines, 120 columns, 28% overhead
+* [jsonfold compact=default](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-files/geojson-default.json):
+  180K, 2344 lines, 120 columns, 28% overhead
+* [jsonfold compact=high](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-files/geojson-high.json):
+  166K, 2239 lines, 120 columns, 27% overhead
+* [jsonfold compact=max](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-files/geojson-max.json):
+  156K, 1321 lines, 255 columns, 20% overhead
 
 
 # Key ideas
@@ -254,7 +260,9 @@ Continuing with the above example, the attributes 'by_land' and 'summary' are no
 
 ## Join
 
-The **join** phase is similar to the **pack** phase - it will attempt to merge folded lines together, potentially merging folded objects into the same line, subject to specific width, nesting level and item counts. Basically:
+The **join** phase is similar to the **pack** phase - it will attempt to merge folded lines together, potentially merging folded objects into the same line, subject to specific width, nesting level and item counts.
+
+At this stage, previously folded containers are treated as atomic units that can be merged together while preserving their internal structure. This allows nested structures such as coordinate pairs or small embedded objects to behave similarly to scalar values during compaction.
 
 Continuing with the above example, the attributes 'summary' and 'meta' are now merged into a single line.
 ```json

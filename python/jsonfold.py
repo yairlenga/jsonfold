@@ -327,20 +327,19 @@ class Line:
     def width(self) -> int:
         return self.indent + len(self.text)
     
-    def is_packable(self) -> bool:
-        return (
-            self.child_nesting < 0
-            and self.parent_kind
-            and not self.opener
-            and not self.closer
-        )
-    
     def is_joinable(self) -> bool:
         return (
             self.parent_kind
             and not self.opener
             and not self.closer
         )
+
+    def is_packable(self) -> bool:
+        return (
+            self.child_nesting < 0
+            and self.is_joinable()
+        )
+    
     
     def join_line(self, other: Line) -> None:
         self.text += " " + other.text
@@ -667,7 +666,7 @@ class JSONFoldWriter:
     # --------------------------------------------------------- streaming
 
     def _stream_frame(self, frame: Frame, *, keep_last: bool) -> None:
-        keep = 1 if keep_last and frame.lines and frame.lines[-1].is_packable() else 0
+        keep = 1 if keep_last and frame.lines and frame.lines[-1].is_joinable() else 0
 
         emit_lines = frame.lines[:-keep] if keep else frame.lines
         frame.lines = frame.lines[-keep:] if keep else []
