@@ -1,0 +1,46 @@
+{
+    "summary": {
+	    "source": "wikipedia"
+    },
+    "meta": {
+	    "generated": "2026-03-13"
+    },
+    "by_land": [
+        "RUS",
+        "CAN",
+        "CHN",
+        "USA",
+        "BRA",
+        "AUS"
+    ],
+    "by_population": [
+        "IND",
+        "CHN",
+        "USA",
+        "IDN",
+        "PAK",
+        "NGA",
+        "BRA",
+        "BGD",
+        "RUS",
+        "ETH",
+        "MEX",
+        "JPN",
+        "EGY",
+        "PHL",
+        "COD",
+        "VNM",
+        "IRN",
+        "TUR",
+        "DEU",
+        "TZA"
+    ],
+    "name": {
+        "RUS": "Russia",
+        "CAN": "Canada",
+        "CHN": "China",
+        "USA": "United States",
+        "BRA": "Brazil",
+        "AUS": "Australia"
+    }
+}

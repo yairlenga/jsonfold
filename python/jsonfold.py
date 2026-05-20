@@ -48,11 +48,21 @@ Configuration
 
 Presets
 -------
-    "default"
+    "default" (also "")
         Balanced default settings.
+        Up to 8 array elements, up to 4 key/value pairs, max nesting = 1
 
     "none"
         Disable all packing and folding.
+
+    "low":
+        Same as default, No nested structures in fold/join
+
+    "med":
+        Same as default, No nested structures in "join"
+
+    "high":
+        aggressive setting. Up to 16 array elements, up to key/value pairs, max nesting = 2
 
     "max"
         Enable aggressive packing and folding, still subject to width.
@@ -62,6 +72,9 @@ Presets
 
     "fold"
         Enable folding only; disable packing.
+
+    "join"
+        Enable folding and joining.
 
 Algorithm
 ---------
@@ -207,11 +220,12 @@ JSONFold.PRESETS = {
     "none":    JSONFold.NONE,
 
     "low": replace(JSONFold.DEFAULT, 
+        fold_nesting = 0,
         join_nesting = 0,
     ),
 
     "med": replace(JSONFold.DEFAULT,
-        join_nesting = 1,
+        join_nesting = 0,
     ),
 
     "high": replace(JSONFold.DEFAULT,
@@ -228,6 +242,7 @@ JSONFold.PRESETS = {
 
 
     "max": replace(JSONFold.NONE,
+        width = 255,
         pack_array_items = MAX_ARRAY_ITEMS,
         pack_obj_items   = MAX_OBJ_ITEMS,
         pack_nesting     = MAX_NESTING,
