@@ -1,36 +1,95 @@
-# A hybrid JSON formatter implemented as a streaming post-filter over existing serializers.
+# A Streaming JSON Formatter That Works With Existing Serializers
 
 Built-in JSON serializers give us two choices:
 
-The default output is built for machines and maximize efficiency. It is compact, without any extra whitespaces. While technically "text", it feels "binary" - a dense wall of brackets, quotes, commas, and braces that is painful to inspect.
+The default output is built for machines and optimized for efficiency. It is compact, without any extra whitespace. While technically "text", it feels "binary" - a dense wall of brackets, quotes, commas, and braces that is painful to inspect.
 
 ```json
 {"request_id":"8f2c1a44-91e2-4f52-8e11-7d2d1d9d52d1","timestamp":"2026-05-19T14:32:11Z","user":{"id":10421,"name":"John Smith","roles":["admin","reviewer","ops"],"preferences":{"theme":"dark","notifications":{"email":true,"sms":false,"push":true}}},"jobs":[{"id":901,"status":"running","targets":["srv-a01","srv-a02","srv-a03"],"metrics":{"cpu":72.4,"mem":68.1,"latency_ms":[12,15,11,18,14]}},{"id":902,"status":"queued","targets":["srv-b17"],"metrics":{"cpu":0,"mem":0,"latency_ms":[]}}],"audit":{"created_by":"system","created_at":"2026-05-19T14:00:00Z","tags":["prod","finance","daily-run","priority-high"]}}
 ```
 
-To solve this problem many serializers have "Pretty-print" mode, which adds indentation, spacing around tokens and line breaks - making it readable for humans. The problem is that for large documents it often goes too far: A small array of numbers becomes ten lines. A tiny metadata object becomes a block. Deep structures become readable only by making the file much longer.
+To solve this problem many serializers provide a "Pretty-print" mode, which adds indentation, spacing around tokens and line breaks - making it readable for humans. The problem is that for large documents it often goes too far: A small array of numbers becomes ten lines. A tiny metadata object becomes a block. Deep structures become readable only by making the file much longer.
 
-That extra formatting is not free. It makes logs larger, diffs noisier, terminal output harder to scan, and require "speed-scrolling" to review the data sets.
+That extra formatting is not free. It makes logs larger, diffs noisier, terminal output harder to scan, and requires "speed-scrolling" to review the data sets.
 
 What I wanted was a middle ground: JSON that keeps the shape of pretty-printed output, but folds small, simple structures back onto one line when they fit.
 
-This article describes `jsonfold` - a process for "compacting" pretty-print JSON data to make it more readable for humans. The level of "compactness" is controlled by parameters, and there are few "preset" configuration that can be used to get output with minimal effort.
+This article describes `jsonfold` - a process for "compacting" pretty-print JSON data to make it more readable for humans. The level of "compactness" is controlled by parameters, and there are a few preset configurations that can be used to get output with minimal effort.
+
+# `jsonfold` in 2 minutes
+
+> Get fine control over the pretty-print JSON output. Keep is readable for machine and humans.
+
+## Minimal Usage
+
+Pull `jsonfold.py` from Github Gist.
+
+```python
+import jsonfold
+data = {
+    "meta": {"version": 1, "ok": True},
+    "ids": [1, 2, 3, 4, 5],
+    "items": [{"id": 1, "name": "alpha"}, {"id": 2, "name": "beta"}],
+}
+# compact can be: default, low, med, high, max
+jsonfold.dump(data, sys.stdout, compact="default")
+
+```
+
+## Different level of compaction
+
+```json
+// compact=low
+{
+  "a": {
+    "b": { "c": "abc" }
+  },
+  "x": {
+    "y": { "z": "xyz" }
+  }
+}
+```
+
+```json
+// Compact=default
+{
+  "a": { "b": { "c": "abc" } },
+  "x": { "y": { "z": "xyz" } }
+}
+```
+
+```json
+// Compact=max
+{ "a": { "b": { "c": "abc" } }, "x": { "y": { "z": "xyz" } } }
+```
+
+### `jsonfold` on real data.
+
+Using the geojson file [geojson.xyz: admin 1 states provinces shp](https://geojson.xyz/). You can view the actual output:
+
+* Baseline - raw data (no formatting): 130K, 1 lines, 130,429 columns, 0% overhead
+* Pretty-Printed (indent=2): 285K, 11731 lines, 79 columns, 120% overhead
+* jsonfold compact=low: 181K, 3475 lines, 116 columns, 40% overhead
+* jsonfold compact=default: 180K, 3406 lines, 116 columns, 38% overhead
+* jsonfold compact=high: 179K, 3301 lines, 120 columns, 37% overhead
+* jsonfold compact=max: 175K, 2847 lines, 255 columns, 35% overhead
+
 
 # Key ideas
 
 ## Do not replace the serializer
 
-For my implementation, I chose NOT to build another serializer.
+For my implementation, I chose NOT to build another serializer. There are already many good serializers available in multiple languages. Many of them support custom transformations, special handling for application classes, non-standard numeric values, date/time objects, and other data types. For example:
 
-There are already many good serializers available. Many of them support custom transformations, special handling for application classes, non-standard numeric values, date/time objects, and other data types.
+- The Python [json module - JSON encoder and decoder](https://docs.python.org/3/library/json.html) provides options for custom data types, `NaN` handling, custom encoders, and more.
 
-> The Python [json module - JSON encoder and decoder](https://docs.python.org/3/library/json.html) provides options for custom data types, `NaN` handling, custom encoders, and more.
+- JavaScript's [`JSON.stringify()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify) supports a `replacer` function that can alter the stringification process.
 
-> JavaScript's `JSON.stringify()` supports a `replacer` function that can alter the stringification process.
+- [Java Jackson ](https://github.com/fasterxml/jackson) `ObjectMapper` can perform complex transformation of POJOs based on annotations, introspection and templates.
 
 ## Wrap the output stream
 
-Instead of replacing the serializer, `jsonfold` acts as a filter between the serializer and the final output stream.
+Instead of replacing or extending the serializer, `jsonfold` acts as a filter between the serializer and the final output stream.
 
 The serializer still does what it already knows how to do: convert application data into valid JSON text. `jsonfold` only looks at the generated pretty-printed output and decides which parts can be safely folded back onto one line.
 
@@ -38,31 +97,274 @@ This keeps all the existing serializer functionality and customization in place.
 
 ## Operate on pretty-printed token stream
 
-The `jsonfold` does not parse JSON format or reconstruct the data objects.
-
-Instead, it operates directly on the pretty-printed token stream generated by the serializer. It relies on a few assumptions:
+The `jsonfold` does not reparse the JSON format or reconstruct the data objects. Instead, it operates directly on the pretty-printed token stream generated by the serializer. It relies on a few assumptions:
 
 1. The input is valid JSON.
-2. Each emitted line represents a complete JSON element that cannot be split safely.
+2. Each input line represents an atomic JSON fragment that can be safely moved or merged as a unit, and should NOT be split or reformatted.
 3. Indentation provides structural clues about the relationship between elements.
 
-If the above assumptions are violated, the `jsonfold` will falls back into "raw" mode - where the data is passed through unchanged without attempting any transformation.
+If the above assumptions are violated, the `jsonfold` falls back into "raw" mode - where the data is passed through unchanged, without attempting any unsafe transformation.
 
 # The three phases
-* pack
-* fold
-* join
+
+The "compaction" is done in three logical phases, we will name them: **pack**, **fold** and **join**. Each one performs a specific transformation that makes the JSON easier to read (by removing whitespace), while not changing the data itself. Separating the process into phases makes the implementation simpler and more predictable. Each phase operates on progressively more compact structures while preserving the original JSON semantics. All three phases are incremental, and process the stream as data becomes available.
+
+```text
+```mermaid
+flowchart TB
+
+    classDef phase fill:#dfe7f2,stroke:#666,color:#111
+
+    A["Pretty-printed JSON<br/>from serializer"]
+
+    subgraph phases["Compaction phases"]
+        direction LR
+
+        B["Pack<br/>
+        Merge scalar<br/>
+        sibling lines"]
+
+        C["Fold<br/>
+        Collapse small<br/>
+        containers"]
+
+        D["Join<br/>
+        Merge folded<br/>
+        structures"]
+    end
+
+    E["Readable<br/>compact JSON"]
+
+    A --> B
+    D --> E
+    class B,C,D phase
+
+```
+
+## Pack
+The **pack** phase handles merging of scalar items inside containers (array, object). It will "pack" array items and object properties that belong to the same containers into single line, subject to specific width, and limits. Basically:
+
+```json
+// From            To:
+[                  [
+    "1",
+    "2",      ->      "1", "2", "3"
+    "3"
+]                  ]
+
+{                  {
+    "a": 1,
+    "b": 2,   ->      "a": 1, "b": 2, "c": 3
+    "c": 3
+}                  }
+```
+
+Example:
+
+```json
+{
+    "summary": {
+        "source": "wikipedia"
+    },
+    "meta": {
+        "generated": "2026-03-13"
+    },
+    "by_land": [
+        "RUS",
+        // 4 more entries
+        "AUS"
+    ],
+    "by_population": [
+        "IND",
+        "CHN",
+        // 16 Additional entries
+        "DEU",
+        "TZA"
+    ]
+    "name": {
+        "RUS": "Russia",
+        "CAN": "Canada",
+        "CHN": "China",
+        "USA": "United States",
+        "BRA": "Brazil",
+        "AUS": "Australia"
+    }
+}
+```
+to:
+```json
+{
+  "summary": { "source": "wikipedia" },
+  "meta": { "generated": "2026-03-13" },
+  "by_land": [
+    "RUS", "CAN", "CHN", "USA", "BRA", "AUS"
+  ],
+  "by_population": [
+    "IND", "CHN", "USA", "IDN", "PAK", "NGA", "BRA", "BGD", "RUS",
+    "ETH", "MEX", "JPN", "EGY", "PHL", "COD", "VNM", "IRN", "TUR",
+    "DEU", "TZA"
+  ],
+  "name": {
+    "RUS": "Russia", "CAN": "Canada", "CHN": "China",
+    "USA": "United States", "BRA": "Brazil", "AUS": "Australia"
+  }
+}
+```
+
+More technically: The first phase looks for lines with the same indentation level, and will merge consecutive lines in such a way that it will respect the user provided line width. In addition, it is possible to cap the count of lines that will be packed for arrays and for objects.
+
+## Fold
+
+The **Fold** phase handles merging of containers that have only one line of items with the container opener/closer (For arrays: `[` and `]`, for objects: `{`, `}`), subject to specific width, nesting level and item counts. Basically:
+
+```json
+// List Folding: From 3 lines 
+[
+    "1", "2", "3"
+]
+//     To: single line
+[ "1", "2", "3" ]
+
+// Object Folding: From 3 lines:
+{
+    "a": 1, "b": 2, "c": 3
+}
+//     To: single line
+{ "a": 1, "b": 2, "c": 3 }
+
+```
+Continuing with the above example, the attributes 'by_land' and 'summary' are not shown in a single line.
+
+```json
+{
+  "summary": { "source": "wikipedia" },
+  "meta": { "generated": "2026-03-13" },
+  "by_land": [ "RUS", "CAN", "CHN", "USA", "BRA", "AUS" ],
+  "by_population": [
+    "IND", "CHN", "USA", "IDN", "PAK", "NGA", "BRA", "BGD",
+    "RUS", "ETH", "MEX", "JPN", "EGY", "PHL", "COD", "VNM",
+    "IRN", "TUR", "DEU", "TZA"
+  ],
+  "name": {
+    "RUS": "Russia", "CAN": "Canada", "CHN": "China", "USA": "United States",
+    "BRA": "Brazil", "AUS": "Australia"
+  }
+}
+```
+
+## Join
+
+The **join** phase is similar to the **pack** phase - it will attempt to merge folded lines together, potentially merging folded objects into the same line, subject to specific width, nesting level and item counts. Basically:
+
+Continuing with the above example, the attributes 'summary' and 'meta' are now merged into a single line.
+```json
+{
+  // summary and meta merge into a single line.  
+  "summary": { "source": "wikipedia" }, "meta": { "generated": "2026-03-13" },
+  "by_land": [ "RUS", "CAN", "CHN", "USA", "BRA", "AUS" ],
+  "by_population": [
+    "IND", "CHN", "USA", "IDN", "PAK", "NGA", "BRA", "BGD",
+    "RUS", "ETH", "MEX", "JPN", "EGY", "PHL", "COD", "VNM",
+    "IRN", "TUR", "DEU", "TZA"
+  ],
+  "name": {
+    "RUS": "Russia", "CAN": "Canada", "CHN": "China", "USA": "United States",
+    "BRA": "Brazil", "AUS": "Australia"
+  }
+}
+```
+
 # Why streaming matters
-* avoids building second giant string
-* can sit on top of existing json.dump()
-* works incrementally
+
+JSON documents can be very large and deeply nested. It's easier to implement the compaction by operating on a complete pretty-printed JSON document - but this has a price:
+
+* Additional memory - having to hold both the original document and the compacted document can increase temporary memory usage to 2-4 times the size of the original document.
+* Operations on large strings: Concatenation and iteration over large strings are more costly than operations on smaller chunks.
+* Time to first byte ("ttfb"): delaying processing until the full documents is generated means that ttfb increases significantly. This can have noticeable negative impact on the service responsiveness to end users.
+  
+The `jsonfold` processes the document in small bites - leveraging the incremental generation provided by the python `JSON.dump()` call - arrays are processed one item at a time, and objects are processed one key/value pair at a time. The extra memory that is needed for processing is approximately 4X the maximum width (actual or set).
+
+If the string generation call `JSON.dumps()` is being used - there is no choice but to build and return the (potentially huge) final string. In this case, the incremental processing will cap the amount of extra memory as described above, and `io.StringIO()` to build the final string reduces the cost.
+
+One important attribute of the streaming approach is that it should work with any other encoders (parameter `cls` in JSON.dump) and pretty-printers that can send output directly to file-like object, by wrapping the existing file-like output stream with the jsonfold `JSONFoldWriter` class. (disclaimer: I do not use any third-party libraries, did not test any specific package).
+
+Example: using custom encoder
+```python
+
+import json
+import jsonfold
+# Custom object
+class Foo:
+    def __init__(self, name):
+        self.name = name
+# Custom encoder for Person objects
+class CustomEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Foo):
+            return {"ID": obj.name}
+        return super().default(obj)
+# Sample custom object
+foo_obj = Foo("Bar")
+# Encoding custom object using the custom encoder
+jsonfold.dump(foo_obj, cls=CustomEncoder)
+```
+
+Or using different serializer like `rapidjson`
+```python
+import rapidjson
+import jsonfold
+import sys
+
+
+def pp(obj, fp, *,
+         compact =  "",
+         indent: int = 2, **kwargs) -> None:
+
+    with jsonfold.JSONFoldWriter(fp, compact=compact) as out:
+        rapidjson.dump(obj, out, indent=indent, **kwargs)
+```
+
 # Cross-language portability
-* same algorithm in Python + JavaScript
-* relies only on pretty-print structure
-# Examples
-* before/after examples are critical here
+
+This article covers the `jsonfold` implementation in python - the same approach can be used in other languages to format JSON according to the same rules - leveraging existing JSON serializers, and various stream filtering in other languages.
+
+* Javascript: In Node, the `Writable` stream can be wrapped to apply the `jsonfold` logic on the output from any JSON serializer.
+* In Java, the `java.io.FilterWriter` can be used to add `jsonfold` formatting to any character stream.
+* In C, the `FILE *` object can be customized using the GLIBC extension `fopencookie` or BSD `funopen`
+
+Future articles will describe implementations in JavaScript, Java, C and other languages/platforms. Each implementation will be:
+* Single file that can be dropped into the code base (Note: certain languages need separate header file).
+* Filter that will attach the `jsonfold` behavior to existing output stream.
+* Efficient implementation that minimize memory usage, and overhead.
+* Self-contained, and does not introduce additional dependencies.
+
 # Limitations
-* assumes normal serializer layout
-* not a validating parser
-* depends on indentation semantics
-* 
+
+Reiterating the limitations of this approach: The `jsonfold` depends on the structure produced by a normal pretty-printer. `jsonfold` is not a general JSON parser, and it does not try to understand arbitrary JSON text.
+
+In particular:
+
+* The input must already be valid JSON.
+* The input should use a regular pretty-printed layout.
+* Indentation must reflect the nesting structure.
+* Each input line is expected to represent an atomic JSON fragment.
+* The formatter is not designed to recover from malformed JSON.
+* Highly customized pretty-printers may produce layouts that cannot be safely compacted.
+
+When these assumptions are violated, `jsonfold` falls back to pass-through mode rather than risking an unsafe transformation.
+
+This also means that `jsonfold` is best used as a post-filter for trusted serializer output, not as a cleanup tool for arbitrary JSON pasted from unknown sources.
+
+# Disclaimer
+
+The examples and benchmarks in this article, including linked code snippets, are simplified and reconstructed for illustration purposes. They are not taken from any production system, and do not reflect the design or implementation of any specific codebase.
+
+This is a personal approach based on general experience working with C codebases. It does not represent any official guideline or the opinion of my employer.
+
+As with any low-level technique, evaluate carefully before adopting it in production.
+
+# Usage and License
+
+The supporting file (`jsonfold.py`, and json examples) are provided under the MIT license and are intended to be copied and used as-is in your own projects.
+
+You can simply copy and/or modify them into your project and integrate those files into your build process — no special packaging or setup is required
