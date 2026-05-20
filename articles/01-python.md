@@ -14,18 +14,19 @@ That extra formatting is not free. It makes logs larger, diffs noisier, terminal
 
 What I wanted was a middle ground: JSON that keeps the shape of pretty-printed output, but folds small, simple structures back onto one line when they fit.
 
-This article describes `jsonfold` - a process for "compacting" pretty-print JSON data to make it more readable for humans. The level of "compactness" is controlled by parameters, and there are a few preset configurations that can be used to get output with minimal effort.
+This article describes `jsonfold`, a process for "compacting" pretty-print JSON data to make it more readable for humans. The level of "compactness" is controlled by parameters, and there are a few preset configurations that can be used to get output with minimal effort.
 
 # `jsonfold` in 2 minutes
 
-> Get fine control over the pretty-print JSON output. Keep is readable for machine and humans.
+> Get fine control over the pretty-print JSON output. Keep it machine-readable and human-friendly.
 
 ## Minimal Usage
 
-Pull `jsonfold.py` from Github Gist.
+Pull `jsonfold.py` from [GitHub project](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-files/jsonfold.py)
 
 ```python
 import jsonfold
+import sys
 data = {
     "meta": {"version": 1, "ok": True},
     "ids": [1, 2, 3, 4, 5],
@@ -36,7 +37,13 @@ jsonfold.dump(data, sys.stdout, compact="default")
 
 ```
 
-## Different level of compaction
+## GitHub Project
+
+Repository: https://github.com/yairlenga/jsonfold
+
+Python implementation is under `python` directory.
+
+## Different levels of compaction
 
 ```json
 // compact=low
@@ -68,13 +75,13 @@ jsonfold.dump(data, sys.stdout, compact="default")
 Using the geojson file [geojson.xyz: admin 1 states provinces shp](https://geojson.xyz/). You can view the actual output:
 
 * [Baseline - no formatting](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-files/geojson.json)
-  130K, 1 lines, 130,429 columns, 0% overhead
+  130K, 1 line, 130,429 columns, 0% overhead
 * [Pretty-Printed, indent=2](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-files/geojson-none.json):
   285K, 11731 lines, 79 columns, 120% overhead
 * [jsonfold compact=low](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-files/geojson-low.json):
   167K, 2344 lines, 120 columns, 28% overhead
 * [jsonfold compact=default](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-files/geojson-default.json):
-  180K, 2344 lines, 120 columns, 28% overhead
+  167K, 2344 lines, 120 columns, 28% overhead
 * [jsonfold compact=high](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-files/geojson-high.json):
   166K, 2239 lines, 120 columns, 27% overhead
 * [jsonfold compact=max](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-files/geojson-max.json):
@@ -113,9 +120,8 @@ If the above assumptions are violated, the `jsonfold` falls back into "raw" mode
 
 # The three phases
 
-The "compaction" is done in three logical phases, we will name them: **pack**, **fold** and **join**. Each one performs a specific transformation that makes the JSON easier to read (by removing whitespace), while not changing the data itself. Separating the process into phases makes the implementation simpler and more predictable. Each phase operates on progressively more compact structures while preserving the original JSON semantics. All three phases are incremental, and process the stream as data becomes available.
+The compaction is done in three logical phases, we will name them: **pack**, **fold** and **join**. Each one performs a specific transformation that makes the JSON easier to read (by removing whitespace), while not changing the data itself. Separating the process into phases makes the implementation simpler and more predictable. Each phase operates on progressively more compact structures while preserving the original JSON semantics. All three phases are incremental, and process the stream as data becomes available.
 
-```text
 ```mermaid
 flowchart TB
 
@@ -290,11 +296,11 @@ JSON documents can be very large and deeply nested. It's easier to implement the
 * Operations on large strings: Concatenation and iteration over large strings are more costly than operations on smaller chunks.
 * Time to first byte ("ttfb"): delaying processing until the full documents is generated means that ttfb increases significantly. This can have noticeable negative impact on the service responsiveness to end users.
   
-The `jsonfold` processes the document in small bites - leveraging the incremental generation provided by the python `JSON.dump()` call - arrays are processed one item at a time, and objects are processed one key/value pair at a time. The extra memory that is needed for processing is approximately 4X the maximum width (actual or set).
+The `jsonfold` processes the document in small bites - leveraging the incremental generation provided by the python `json.dump()` call - arrays are processed one item at a time, and objects are processed one key/value pair at a time. The extra memory that is needed for processing is approximately 4X the maximum width (actual or set).
 
-If the string generation call `JSON.dumps()` is being used - there is no choice but to build and return the (potentially huge) final string. In this case, the incremental processing will cap the amount of extra memory as described above, and `io.StringIO()` to build the final string reduces the cost.
+If the string generation call `json.dumps()` is being used - there is no choice but to build and return the (potentially huge) final string. In this case, the incremental processing will cap the amount of extra memory as described above, and `io.StringIO()` to build the final string reduces the cost.
 
-One important attribute of the streaming approach is that it should work with any other encoders (parameter `cls` in JSON.dump) and pretty-printers that can send output directly to file-like object, by wrapping the existing file-like output stream with the jsonfold `JSONFoldWriter` class. (disclaimer: I do not use any third-party libraries, did not test any specific package).
+One important advantage of the streaming approach is that it should work with any other encoders (parameter `cls` in `json.dump`) and pretty-printers that can send output directly to a file-like object, by wrapping the existing file-like output stream with the jsonfold `JSONFoldWriter` class. (disclaimer: I do not use any third-party libraries, did not test any specific package).
 
 Example: using custom encoder
 ```python
@@ -305,12 +311,14 @@ import jsonfold
 class Foo:
     def __init__(self, name):
         self.name = name
+
 # Custom encoder for Person objects
 class CustomEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, Foo):
             return {"ID": obj.name}
         return super().default(obj)
+
 # Sample custom object
 foo_obj = Foo("Bar")
 # Encoding custom object using the custom encoder
@@ -343,7 +351,7 @@ This article covers the `jsonfold` implementation in python - the same approach 
 Future articles will describe implementations in JavaScript, Java, C and other languages/platforms. Each implementation will be:
 * Single file that can be dropped into the code base (Note: certain languages need separate header file).
 * Filter that will attach the `jsonfold` behavior to existing output stream.
-* Efficient implementation that minimize memory usage, and overhead.
+* Efficient implementation that minimizes memory usage, and overhead.
 * Self-contained, and does not introduce additional dependencies.
 
 # Limitations
@@ -367,9 +375,9 @@ This also means that `jsonfold` is best used as a post-filter for trusted serial
 
 The examples and benchmarks in this article, including linked code snippets, are simplified and reconstructed for illustration purposes. They are not taken from any production system, and do not reflect the design or implementation of any specific codebase.
 
-This is a personal approach based on general experience working with C codebases. It does not represent any official guideline or the opinion of my employer.
+This is a personal approach based on general experience working with codebases. It does not represent any official guideline or the opinion of my employer.
 
-As with any low-level technique, evaluate carefully before adopting it in production.
+As always, evaluate and test the code carefully before adopting it in production.
 
 # Usage and License
 
