@@ -4,6 +4,7 @@ mkdir -p out
 function run1 {
 	local out=out/geojson-$1.json
 	shift
+	python3 $JSONFOLD < geojson.json > $out "$@"
 	echo "$(wc < $out)" \
 		"$(awk 'length > max_len { max_len = length } END { print max_len }' $out)" \
 		$1
