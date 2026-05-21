@@ -108,7 +108,7 @@ Phase 3: Join
     Repeat the pack step, allowing folded lines to be joined with scalar items
     or other folded lines. subject to same limits
 
-    A container may be collaped from:
+    A container may be collapsed from:
     [
         [ 1, 2, 3],
         [ 4, 5, 6]

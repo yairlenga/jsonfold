@@ -1,3 +1,6 @@
+<!-- cSpell:words jsonfold isinstance rapidjson TTFB kwargs fopencookie funopen  -->
+<!-- LTeX: dictionary+=jsonfold dictionary+=serializer dictionary+=serializers dictionary+=Serializers -->
+
 # A Streaming JSON Formatter That Works With Existing Serializers
 
 Built-in JSON serializers give us two choices:
@@ -22,7 +25,7 @@ This article describes `jsonfold`, a process for "compacting" pretty-print JSON 
 
 ## Minimal Usage
 
-Pull `jsonfold.py` from [GitHub project](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-files/jsonfold.py)
+Pull `jsonfold.py` from [GitHub project](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-python/jsonfold.py)
 
 ```python
 import jsonfold
@@ -72,19 +75,19 @@ Python implementation is under `python` directory.
 
 ### `jsonfold` on real data.
 
-Using the geojson file [geojson.xyz: admin 1 states provinces shp](https://geojson.xyz/). You can view the actual output:
+Using the geojson file [geojson.xyz: admin 1 states provinces](https://geojson.xyz/). You can view the actual output:
 
-* [Baseline - no formatting](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-files/geojson.json)
+* [Baseline - no formatting](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-python/geojson.json)
   130K, 1 line, 130,429 columns, 0% overhead
-* [Pretty-Printed, indent=2](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-files/geojson-none.json):
+* [Pretty-Printed, indent=2](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-python/geojson-none.json):
   285K, 11731 lines, 79 columns, 120% overhead
-* [jsonfold compact=low](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-files/geojson-low.json):
+* [jsonfold compact=low](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-python/geojson-low.json):
   167K, 2344 lines, 120 columns, 28% overhead
-* [jsonfold compact=default](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-files/geojson-default.json):
+* [jsonfold compact=default](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-python/geojson-default.json):
   167K, 2344 lines, 120 columns, 28% overhead
-* [jsonfold compact=high](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-files/geojson-high.json):
+* [jsonfold compact=high](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-python/geojson-high.json):
   166K, 2239 lines, 120 columns, 27% overhead
-* [jsonfold compact=max](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-files/geojson-max.json):
+* [jsonfold compact=max](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-python/geojson-max.json):
   156K, 1321 lines, 255 columns, 20% overhead
 
 
@@ -122,7 +125,7 @@ If the above assumptions are violated, the `jsonfold` falls back into "raw" mode
 
 The compaction is done in three logical phases, we will name them: **pack**, **fold** and **join**. Each one performs a specific transformation that makes the JSON easier to read (by removing whitespace), while not changing the data itself. Separating the process into phases makes the implementation simpler and more predictable. Each phase operates on progressively more compact structures while preserving the original JSON semantics. All three phases are incremental, and process the stream as data becomes available.
 
-![diagram](01-files/diagram-1.png)
+![Three Phases Diagram](01-python/diagram-1.png)
 
 ## Pack
 The **pack** phase handles merging of scalar items inside containers (array, object). It will "pack" array items and object properties that belong to the same containers into single line, subject to specific width, and limits. Basically:
@@ -265,7 +268,7 @@ JSON documents can be very large and deeply nested. It's easier to implement the
 
 * Additional memory - having to hold both the original document and the compacted document can increase temporary memory usage to 2-4 times the size of the original document.
 * Operations on large strings: Concatenation and iteration over large strings are more costly than operations on smaller chunks.
-* Time to first byte ("ttfb"): delaying processing until the full documents is generated means that ttfb increases significantly. This can have noticeable negative impact on the service responsiveness to end users.
+* Time to first byte ("TTFB"): delaying processing until the full documents is generated means that TTFB increases significantly. This can have noticeable negative impact on the service responsiveness to end users.
   
 The `jsonfold` processes the document in small bites - leveraging the incremental generation provided by the python `json.dump()` call - arrays are processed one item at a time, and objects are processed one key/value pair at a time. The extra memory that is needed for processing is approximately 4X the maximum width (actual or set).
 

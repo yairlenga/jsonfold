@@ -1,0 +1,26 @@
+{
+    "cSpell.words": [
+        "jsonfold"
+    ],
+    "ltex.dictionary": {
+        "en-US": [
+            "jsonfold"
+        ]
+    },
+    "ltex.disabledRules": {
+        "en-US": [
+            "MORFOLOGIK_RULE_EN_US",
+            "HYPHEN_TO_EN"
+        ]
+    },
+    "cSpell.languageSettings": [
+        {
+            "languageId": "python",
+            "words": [
+                "dumpi",
+                "keepends",
+                ""
+            ]
+        }
+    ]
+}
