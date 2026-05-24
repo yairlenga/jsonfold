@@ -1,3 +1,5 @@
+#! /usr/bin/env node
+
 import * as jsonfold from "./jsonfold.js";
 
 
@@ -272,22 +274,11 @@ json options:
 `);
 }
 
-if (isMainModule()) {
-  main()
-    .then((rc) => {
-      process.exit(rc);
-    })
-    .catch((err) => {
-      console.error(err?.stack ?? String(err));
-      process.exit(1);
-    });
-}
-
-function isMainModule() {
-  try {
-    return import.meta.url ===
-      new URL(process.argv[1], "file:").href;
-  } catch {
-    return false;
-  }
-}
+main()
+  .then((rc) => {
+    process.exit(rc);
+  })
+  .catch((err) => {
+    console.error(err?.stack ?? String(err));
+    process.exit(1);
+  });
