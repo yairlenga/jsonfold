@@ -22,5 +22,6 @@
                 ""
             ]
         }
-    ]
+    ],
+    "sarif-viewer.connectToGithubCodeScanning": "off"
 }
