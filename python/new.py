@@ -177,7 +177,7 @@ MAX_ARRAY_ITEMS = 1000
 MAX_OBJ_ITEMS = 1000
 MAX_NESTING = 10
 
-@dataclass(frozen=True,slots=True)
+@dataclass(frozen=True)
 class JSONFold:
     """Configuration for hybrid pretty/compact JSON formatting.
 
@@ -291,7 +291,7 @@ _CLOSING_KIND: dict[str, Kind] = {
     "]":  Kind.LIST, "],": Kind.LIST,
 }
 
-@dataclass(slots=True)
+@dataclass
 class Line:
     indent: int
     text:   str
@@ -303,14 +303,7 @@ class Line:
     opener: Kind = Kind.NONE
     closer: Kind = Kind.NONE
 
-    try:
-        profile
-    except NameError:
-        def profile(func):
-            return func
-
     @classmethod
-    @profile
     def parse(cls, s: str, parent_kind: Kind) -> "Line":
         stripped = s.lstrip()
         body=stripped.rstrip()
@@ -321,12 +314,11 @@ class Line:
         )
         closer=_CLOSING_KIND.get(body, Kind.NONE)
 
-        return cls(
-            indent=len(s) - len(stripped),
-            text=body,
-            parent_kind=parent_kind,
-            opener=opener,
-            closer=closer,
+        return cls(indent=len(s) - len(stripped),
+                   text=body,
+                   parent_kind=parent_kind,
+                   opener=opener,
+                   closer=closer,
         )
 
     def raw(self) -> str:
@@ -355,7 +347,7 @@ class Line:
         self.leafs += other.leafs
         self.child_nesting = max(self.child_nesting, other.child_nesting)
 
-@dataclass(slots=True)
+@dataclass
 class Frame:
     kind: Kind
     depth: int
@@ -372,7 +364,7 @@ class Frame:
     fold_ok: bool = True
     child_nesting: int = -1
 
-@dataclass(slots=True)
+@dataclass
 class JSONFoldStats:
     bytes_in:  int = 0
     bytes_out: int = 0
@@ -402,59 +394,41 @@ class JSONFoldWriter:
         self.stack: list[Frame] = []
 
     # ------------------------------------------------------------------ I/O
-    try:
-        profile
-    except NameError:
-        def profile(func):
-            return func
-
-    @profile
     def write(self, s: str) -> int:
-#        print(f"write {len(s)} '{s}'", file=sys.stderr)
-        s_len = len(s)
-        self.stats.bytes_in += s_len
+        print(f"write {len(s)} '{s}'", file=sys.stderr)
+        self.stats.bytes_in += len(s)
 
-        # If no config object, do nothing, just pass thru
-        nl_pos = s.find("\n")
+        nl_count = s.count("\n")
+        if (nl_count == 0):
+            self.pending += s
+            if len(self.pending.rstrip()) > self.cfg.width:
+                self._mark_no_fold()
+            return
+
+        self.stats.lines_in += nl_count
+    
         if not self.cfg:
-            if nl_pos >= 0:
-                self.stats.lines_in += s.count("\n")
             return self._write_str(s)
 
-        # Fast Path: No new line, just a a segment in the line
-        if nl_pos < 0:
-            self.pending += s
-            self._check_no_fold(len(self.pending))
-            return s_len
-
-        # Fast Path: line terminated with new line
-        nl2_pos = s.find("\n", nl_pos+1)
-        if ( nl2_pos < 0 ):
-            self.stats.lines_in += 1
-            s2 = self.pending + s[:nl_pos]
-            self.pending = s[nl_pos+1:]
-
-            self._feed(Line.parse(s2, self._parent_kind()))
-            self._check_no_fold(len(self.pending))
-            return s_len
-
-        # Unlikely case - multiple new lines.
         parts = s.splitlines(keepends=True)
-        self.stats.lines_in += len(parts)-1
 
         if self.pending:
-            parts[0] = self.pending + parts[0]
+            if parts:
+                parts[0] = self.pending + parts[0]
+            else:
+                parts = [self.pending]
             self.pending = ""
 
-        if not parts[-1].endswith("\n"):
+        if parts and not parts[-1].endswith("\n"):
             self.pending = parts.pop()
 
         for part in parts:
             self._feed(Line.parse(part[:-1], self._parent_kind()))
 
-        self._check_no_fold(len(self.pending))
+        if self.pending and len(self.pending.rstrip()) > self.cfg.width:
+            self._mark_no_fold()
 
-        return s_len
+        return len(s)
 
     def flush(self) -> None:
         self.finish()
@@ -496,7 +470,7 @@ class JSONFoldWriter:
         self._write_str(line.raw())
 
     # ------------------------------------------------------------ core feed
-    @profile
+
     def _feed(self, line: Line) -> None:
         opener = line.opener
         if opener:
@@ -510,7 +484,8 @@ class JSONFoldWriter:
                 )
             )
 
-            self._check_no_fold(line.width())
+            if line.width() > self.cfg.width:
+                self._mark_no_fold()
             return
 
         closer = line.closer
@@ -520,7 +495,6 @@ class JSONFoldWriter:
 
         self._emit_line(line)
 
-    @profile
     def _emit_line(self, line: Line) -> None:
         if self.stack:
             self._add_to_frame(self.stack[-1], line)
@@ -552,22 +526,21 @@ class JSONFoldWriter:
 
     # --------------------------------------------------------- phase 1: pack
 
-    @profile
     def _add_to_frame(self, frame: Frame, line: Line) -> None:
-#        print(f"add {len(frame.lines)} {line.text}")
-
-        # No point trying to pack/join if there are not previous lines.
-        if ( frame.lines):
-            if self._try_pack(frame, line):
-                return
+        if self._try_pack(frame, line):
+            return
         
-            if self._try_join(frame, line):
-                return
+        if self._try_join(frame, line):
+            return
 
         frame.lines.append(line)
         self._update_frame(frame, line)
 
-        self._check_no_fold(line.width())
+        if frame.fold_ok and line.width() > self.cfg.width:
+            self._mark_no_fold()
+
+        if not frame.fold_ok:
+            self._stream_frame(frame, keep_last=True)
 
 
     def _can_join(self, prev: Line, line: Line, limit: int) -> bool:
@@ -629,7 +602,6 @@ class JSONFoldWriter:
 
     # --------------------------------------------------------- frame tracking
 
-    @profile
     def _update_frame(self, frame: Frame, line: Line) -> None:
         if line.closer:
             return
@@ -640,33 +612,23 @@ class JSONFoldWriter:
             frame.leafs += line.leafs
             frame.items += line.items
 
-        if line.child_nesting >= frame.child_nesting:
-            frame.child_nesting = line.child_nesting + 1
+        if line.child_nesting >= 0:
+            frame.child_nesting = max(frame.child_nesting, line.child_nesting + 1)
 
         self._check_fold_limits(frame)
 
-    @profile
     def _check_fold_limits(self, frame: Frame) -> None:
-        if not frame.fold_ok:
-            return
-        
         if frame.content_lines > 1:
             frame.fold_ok = False
-            return
 
         if frame.items > frame.fold_limit:
             frame.fold_ok = False
-            return
 
         if frame.child_nesting > self.cfg.fold_nesting:
             frame.fold_ok = False
-            return
-
-        return
 
     # --------------------------------------------------------- phase 2: fold
 
-    @profile
     def _close_frame(self, closer: Line, closing_kind: Kind) -> None:
         if not self.stack:
             self._write_line(closer)
@@ -712,9 +674,9 @@ class JSONFoldWriter:
         )
 
     # --------------------------------------------------------- streaming
-    @profile
-    def _stream_frame(self, frame: Frame) -> None:
-        keep = 1 if frame.lines and frame.lines[-1].is_joinable() else 0
+
+    def _stream_frame(self, frame: Frame, *, keep_last: bool) -> None:
+        keep = 1 if keep_last and frame.lines and frame.lines[-1].is_joinable() else 0
 
         emit_lines = frame.lines[:-keep] if keep else frame.lines
         frame.lines = frame.lines[-keep:] if keep else []
@@ -727,25 +689,12 @@ class JSONFoldWriter:
 
     # --------------------------------------------------------- misc helpers
 
-    @profile
-    def _check_no_fold(self, width: int) -> None:
-        if width <= self.cfg.width:
-            return False
-
-        if not self.stack:
-            return False
-
-        frame = self.stack[-1]
-        if not frame.fold_ok:
-            return False
-
+    def _mark_no_fold(self) -> None:
         for frame in self.stack:
             frame.fold_ok = False
 
-        self._stream_frame(self.stack[-1])
-
-        return True
-
+        if self.stack:
+            self._stream_frame(self.stack[-1], keep_last=True)
 
     def _parent_kind(self) -> Kind:
         return self.stack[-1].kind if self.stack else Kind.NONE
