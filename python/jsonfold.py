@@ -177,7 +177,7 @@ MAX_ARRAY_ITEMS = 1000
 MAX_OBJ_ITEMS = 1000
 MAX_NESTING = 10
 
-@dataclass(frozen=True)
+@dataclass(frozen=True,slots=True)
 class JSONFold:
     """Configuration for hybrid pretty/compact JSON formatting.
 
@@ -291,7 +291,7 @@ _CLOSING_KIND: dict[str, Kind] = {
     "]":  Kind.LIST, "],": Kind.LIST,
 }
 
-@dataclass
+@dataclass(slots=True)
 class Line:
     indent: int
     text:   str
@@ -347,7 +347,7 @@ class Line:
         self.leafs += other.leafs
         self.child_nesting = max(self.child_nesting, other.child_nesting)
 
-@dataclass
+@dataclass(slots=True)
 class Frame:
     kind: Kind
     depth: int
@@ -364,7 +364,7 @@ class Frame:
     fold_ok: bool = True
     child_nesting: int = -1
 
-@dataclass
+@dataclass(slots=True)
 class JSONFoldStats:
     bytes_in:  int = 0
     bytes_out: int = 0
@@ -622,6 +622,7 @@ class JSONFoldWriter:
 
     # --------------------------------------------------------- frame tracking
 
+    @profile
     def _update_frame(self, frame: Frame, line: Line) -> None:
         if line.closer:
             return
@@ -637,6 +638,7 @@ class JSONFoldWriter:
 
         self._check_fold_limits(frame)
 
+    @profile
     def _check_fold_limits(self, frame: Frame) -> None:
         if frame.content_lines > 1:
             frame.fold_ok = False
@@ -710,6 +712,7 @@ class JSONFoldWriter:
 
     # --------------------------------------------------------- misc helpers
 
+    @profile
     def _check_no_fold(self, width: int) -> None:
         if not self.stack:
             return False

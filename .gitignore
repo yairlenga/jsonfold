@@ -1,5 +1,10 @@
 __pycache__
 *.swp
+*.tmp
+*.out
+*.cover
+*.prof
+*.lprof
 .venv
 python/dist
 javascript/node_modules

@@ -26,13 +26,11 @@
     },
     {
       "id": 6, "name": "user6",
-      "roles": [ "gamma", "south", "gamma" ],
-      "active": true
+      "roles": [ "gamma", "south", "gamma" ], "active": true
     },
     {
       "id": 7, "name": "user7",
-      "roles": [ "delta", "stage", "south" ],
-      "active": false
+      "roles": [ "delta", "stage", "south" ], "active": false
     },
     {
       "id": 8, "name": "user8", "roles": [ "south", "prod", "prod" ],
@@ -44,18 +42,15 @@
     },
     {
       "id": 10, "name": "user10",
-      "roles": [ "stage", "north", "beta" ],
-      "active": true
+      "roles": [ "stage", "north", "beta" ], "active": true
     },
     {
       "id": 11, "name": "user11",
-      "roles": [ "gamma", "north", "omega" ],
-      "active": false
+      "roles": [ "gamma", "north", "omega" ], "active": false
     },
     {
       "id": 12, "name": "user12",
-      "roles": [ "beta", "gamma", "east" ],
-      "active": true
+      "roles": [ "beta", "gamma", "east" ], "active": true
     },
     {
       "id": 13, "name": "user13", "roles": [ "north", "dev", "dev" ],
@@ -63,8 +58,7 @@
     },
     {
       "id": 14, "name": "user14",
-      "roles": [ "south", "gamma", "west" ],
-      "active": true
+      "roles": [ "south", "gamma", "west" ], "active": true
     },
     {
       "id": 15, "name": "user15", "roles": [ "dev", "prod", "east" ],
@@ -76,13 +70,11 @@
     },
     {
       "id": 17, "name": "user17",
-      "roles": [ "north", "omega", "south" ],
-      "active": false
+      "roles": [ "north", "omega", "south" ], "active": false
     },
     {
       "id": 18, "name": "user18",
-      "roles": [ "beta", "north", "east" ],
-      "active": true
+      "roles": [ "beta", "north", "east" ], "active": true
     },
     {
       "id": 19, "name": "user19", "roles": [ "west", "dev", "beta" ],
@@ -94,8 +86,7 @@
     },
     {
       "id": 21, "name": "user21",
-      "roles": [ "north", "omega", "stage" ],
-      "active": false
+      "roles": [ "north", "omega", "stage" ], "active": false
     },
     {
       "id": 22, "name": "user22", "roles": [ "stage", "prod", "dev" ],
@@ -103,33 +94,27 @@
     },
     {
       "id": 23, "name": "user23",
-      "roles": [ "stage", "west", "beta" ],
-      "active": false
+      "roles": [ "stage", "west", "beta" ], "active": false
     },
     {
       "id": 24, "name": "user24",
-      "roles": [ "gamma", "north", "stage" ],
-      "active": true
+      "roles": [ "gamma", "north", "stage" ], "active": true
     },
     {
       "id": 25, "name": "user25",
-      "roles": [ "south", "alpha", "alpha" ],
-      "active": false
+      "roles": [ "south", "alpha", "alpha" ], "active": false
     },
     {
       "id": 26, "name": "user26",
-      "roles": [ "gamma", "east", "north" ],
-      "active": true
+      "roles": [ "gamma", "east", "north" ], "active": true
     },
     {
       "id": 27, "name": "user27",
-      "roles": [ "stage", "north", "north" ],
-      "active": false
+      "roles": [ "stage", "north", "north" ], "active": false
     },
     {
       "id": 28, "name": "user28",
-      "roles": [ "south", "beta", "beta" ],
-      "active": true
+      "roles": [ "south", "beta", "beta" ], "active": true
     },
     {
       "id": 29, "name": "user29", "roles": [ "dev", "west", "alpha" ],
@@ -137,8 +122,7 @@
     },
     {
       "id": 30, "name": "user30",
-      "roles": [ "south", "stage", "north" ],
-      "active": true
+      "roles": [ "south", "stage", "north" ], "active": true
     },
     {
       "id": 31, "name": "user31", "roles": [ "west", "beta", "east" ],
@@ -146,18 +130,15 @@
     },
     {
       "id": 32, "name": "user32",
-      "roles": [ "south", "dev", "stage" ],
-      "active": true
+      "roles": [ "south", "dev", "stage" ], "active": true
     },
     {
       "id": 33, "name": "user33",
-      "roles": [ "west", "alpha", "prod" ],
-      "active": false
+      "roles": [ "west", "alpha", "prod" ], "active": false
     },
     {
       "id": 34, "name": "user34",
-      "roles": [ "prod", "gamma", "delta" ],
-      "active": true
+      "roles": [ "prod", "gamma", "delta" ], "active": true
     },
     {
       "id": 35, "name": "user35", "roles": [ "south", "beta", "dev" ],
@@ -169,8 +150,7 @@
     },
     {
       "id": 37, "name": "user37",
-      "roles": [ "beta", "east", "delta" ],
-      "active": false
+      "roles": [ "beta", "east", "delta" ], "active": false
     },
     {
       "id": 38, "name": "user38", "roles": [ "beta", "prod", "dev" ],
@@ -178,58 +158,47 @@
     },
     {
       "id": 39, "name": "user39",
-      "roles": [ "west", "stage", "east" ],
-      "active": false
+      "roles": [ "west", "stage", "east" ], "active": false
     },
     {
       "id": 40, "name": "user40",
-      "roles": [ "omega", "alpha", "north" ],
-      "active": true
+      "roles": [ "omega", "alpha", "north" ], "active": true
     },
     {
       "id": 41, "name": "user41",
-      "roles": [ "north", "prod", "alpha" ],
-      "active": false
+      "roles": [ "north", "prod", "alpha" ], "active": false
     },
     {
       "id": 42, "name": "user42",
-      "roles": [ "south", "delta", "dev" ],
-      "active": true
+      "roles": [ "south", "delta", "dev" ], "active": true
     },
     {
       "id": 43, "name": "user43",
-      "roles": [ "gamma", "beta", "north" ],
-      "active": false
+      "roles": [ "gamma", "beta", "north" ], "active": false
     },
     {
       "id": 44, "name": "user44",
-      "roles": [ "omega", "south", "prod" ],
-      "active": true
+      "roles": [ "omega", "south", "prod" ], "active": true
     },
     {
       "id": 45, "name": "user45",
-      "roles": [ "omega", "gamma", "south" ],
-      "active": false
+      "roles": [ "omega", "gamma", "south" ], "active": false
     },
     {
       "id": 46, "name": "user46",
-      "roles": [ "gamma", "gamma", "north" ],
-      "active": true
+      "roles": [ "gamma", "gamma", "north" ], "active": true
     },
     {
       "id": 47, "name": "user47",
-      "roles": [ "south", "west", "beta" ],
-      "active": false
+      "roles": [ "south", "west", "beta" ], "active": false
     },
     {
       "id": 48, "name": "user48",
-      "roles": [ "prod", "omega", "south" ],
-      "active": true
+      "roles": [ "prod", "omega", "south" ], "active": true
     },
     {
       "id": 49, "name": "user49",
-      "roles": [ "delta", "dev", "stage" ],
-      "active": false
+      "roles": [ "delta", "dev", "stage" ], "active": false
     }
   ]
 }
