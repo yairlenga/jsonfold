@@ -303,7 +303,14 @@ class Line:
     opener: Kind = Kind.NONE
     closer: Kind = Kind.NONE
 
+    try:
+        profile
+    except NameError:
+        def profile(func):
+            return func
+
     @classmethod
+    @profile
     def parse(cls, s: str, parent_kind: Kind) -> "Line":
         stripped = s.lstrip()
         body=stripped.rstrip()
@@ -714,14 +721,14 @@ class JSONFoldWriter:
 
     @profile
     def _check_no_fold(self, width: int) -> None:
+        if width <= self.cfg.width:
+            return False
+
         if not self.stack:
             return False
 
         frame = self.stack[-1]
         if not frame.fold_ok:
-            return False
-
-        if width <= self.cfg.width:
             return False
 
         for frame in self.stack:
