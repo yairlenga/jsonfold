@@ -303,7 +303,14 @@ class Line:
     opener: Kind = Kind.NONE
     closer: Kind = Kind.NONE
 
+    try:
+        profile
+    except NameError:
+        def profile(func):
+            return func
+
     @classmethod
+    @profile
     def parse(cls, s: str, parent_kind: Kind) -> "Line":
         stripped = s.lstrip()
         body=stripped.rstrip()
@@ -394,6 +401,13 @@ class JSONFoldWriter:
         self.stack: list[Frame] = []
 
     # ------------------------------------------------------------------ I/O
+    try:
+        profile
+    except NameError:
+        def profile(func):
+            return func
+
+    @profile
     def write(self, s: str) -> int:
         self.stats.bytes_in += len(s)
         self.stats.lines_in += s.count("\n")
@@ -460,7 +474,7 @@ class JSONFoldWriter:
         self._write_str(line.raw())
 
     # ------------------------------------------------------------ core feed
-
+    @profile
     def _feed(self, line: Line) -> None:
         opener = line.opener
         if opener:
@@ -485,7 +499,8 @@ class JSONFoldWriter:
 
         self._emit_line(line)
 
-    def _emit_line(self, line: Line) -> None:
+    @profile
+    def _emit_line(self, line: Line, from_child: bool = False) -> None:
         if self.stack:
             self._add_to_frame(self.stack[-1], line)
         else:
@@ -592,6 +607,7 @@ class JSONFoldWriter:
 
     # --------------------------------------------------------- frame tracking
 
+    @profile
     def _update_frame(self, frame: Frame, line: Line) -> None:
         if line.closer:
             return
@@ -607,6 +623,7 @@ class JSONFoldWriter:
 
         self._check_fold_limits(frame)
 
+    @profile
     def _check_fold_limits(self, frame: Frame) -> None:
         if not frame.fold_ok:
             return
@@ -625,6 +642,7 @@ class JSONFoldWriter:
 
     # --------------------------------------------------------- phase 2: fold
 
+    @profile
     def _close_frame(self, closer: Line, closing_kind: Kind) -> None:
         if not self.stack:
             self._write_line(closer)
@@ -670,7 +688,7 @@ class JSONFoldWriter:
         )
 
     # --------------------------------------------------------- streaming
-
+    @profile
     def _stream_frame(self, frame: Frame, *, keep_last: bool) -> None:
         keep = 1 if keep_last and frame.lines and frame.lines[-1].is_joinable() else 0
 
@@ -684,6 +702,7 @@ class JSONFoldWriter:
                 self._add_to_frame(self.stack[frame.depth - 1], line)
 
     # --------------------------------------------------------- misc helpers
+    @profile
 
     def _mark_no_fold(self) -> None:
         for frame in self.stack:
