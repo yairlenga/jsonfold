@@ -510,7 +510,6 @@ class JSONFoldWriter:
                 )
             )
 
-            self._check_no_fold(line.width())
             return
 
         closer = line.closer
@@ -519,13 +518,15 @@ class JSONFoldWriter:
             return
 
         self._emit_line(line)
+        return
 
     @profile
-    def _emit_line(self, line: Line) -> None:
+    def _emit_line(self, line: Line, from_child: bool = False) -> None:
         if self.stack:
-            self._add_to_frame(self.stack[-1], line)
+            self._add_to_frame(self.stack[-1], line, from_child)
         else:
             self._write_line(line)
+        return
 
     def _choose_limit(self, kind: Kind, *, default: int =0, list_limit: int =0, dict_limit: int):
         return (
@@ -553,22 +554,24 @@ class JSONFoldWriter:
     # --------------------------------------------------------- phase 1: pack
 
     @profile
-    def _add_to_frame(self, frame: Frame, line: Line) -> None:
+    def _add_to_frame(self, frame: Frame, line: Line, from_child: False) -> None:
 #        print(f"add {len(frame.lines)} {line.text}")
 
         # No point trying to pack/join if there are not previous lines.
         if ( frame.lines):
-            if self._try_pack(frame, line):
-                return
+            if from_child:
+                if self._try_join(frame, line):
+                    return
+            else:
+                if self._try_pack(frame, line):
+                    return
         
-            if self._try_join(frame, line):
-                return
 
         frame.lines.append(line)
         self._update_frame(frame, line)
 
         self._check_no_fold(line.width())
-
+        return
 
     def _can_join(self, prev: Line, line: Line, limit: int) -> bool:
         return (
@@ -587,6 +590,7 @@ class JSONFoldWriter:
             frame.leafs += line.leafs
 
         self._check_fold_limits(frame)
+        return
 
     def _try_pack(self, frame: Frame, line: Line) -> bool:
         if (
@@ -644,6 +648,7 @@ class JSONFoldWriter:
             frame.child_nesting = line.child_nesting + 1
 
         self._check_fold_limits(frame)
+        return
 
     @profile
     def _check_fold_limits(self, frame: Frame) -> None:
@@ -684,7 +689,7 @@ class JSONFoldWriter:
             frame.lines = [ folded]
 
         for line in frame.lines:
-            self._emit_line(line)
+            self._emit_line(line, from_child=True)
         frame.lines.clear()
 
     def _try_fold(self, frame: Frame) -> Line | None:
@@ -723,7 +728,7 @@ class JSONFoldWriter:
             if frame.depth == 0:
                 self._write_line(line)
             else:
-                self._add_to_frame(self.stack[frame.depth - 1], line)
+                self._add_to_frame(self.stack[frame.depth - 1], line, from_child=True)
 
     # --------------------------------------------------------- misc helpers
 
