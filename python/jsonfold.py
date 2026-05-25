@@ -321,11 +321,12 @@ class Line:
         )
         closer=_CLOSING_KIND.get(body, Kind.NONE)
 
-        return cls(indent=len(s) - len(stripped),
-                   text=body,
-                   parent_kind=parent_kind,
-                   opener=opener,
-                   closer=closer,
+        return cls(
+            indent=len(s) - len(stripped),
+            text=body,
+            parent_kind=parent_kind,
+            opener=opener,
+            closer=closer,
         )
 
     def raw(self) -> str:
@@ -409,30 +410,50 @@ class JSONFoldWriter:
 
     @profile
     def write(self, s: str) -> int:
-        self.stats.bytes_in += len(s)
-        self.stats.lines_in += s.count("\n")
-        if not self.cfg:
-            return self._write_str(s)
+        s_len = len(s)
+        self.stats.bytes_in += s_len
 
+        # If no config object, do nothing, just pass thru
+        nl_pos = s.find("\n")
+        if not self.cfg:
+            if nl_pos >= 0:
+                self.stats.lines_in += s.count("\n")
+            return self._write_str(s)
+        
+        # Fast Path: No new line, just a a segment in the line
+        if nl_pos < 0:
+            self.pending += s
+            return s_len
+
+        # Fast Path: line terminated with new line
+        nl2_pos = s.find("\n", nl_pos+1)
+        if ( nl2_pos < 0 ):
+            self.stats.lines_in += 1
+            s2 = self.pending + s[:nl_pos]
+            self.pending = s[nl_pos+1:]
+
+            self._feed(Line.parse(s2, self._parent_kind()))
+            if len(self.pending) > self.cfg.width:
+                self._mark_no_fold()
+
+            return s_len
+
+        # Unlikely case - multiple new lines.
         parts = s.splitlines(keepends=True)
+        self.stats.lines_in += len(parts)-1
+
 
         if self.pending:
-            if parts:
-                parts[0] = self.pending + parts[0]
-            else:
-                parts = [self.pending]
+            parts[0] = self.pending + parts[0]
             self.pending = ""
 
-        if parts and not parts[-1].endswith("\n"):
+        if not parts[-1].endswith("\n"):
             self.pending = parts.pop()
 
         for part in parts:
             self._feed(Line.parse(part[:-1], self._parent_kind()))
 
-        if self.pending and len(self.pending.rstrip()) > self.cfg.width:
-            self._mark_no_fold()
-
-        return len(s)
+        return s_len
 
     def flush(self) -> None:
         self.finish()
