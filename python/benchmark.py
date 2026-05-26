@@ -165,6 +165,7 @@ def run_one_size(rows, testid):
     names = [
         "baseline.dump.plain",
         "baseline.dump.pretty",
+        "jsonfold.dump.off",
         "jsonfold.dump.none",
         "jsonfold.dump.default",
         "jsonfold.dump.max",
