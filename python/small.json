@@ -1,0 +1,489 @@
+{
+  "meta": {
+    "version": 1,
+    "ok": true,
+    "name": "jsonfold benchmark"
+  },
+  "rows": [
+    {
+      "id": 0,
+      "name": "name_0",
+      "active": true,
+      "score": 0.0,
+      "tags": [
+        "alpha",
+        "beta",
+        "gamma",
+        "delta"
+      ],
+      "pos": {
+        "x": 0,
+        "y": 1,
+        "z": 2
+      },
+      "values": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    {
+      "id": 1,
+      "name": "name_1",
+      "active": false,
+      "score": 1.25,
+      "tags": [
+        "alpha",
+        "beta",
+        "gamma",
+        "delta"
+      ],
+      "pos": {
+        "x": 1,
+        "y": 2,
+        "z": 3
+      },
+      "values": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "id": 2,
+      "name": "name_2",
+      "active": false,
+      "score": 2.5,
+      "tags": [
+        "alpha",
+        "beta",
+        "gamma",
+        "delta"
+      ],
+      "pos": {
+        "x": 2,
+        "y": 3,
+        "z": 4
+      },
+      "values": [
+        2,
+        3,
+        4,
+        5,
+        6
+      ]
+    },
+    {
+      "id": 3,
+      "name": "name_3",
+      "active": true,
+      "score": 3.75,
+      "tags": [
+        "alpha",
+        "beta",
+        "gamma",
+        "delta"
+      ],
+      "pos": {
+        "x": 3,
+        "y": 4,
+        "z": 5
+      },
+      "values": [
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    },
+    {
+      "id": 4,
+      "name": "name_4",
+      "active": false,
+      "score": 5.0,
+      "tags": [
+        "alpha",
+        "beta",
+        "gamma",
+        "delta"
+      ],
+      "pos": {
+        "x": 4,
+        "y": 5,
+        "z": 6
+      },
+      "values": [
+        4,
+        5,
+        6,
+        7,
+        8
+      ]
+    },
+    {
+      "id": 5,
+      "name": "name_5",
+      "active": false,
+      "score": 6.25,
+      "tags": [
+        "alpha",
+        "beta",
+        "gamma",
+        "delta"
+      ],
+      "pos": {
+        "x": 5,
+        "y": 6,
+        "z": 7
+      },
+      "values": [
+        5,
+        6,
+        7,
+        8,
+        9
+      ]
+    },
+    {
+      "id": 6,
+      "name": "name_6",
+      "active": true,
+      "score": 7.5,
+      "tags": [
+        "alpha",
+        "beta",
+        "gamma",
+        "delta"
+      ],
+      "pos": {
+        "x": 6,
+        "y": 7,
+        "z": 8
+      },
+      "values": [
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    },
+    {
+      "id": 7,
+      "name": "name_7",
+      "active": false,
+      "score": 8.75,
+      "tags": [
+        "alpha",
+        "beta",
+        "gamma",
+        "delta"
+      ],
+      "pos": {
+        "x": 7,
+        "y": 8,
+        "z": 9
+      },
+      "values": [
+        7,
+        8,
+        9,
+        10,
+        11
+      ]
+    },
+    {
+      "id": 8,
+      "name": "name_8",
+      "active": false,
+      "score": 10.0,
+      "tags": [
+        "alpha",
+        "beta",
+        "gamma",
+        "delta"
+      ],
+      "pos": {
+        "x": 8,
+        "y": 9,
+        "z": 10
+      },
+      "values": [
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    {
+      "id": 9,
+      "name": "name_9",
+      "active": true,
+      "score": 11.25,
+      "tags": [
+        "alpha",
+        "beta",
+        "gamma",
+        "delta"
+      ],
+      "pos": {
+        "x": 9,
+        "y": 10,
+        "z": 11
+      },
+      "values": [
+        9,
+        10,
+        11,
+        12,
+        13
+      ]
+    },
+    {
+      "id": 10,
+      "name": "name_10",
+      "active": false,
+      "score": 12.5,
+      "tags": [
+        "alpha",
+        "beta",
+        "gamma",
+        "delta"
+      ],
+      "pos": {
+        "x": 10,
+        "y": 11,
+        "z": 12
+      },
+      "values": [
+        10,
+        11,
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": 11,
+      "name": "name_11",
+      "active": false,
+      "score": 13.75,
+      "tags": [
+        "alpha",
+        "beta",
+        "gamma",
+        "delta"
+      ],
+      "pos": {
+        "x": 11,
+        "y": 12,
+        "z": 13
+      },
+      "values": [
+        11,
+        12,
+        13,
+        14,
+        15
+      ]
+    },
+    {
+      "id": 12,
+      "name": "name_12",
+      "active": true,
+      "score": 15.0,
+      "tags": [
+        "alpha",
+        "beta",
+        "gamma",
+        "delta"
+      ],
+      "pos": {
+        "x": 12,
+        "y": 13,
+        "z": 14
+      },
+      "values": [
+        12,
+        13,
+        14,
+        15,
+        16
+      ]
+    },
+    {
+      "id": 13,
+      "name": "name_13",
+      "active": false,
+      "score": 16.25,
+      "tags": [
+        "alpha",
+        "beta",
+        "gamma",
+        "delta"
+      ],
+      "pos": {
+        "x": 13,
+        "y": 14,
+        "z": 15
+      },
+      "values": [
+        13,
+        14,
+        15,
+        16,
+        17
+      ]
+    },
+    {
+      "id": 14,
+      "name": "name_14",
+      "active": false,
+      "score": 17.5,
+      "tags": [
+        "alpha",
+        "beta",
+        "gamma",
+        "delta"
+      ],
+      "pos": {
+        "x": 14,
+        "y": 15,
+        "z": 16
+      },
+      "values": [
+        14,
+        15,
+        16,
+        17,
+        18
+      ]
+    },
+    {
+      "id": 15,
+      "name": "name_15",
+      "active": true,
+      "score": 18.75,
+      "tags": [
+        "alpha",
+        "beta",
+        "gamma",
+        "delta"
+      ],
+      "pos": {
+        "x": 15,
+        "y": 16,
+        "z": 17
+      },
+      "values": [
+        15,
+        16,
+        17,
+        18,
+        19
+      ]
+    },
+    {
+      "id": 16,
+      "name": "name_16",
+      "active": false,
+      "score": 20.0,
+      "tags": [
+        "alpha",
+        "beta",
+        "gamma",
+        "delta"
+      ],
+      "pos": {
+        "x": 16,
+        "y": 17,
+        "z": 18
+      },
+      "values": [
+        16,
+        17,
+        18,
+        19,
+        20
+      ]
+    },
+    {
+      "id": 17,
+      "name": "name_17",
+      "active": false,
+      "score": 21.25,
+      "tags": [
+        "alpha",
+        "beta",
+        "gamma",
+        "delta"
+      ],
+      "pos": {
+        "x": 17,
+        "y": 18,
+        "z": 19
+      },
+      "values": [
+        17,
+        18,
+        19,
+        20,
+        21
+      ]
+    },
+    {
+      "id": 18,
+      "name": "name_18",
+      "active": true,
+      "score": 22.5,
+      "tags": [
+        "alpha",
+        "beta",
+        "gamma",
+        "delta"
+      ],
+      "pos": {
+        "x": 18,
+        "y": 19,
+        "z": 20
+      },
+      "values": [
+        18,
+        19,
+        20,
+        21,
+        22
+      ]
+    },
+    {
+      "id": 19,
+      "name": "name_19",
+      "active": false,
+      "score": 23.75,
+      "tags": [
+        "alpha",
+        "beta",
+        "gamma",
+        "delta"
+      ],
+      "pos": {
+        "x": 19,
+        "y": 20,
+        "z": 21
+      },
+      "values": [
+        19,
+        20,
+        21,
+        22,
+        23
+      ]
+    }
+  ]
+}
