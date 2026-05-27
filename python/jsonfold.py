@@ -429,8 +429,6 @@ class JSONFoldWriter:
             self.pending = s[nl_pos+1:]
             line = Line.parse(s2, self._parent_kind())
             self._feed(line)
-            if len(self.pending) > self.cfg.width:
-                self._mark_no_fold()
 
             return s_len
 
@@ -504,8 +502,6 @@ class JSONFoldWriter:
                 )
             )
 
-            if line.width() > self.cfg.width:
-                self._mark_no_fold()
             return
 
         closer = line.closer

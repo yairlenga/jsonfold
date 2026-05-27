@@ -29,7 +29,7 @@ class NullWriter:
     def ttfb_ms(self):
         if self.first_write is None:
             return ""
-        return round((self.first_write - self.t0) * 1000, 3)
+        return round((self.first_write - self.t0) * 1000, 1)
 
 
 def make_data(rows):
@@ -99,24 +99,32 @@ def run_json_dump_plain(data, t0):
 
 def time_one(name, data):
     best = None
+    best_dt = 0
 
     for _ in range(REPEATS):
         gc.collect()
         t0 = time.perf_counter()
+        p0 = time.process_time()
         w = run_case(data, name)(t0)
+        p1 = time.process_time()
         t1 = time.perf_counter()
+        dt = t1-t0
 
         row = {
-            "ms": round((t1 - t0) * 1000, 1),
-            "ttfbMs": w.ttfb_ms(),
-            "outMB": mb(w.bytes),
+            "time(ms)": round(dt * 1000, 1),
+            "CPU(ms)": round((p1 - p0) * 1000, 1),
+            "ttfb(ms)": w.ttfb_ms(),
+            "out(MB)": mb(w.bytes),
+
+            "out(MB)": mb(w.bytes),
             "writes": w.writes,
         }
 
-        if best is None or row["ms"] < best["ms"]:
+        if best is None or dt < best_dt:
             best = row
+            best_dt = dt
 
-    return best
+    return best_dt, best
 
 
 def memory_one(name, data):
@@ -159,8 +167,6 @@ def print_table(rows):
 
 def run_one_size(rows, testid):
     data = make_data(rows)
-    mem_rows = max(1, int(rows * MEM_FRACTION))
-    mem_data = make_data(mem_rows)
 
     names = [
         "baseline.dump.plain",
@@ -180,14 +186,13 @@ def run_one_size(rows, testid):
     for name in names:
         print(f"{name} ({rows})... ", end="", file=sys.stderr, flush=True)
 
-        speed = time_one(name, data)
-        peak_mb = memory_one(name, mem_data)
+        dt, speed = time_one(name, data)
+        peak_mb = memory_one(name, data)
 
-        print(f"{speed['ms']} ms", file=sys.stderr)
+        print(f"{round(dt)/1000,0} ms", file=sys.stderr)
 
         results.append({
             "rows": rows,
-            "memRows": mem_rows,
             "name": name,
             **speed,
             "peakMB": peak_mb,
