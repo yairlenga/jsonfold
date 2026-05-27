@@ -410,13 +410,12 @@ class JSONFoldWriter:
         self.stats.bytes_in += s_len
 
         # If no config object, do nothing, just pass thru
-        nl_pos = s.find("\n")
         if not self.cfg:
-            if nl_pos >= 0:
-                self.stats.lines_in += s.count("\n")
+            self.stats.lines_in += s.count("\n")
             return self._write_str(s)
         
         # Fast Path: No new line, just a a segment in the line
+        nl_pos = s.find("\n")
         if nl_pos < 0:
             self.pending += s
             return s_len

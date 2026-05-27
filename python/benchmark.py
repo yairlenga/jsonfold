@@ -168,31 +168,32 @@ def print_table(rows):
         print("|" + "|".join(cell(c, r[c]) for c in cols) + "|")
     print(line)
 
-def run_one_size(rows, testid):
+def run_one_size(rows, tests):
     data = make_data(rows)
 
-    names = [
-        "baseline.dump.plain",
-        "baseline.dump.pretty",
-        "jsonfold.dump.off",
-        "jsonfold.dump.none",
-        "jsonfold.dump.default",
-        "jsonfold.dump.low",
-        "jsonfold.dump.med",
-        "jsonfold.dump.high",
-        "jsonfold.dump.max",
-        "jsonfold.dump.pack",
-        "jsonfold.dump.fold",
-        "jsonfold.dump.join",
-        "baseline.dumps.plain",
-        "baseline.dumps.pretty",
-        "jsonfold.dumps.none",
-        "jsonfold.dumps.default",
-        "jsonfold.dumps.max",
-    ] if testid is None else [ testid ]
+    if not tests:
+        tests = [
+            "baseline.dump.plain",
+            "baseline.dump.pretty",
+            "jsonfold.dump.off",
+            "jsonfold.dump.none",
+            "jsonfold.dump.default",
+            "jsonfold.dump.low",
+            "jsonfold.dump.med",
+            "jsonfold.dump.high",
+            "jsonfold.dump.max",
+            "jsonfold.dump.pack",
+            "jsonfold.dump.fold",
+            "jsonfold.dump.join",
+            "baseline.dumps.plain",
+            "baseline.dumps.pretty",
+            "jsonfold.dumps.none",
+            "jsonfold.dumps.default",
+            "jsonfold.dumps.max",
+            ]
     results = []
 
-    for name in names:
+    for name in tests:
         print(f"{name} ({rows})... ", end="", file=sys.stderr, flush=True)
 
         dt, speed = time_one(name, data)
@@ -211,14 +212,17 @@ def run_one_size(rows, testid):
 
 
 def main(argv):
-    filter = None
+    filter = []
     last_sz = None
     results = []
     for arg in argv[1:]:
+        if arg == "-":
+            filter = []
+            continue
         try:
             last_sz = int(arg)
         except ValueError:
-            filter = arg
+            filter.append(arg)
             continue
         results.extend(run_one_size(last_sz, filter))
 
