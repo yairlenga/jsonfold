@@ -35,6 +35,8 @@ class NullWriter:
 def make_data(rows):
     return {
         "meta": {"version": 1, "ok": True, "name": "jsonfold benchmark"},
+        "long_ids": list(range(100)),
+        "long_obj": {f"k{i}": i for i in range(50)},
         "rows": [
             {
                 "id": i,
@@ -50,8 +52,11 @@ def make_data(rows):
     }
 
 
-def mb(n):
-    return round(n / 1024 / 1024, 1)
+def mem_label():
+    return "kb"
+
+def mem_units(n):
+    return round(n / 1024, 1)
 
 
 def run_case(data, name):
@@ -114,9 +119,7 @@ def time_one(name, data):
             "time(ms)": round(dt * 1000, 1),
             "CPU(ms)": round((p1 - p0) * 1000, 1),
             "ttfb(ms)": w.ttfb_ms(),
-            "out(MB)": mb(w.bytes),
-
-            "out(MB)": mb(w.bytes),
+            f"out({mem_label()})": mem_units(w.bytes),
             "writes": w.writes,
         }
 
@@ -137,7 +140,7 @@ def memory_one(name, data):
     _, peak = tracemalloc.get_traced_memory()
     tracemalloc.stop()
 
-    return mb(peak)
+    return mem_units(peak)
 
 
 def print_table(rows):
@@ -189,13 +192,13 @@ def run_one_size(rows, testid):
         dt, speed = time_one(name, data)
         peak_mb = memory_one(name, data)
 
-        print(f"{round(dt)/1000,0} ms", file=sys.stderr)
+        print(f"{round(dt*1000,0)} ms", file=sys.stderr)
 
         results.append({
             "rows": rows,
             "name": name,
             **speed,
-            "peakMB": peak_mb,
+            f"peak({mem_label()})": peak_mb,
         })
 
     return results
@@ -217,7 +220,6 @@ def main(argv):
         results.extend(run_one_size(1_000, filter))
 
     print_table(results)
-
 
 if __name__ == "__main__":
     main(sys.argv)

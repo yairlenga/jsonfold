@@ -577,6 +577,9 @@ class JSONFoldWriter:
         # Add as new line
         frame.lines.append(line)
 
+        if frame.fold_ok and line.width() > self.cfg.width:
+            self._mark_no_fold()
+
         if not line.closer:
             frame.content_lines += 1
             frame.leafs += line.leafs
@@ -586,10 +589,8 @@ class JSONFoldWriter:
                 frame.child_nesting = line.child_nesting+1
 
             if frame.fold_ok:
-                self._check_fold_limits(frame)
-
-        if frame.fold_ok and line.width() > self.cfg.width:
-            self._mark_no_fold()
+                if not self._check_fold_limits(frame):
+                    self._mark_no_fold()
 
         if not frame.fold_ok:
             self._stream_frame(frame)
@@ -615,7 +616,9 @@ class JSONFoldWriter:
             prev.can_join = False
 
         if frame.fold_ok:
-            self._check_fold_limits(frame)
+            if not self._check_fold_limits(frame):
+                self._mark_no_fold()
+                self._stream_frame(frame)
 
     @profile
     def _try_pack(self, frame: Frame, line: Line) -> bool:
@@ -661,21 +664,17 @@ class JSONFoldWriter:
     # --------------------------------------------------------- frame tracking
 
     @profile
-    def _check_fold_limits(self, frame: Frame) -> None:
-        if not frame.fold_ok:
-            return
-        
+    def _check_fold_limits(self, frame: Frame) -> bool:
         if frame.content_lines > 1:
-            frame.fold_ok = False
-            return
+            return False
 
         if frame.items > frame.fold_limit:
-            frame.fold_ok = False
-            return
+            return False
 
         if frame.child_nesting > self.cfg.fold_nesting:
-            frame.fold_ok = False
-        return
+            return False
+
+        return True
 
     # --------------------------------------------------------- phase 2: fold
 
@@ -689,8 +688,8 @@ class JSONFoldWriter:
         frame = self.stack.pop()
         frame.lines.append(closer)
 
-        if frame.kind != closing_kind:
-            frame.fold_ok = False
+#       Need to handle mismatch between closing and opening.
+#        if frame.kind != closing_kind: ...
 
         folded = self._try_fold(frame)
 
@@ -744,9 +743,6 @@ class JSONFoldWriter:
     def _mark_no_fold(self) -> None:
         for frame in self.stack:
             frame.fold_ok = False
-
-        if self.stack:
-            self._stream_frame(self.stack[-1])
 
     def _parent_kind(self) -> Kind:
         return self.stack[-1].kind if self.stack else Kind.NONE
