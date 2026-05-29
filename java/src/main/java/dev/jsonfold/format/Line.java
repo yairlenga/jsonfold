@@ -1,4 +1,4 @@
-package dev.jsonfold;
+package dev.jsonfold.format;
 
 /**
  * Represents a single pretty-printed JSON line.

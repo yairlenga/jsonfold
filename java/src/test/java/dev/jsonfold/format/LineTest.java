@@ -1,8 +1,11 @@
-package dev.jsonfold;
+package dev.jsonfold.format;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.Test;
+
+import dev.jsonfold.format.Kind;
+import dev.jsonfold.format.Line;
 
 class LineTest {
 

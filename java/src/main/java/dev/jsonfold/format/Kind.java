@@ -1,4 +1,4 @@
-package dev.jsonfold;
+package dev.jsonfold.format;
 
 /**
  * Type of JSON container currently being processed.

@@ -1,4 +1,4 @@
-package dev.jsonfold;
+package dev.jsonfold.format;
 
 public class Main {
     public static void main(String[] args) {
