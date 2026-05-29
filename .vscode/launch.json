@@ -5,25 +5,37 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "type": "java",
+            "name": "Main",
+            "request": "launch",
+            "mainClass": "dev.jsonfold.Main",
+            "projectName": "jsonfold"
+        },
+        {
             "name": "benchmark",
             "type": "debugpy",
             "request": "launch",
             "program": "python/benchmark.py",
-            "args": [ ]
+            "args": []
         },
         {
             "name": "benchmark dump.done",
             "type": "debugpy",
             "request": "launch",
             "program": "python/benchmark.py",
-            "args": [ "jsonfold.dump.none" ]
+            "args": [
+                "jsonfold.dump.none"
+            ]
         },
         {
             "name": "Python Debugger: unit/010",
             "type": "debugpy",
             "request": "launch",
             "program": "python/jsonfold.py",
-            "args": [ "--input=tests/unit/010.gold", "--compact=pack"]
+            "args": [
+                "--input=tests/unit/010.gold",
+                "--compact=pack"
+            ]
         },
         {
             "name": "Python Debugger: Python File",

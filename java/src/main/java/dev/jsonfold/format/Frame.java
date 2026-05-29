@@ -57,4 +57,36 @@ final class Frame {
         this.foldLimit = foldLimit;
         this.joinLimit = joinLimit;
     }
+
+    /**
+     * Return true if the frame currently contains no lines.
+     */
+    boolean isEmpty() {
+        return lines.isEmpty();
+    }
+
+    /**
+     * Return the most recently buffered line.
+     *
+     * @return last line or null if frame is empty
+     */
+    Line lastLine() {
+        return lines.isEmpty()
+                ? null
+                : lines.get(lines.size() - 1);
+    }
+
+    @Override
+    public String toString() {
+        return "Frame{" +
+                "kind=" + kind +
+                ", depth=" + depth +
+                ", lines=" + lines.size() +
+                ", items=" + items +
+                ", leafs=" + leafs +
+                ", contentLines=" + contentLines +
+                ", foldOk=" + foldOk +
+                ", childNesting=" + childNesting +
+                '}';
+    }
 }
