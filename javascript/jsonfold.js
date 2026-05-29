@@ -562,6 +562,27 @@ function countNewlines(s) {
   return n;
 }
 
+function sortObjectKeys(value) {
+  if (Array.isArray(value)) {
+    return value.map(sortObjectKeys);
+  }
+
+  if (
+    value &&
+    typeof value === "object" &&
+    Object.getPrototypeOf(value) === Object.prototype
+  ) {
+    const out = {};
+
+    for (const key of Object.keys(value).sort()) {
+      out[key] = sortObjectKeys(value[key]);
+    }
+
+    return out;
+  }
+
+  return value;
+}
 
 export function dump(obj, fp, {
   compact = "",
@@ -607,11 +628,16 @@ export function stringify(obj, options = {}) {
   return text;
 }
 
+export function dumps(obj, options = {}) {
+  return stringify(obj, options)
+}
+
 export default {
   JSONFold,
   JSONFoldFilter,
   JSONFoldStats,
   dump,
   dumpi,
+  dumps,
   stringify,
 };
