@@ -20,74 +20,129 @@ final class Line {
     /** Leading indentation width in spaces. */
     int indent;
 
-    /** Text content excluding indentation and trailing newline. */
+    /** Line text without leading indentation or trailing newline. */
     String text;
 
-    /** Parent container type. */
-    Kind parentKind = Kind.NONE;
+    /** Container kind of the parent frame, or {@link Kind#NONE}. */
+    Kind parentKind;
 
-    /** Number of packed logical items represented by this line. */
+    /** Logical item count represented by this line. */
     int items = 1;
 
-    /** Total leaf elements represented by this line. */
+    /** Number of scalar leaf values represented by this line. */
     int leafs = 1;
 
     /**
-     * Maximum folded child nesting depth.
+     * Maximum folded child nesting represented by this line.
      *
-     * <p>-1 indicates a scalar line.
+     * <p>A value of {@code -1} means this is a scalar/body line.
      */
     int childNesting = -1;
 
-    /** Opening container marker, if any. */
+    /** Opening container kind, or {@link Kind#NONE}. */
     Kind opener = Kind.NONE;
 
-    /** Closing container marker, if any. */
+    /** Closing container kind, or {@link Kind#NONE}. */
     Kind closer = Kind.NONE;
 
-    /** Whether this line may participate in packing. */
-    boolean canPack = true;
+    /** Whether this line may be packed with another scalar line. */
+    boolean canPack;
 
-    /** Whether this line may participate in joining. */
-    boolean canJoin = true;
+    /** Whether this line may be joined with another line. */
+    boolean canJoin;
 
-    /**
-     * Parse a pretty-printed JSON line.
-     *
-     * @param text line text without trailing newline
-     * @param parentKind parent container type
-     * @return parsed line
-     */
-    static Line parse(String text, Kind parentKind) {
-        throw new UnsupportedOperationException();
+    private Line() {
     }
 
     /**
-     * Returns the physical width of the line.
+     * Parse one pretty-printed JSON line.
      *
-     * @return indentation + text length
+     * @param s line text without trailing newline
+     * @param parentKind parent container kind
+     * @return parsed line metadata
      */
-    int width() {
-        return indent + text.length();
+    static Line parse(String s, Kind parentKind) {
+        Line line = new Line();
+
+        int start = 0;
+        while (start < s.length() && Character.isWhitespace(s.charAt(start))) {
+            start++;
+        }
+
+        String body = rstrip(s.substring(start));
+
+        line.indent = start;
+        line.text = body;
+        line.parentKind = parentKind;
+
+        if (body.endsWith("{")) {
+            line.opener = Kind.DICT;
+        } else if (body.endsWith("[")) {
+            line.opener = Kind.LIST;
+        }
+
+        line.closer = closingKind(body);
+
+        boolean isBodyLine =
+                parentKind != Kind.NONE
+                        && line.opener == Kind.NONE
+                        && line.closer == Kind.NONE;
+
+        line.canPack = isBodyLine;
+        line.canJoin = isBodyLine;
+
+        return line;
     }
 
     /**
-     * Convert back to output form.
+     * Return this line as output text.
      *
-     * @return line including trailing newline
+     * @return indentation, line text, and trailing newline
      */
     String raw() {
         return " ".repeat(indent) + text + "\n";
     }
 
     /**
-     * Merge another line into this one.
+     * Return physical output width.
      *
-     * <p>Used during pack/join operations.
+     * @return indentation plus text length
+     */
+    int width() {
+        return indent + text.length();
+    }
+
+    /**
+     * Merge another line into this line.
      *
-     * @param other line to merge
+     * <p>Used by pack/join phases after width and count checks have passed.
+     *
+     * @param other line to append
      */
     void joinLine(Line other) {
-        throw new UnsupportedOperationException();
+        text += " " + other.text;
+        items += other.items;
+        leafs += other.leafs;
+
+        if (other.childNesting > childNesting) {
+            childNesting = other.childNesting;
+            canPack = false;
+        }
+    }
+
+    private static Kind closingKind(String body) {
+        return switch (body) {
+            case "}", "}," -> Kind.DICT;
+            case "]", "]," -> Kind.LIST;
+            default -> Kind.NONE;
+        };
+    }
+
+    private static String rstrip(String s) {
+        int end = s.length();
+        while (end > 0 && Character.isWhitespace(s.charAt(end - 1))) {
+            end--;
+        }
+        return s.substring(0, end);
     }
 }
