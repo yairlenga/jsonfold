@@ -1,20 +1,5 @@
 // jsonfold.js
 // Hybrid pretty/compact JSON output for JavaScript.
-//
-// Structure intentionally mirrors the Python version:
-//   JSONFold          immutable-style configuration + presets
-//   Kind              container kind enum
-//   Line              physical pretty-print line with packing metadata
-//   Frame             open container frame
-//   JSONFoldStats     input/output counters
-//   JSONFoldFilter    file-like writer/filter
-//   dump              write folded JSON to a writer
-//   dumpi             write folded JSON and return stats
-//   dumps             return folded JSON as a string
-//
-// Unlike Python, JavaScript has no built-in incremental JSON encoder like
-// json.dump(obj, fp). This file therefore includes a small incremental encoder
-// that emits pretty JSON lines into JSONFoldFilter.
 
 export const Kind = Object.freeze({
   NONE: 0,
@@ -68,9 +53,10 @@ export class JSONFold {
   }
 
   static preset(name = "") {
-    const cfg = JSONFold.PRESETS[name];
-    if (!cfg) throw new Error(`unknown JSONFold preset: ${name}`);
-    return cfg;
+    if (!Object.prototype.hasOwnProperty.call(JSONFold.PRESETS, name)) {
+      throw new Error(`unknown JSONFold preset: ${name}`);
+    }
+    return JSONFold.PRESETS[name];
   }
 }
 
@@ -89,16 +75,18 @@ JSONFold.NONE = new JSONFold({
 JSONFold.DEFAULT = new JSONFold();
 
 JSONFold.PRESETS = Object.freeze({
+  off: null,
   "": JSONFold.DEFAULT,
   default: JSONFold.DEFAULT,
   none: JSONFold.NONE,
 
   low: JSONFold.DEFAULT.replace({
+    foldNesting: 0,
     joinNesting: 0,
   }),
 
   med: JSONFold.DEFAULT.replace({
-    joinNesting: 1,
+    joinNesting: 0,
   }),
 
   high: JSONFold.DEFAULT.replace({
@@ -114,6 +102,7 @@ JSONFold.PRESETS = Object.freeze({
   }),
 
   max: JSONFold.NONE.replace({
+    width: 255,
     packArrayItems: MAX_ARRAY_ITEMS,
     packObjItems: MAX_OBJ_ITEMS,
     packNesting: MAX_NESTING,
@@ -157,6 +146,8 @@ export class Line {
     childNesting = -1,
     opener = Kind.NONE,
     closer = Kind.NONE,
+    canJoin = true,
+    canPack = true,
   } = {}) {
     this.indent = indent;
     this.text = text;
@@ -166,13 +157,23 @@ export class Line {
     this.childNesting = childNesting;
     this.opener = opener;
     this.closer = closer;
+    this.canJoin = canJoin;
+    this.canPack = canPack;
   }
 
   static parse(s, parentKind = Kind.NONE) {
     const stripped = s.trimStart();
     const body = stripped.trimEnd();
-    const opener = body.endsWith("{") ? Kind.DICT : body.endsWith("[") ? Kind.LIST : Kind.NONE;
+    const opener =
+      body.endsWith("{") ? Kind.DICT :
+      body.endsWith("[") ? Kind.LIST :
+      Kind.NONE;
+
     const closer = CLOSING_KIND[body] ?? Kind.NONE;
+    const isBodyLine =
+      parentKind !== Kind.NONE &&
+      opener === Kind.NONE &&
+      closer === Kind.NONE;
 
     return new Line({
       indent: s.length - stripped.length,
@@ -180,39 +181,28 @@ export class Line {
       parentKind,
       opener,
       closer,
+      canJoin: isBodyLine,
+      canPack: isBodyLine,
     });
   }
 
   raw() {
-    return " ".repeat(this.indent) + this.text + String.fromCharCode(10);
+    return " ".repeat(this.indent) + this.text + "\n";
   }
 
   width() {
     return this.indent + this.text.length;
   }
 
-  isPackable() {
-    return (
-      this.childNesting < 0 &&
-      this.parentKind !== Kind.NONE &&
-      this.opener === Kind.NONE &&
-      this.closer === Kind.NONE
-    );
-  }
-
-  isJoinable() {
-    return (
-      this.parentKind !== Kind.NONE &&
-      this.opener === Kind.NONE &&
-      this.closer === Kind.NONE
-    );
-  }
-
   joinLine(other) {
     this.text += " " + other.text;
     this.items += other.items;
     this.leafs += other.leafs;
-    this.childNesting = Math.max(this.childNesting, other.childNesting);
+
+    if (other.childNesting > this.childNesting) {
+      this.childNesting = other.childNesting;
+      this.canPack = false;
+    }
   }
 }
 
@@ -252,6 +242,7 @@ export class JSONFoldStats {
 }
 
 function asConfig(compact = "") {
+  if (compact === null || compact === false) return null;
   if (compact instanceof JSONFold) return compact;
   if (typeof compact === "string") return JSONFold.preset(compact);
   if (compact && typeof compact === "object") return new JSONFold(compact);
@@ -260,15 +251,71 @@ function asConfig(compact = "") {
 
 function writeAny(writer, s) {
   if (writer == null) return s.length;
+
   if (typeof writer === "function") {
     writer(s);
     return s.length;
   }
+
   if (typeof writer.write === "function") {
     const ret = writer.write(s);
     return typeof ret === "number" ? ret : s.length;
   }
+
   throw new TypeError("writer must be a function or an object with write(s)");
+}
+
+function countNewlines(s) {
+  let n = 0;
+  for (let i = 0; i < s.length; i++) {
+    if (s.charCodeAt(i) === 10) n++;
+  }
+  return n;
+}
+
+function sortObjectKeys(value) {
+  if (Array.isArray(value)) {
+    return value.map(sortObjectKeys);
+  }
+
+  if (
+    value &&
+    typeof value === "object" &&
+    Object.getPrototypeOf(value) === Object.prototype
+  ) {
+    const out = {};
+
+    for (const key of Object.keys(value).sort()) {
+      out[key] = sortObjectKeys(value[key]);
+    }
+
+    return out;
+  }
+
+  return value;
+}
+
+function sortedReplacer(userReplacer) {
+  return function replacer(key, value) {
+    if (userReplacer) {
+      value = userReplacer.call(this, key, value);
+    }
+
+    if (
+      value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      Object.getPrototypeOf(value) === Object.prototype
+    ) {
+      const out = {};
+      for (const k of Object.keys(value).sort()) {
+        out[k] = value[k];
+      }
+      return out;
+    }
+
+    return value;
+  };
 }
 
 export class JSONFoldFilter {
@@ -282,32 +329,55 @@ export class JSONFoldFilter {
 
   write(s) {
     s = String(s);
-    this.stats.bytesIn += s.length;
+    const sLen = s.length;
+    this.stats.bytesIn += sLen;
+
+    const nlPos = s.indexOf("\n");
+
+    if (!this.cfg) {
+      if (nlPos >= 0) this.stats.linesIn += countNewlines(s);
+      return this._writeStr(s);
+    }
+
+    if (nlPos < 0) {
+      this.pending += s;
+      return sLen;
+    }
+
+    const nl2Pos = s.indexOf("\n", nlPos + 1);
+
+    if (nl2Pos < 0) {
+      this.stats.linesIn += 1;
+
+      const s2 = this.pending + s.slice(0, nlPos);
+      this.pending = s.slice(nlPos + 1);
+
+      this._feed(Line.parse(s2, this._parentKind()));
+
+      if (this.pending.length > this.cfg.width) {
+        this._markNoFold();
+      }
+
+      return sLen;
+    }
+
+    const parts = s.split(/(?<=\n)/);
     this.stats.linesIn += countNewlines(s);
 
-    if (!this.cfg) return this._writeStr(s);
-
-    const nl = String.fromCharCode(10);
-    let start = 0;
-
     if (this.pending) {
-      s = this.pending + s;
+      parts[0] = this.pending + parts[0];
       this.pending = "";
     }
 
-    for (let i = 0; i < s.length; i++) {
-      if (s[i] !== nl) continue;
-      const part = s.slice(start, i);
-      this._feed(Line.parse(part, this._parentKind()));
-      start = i + 1;
+    if (parts.length && !parts[parts.length - 1].endsWith("\n")) {
+      this.pending = parts.pop();
     }
 
-    if (start < s.length) {
-      this.pending = s.slice(start);
-      if (this.pending.trimEnd().length > this.cfg.width) this._markNoFold();
+    for (const part of parts) {
+      this._feed(Line.parse(part.slice(0, -1), this._parentKind()));
     }
 
-    return s.length;
+    return sLen;
   }
 
   flush() {
@@ -328,6 +398,7 @@ export class JSONFoldFilter {
     for (const frame of this.stack) {
       for (const line of frame.lines) this._writeLine(line);
     }
+
     this.stack.length = 0;
   }
 
@@ -344,6 +415,7 @@ export class JSONFoldFilter {
 
   _feed(line) {
     const opener = line.opener;
+
     if (opener !== Kind.NONE) {
       this.stack.push(new Frame({
         kind: opener,
@@ -354,25 +426,42 @@ export class JSONFoldFilter {
         joinLimit: this._joinLimit(opener),
       }));
 
-      if (line.width() > this.cfg.width) this._markNoFold();
+      if (line.width() > this.cfg.width) {
+        this._markNoFold();
+      }
+
       return;
     }
 
     const closer = line.closer;
+
     if (closer !== Kind.NONE) {
       this._closeFrame(line, closer);
       return;
     }
 
-    this._emitLine(line);
-  }
-
-  _emitLine(line) {
     if (this.stack.length) {
-      this._addToFrame(this.stack[this.stack.length - 1], line);
+      const frame = this.stack[this.stack.length - 1];
+
+      if (line.items >= frame.packLimit) line.canPack = false;
+      if (line.items >= frame.joinLimit) line.canJoin = false;
+
+      this._addToFrame(frame, line);
     } else {
       this._writeLine(line);
     }
+  }
+
+  _emitLines(lines, depth = this.stack.length - 1) {
+    if (!lines.length) return;
+
+    if (depth < 0) {
+      for (const line of lines) this._writeLine(line);
+      return;
+    }
+
+    const frame = this.stack[depth];
+    for (const line of lines) this._addToFrame(frame, line);
   }
 
   _chooseLimit(kind, { defaultValue = 0, listLimit = 0, dictLimit = 0 } = {}) {
@@ -403,17 +492,35 @@ export class JSONFoldFilter {
   }
 
   _addToFrame(frame, line) {
-    if (this._tryPack(frame, line)) return;
-    if (this._tryJoin(frame, line)) return;
+    if (frame.lines.length) {
+      if (line.canPack && this._tryPack(frame, line)) return;
+      if (line.canJoin && this._tryJoin(frame, line)) return;
+    }
 
     frame.lines.push(line);
-    this._updateFrame(frame, line);
 
-    if (frame.foldOk && line.width() > this.cfg.width) this._markNoFold();
-    if (!frame.foldOk) this._streamFrame(frame, { keepLast: true });
+    if (line.closer === Kind.NONE) {
+      frame.contentLines += 1;
+      frame.items += line.items;
+      frame.leafs += line.leafs;
+
+      if (line.childNesting >= frame.childNesting) {
+        frame.childNesting = line.childNesting + 1;
+      }
+
+      if (frame.foldOk) this._checkFoldLimits(frame);
+    }
+
+    if (frame.foldOk && line.width() > this.cfg.width) {
+      this._markNoFold();
+    }
+
+    if (!frame.foldOk) {
+      this._streamFrame(frame);
+    }
   }
 
-  _canJoin(prev, line, limit) {
+  _canMerge(prev, line, limit) {
     return (
       prev.indent === line.indent &&
       prev.items + line.items <= limit &&
@@ -421,81 +528,83 @@ export class JSONFoldFilter {
     );
   }
 
-  _joinIntoFrame(frame, prev, line) {
+  _mergeIntoFrame(frame, prev, line) {
     prev.joinLine(line);
 
-    if (line.parentKind === frame.kind) {
-      frame.items += line.items;
-      frame.leafs += line.leafs;
-    }
+    frame.items += line.items;
+    frame.leafs += line.leafs;
 
-    this._checkFoldLimits(frame);
+    if (prev.items >= frame.packLimit) prev.canPack = false;
+    if (prev.items >= frame.joinLimit) prev.canJoin = false;
+
+    if (frame.foldOk) this._checkFoldLimits(frame);
   }
 
   _tryPack(frame, line) {
     if (
-      frame.lines.length === 0 ||
       frame.packLimit <= 1 ||
-      !line.isPackable()
+      !frame.lines.length ||
+      !line.canPack
     ) {
       return false;
     }
 
     const prev = frame.lines[frame.lines.length - 1];
-    if (!(prev.isPackable() && this._canJoin(prev, line, frame.packLimit))) return false;
 
-    this._joinIntoFrame(frame, prev, line);
+    if (!(prev.canPack && this._canMerge(prev, line, frame.packLimit))) {
+      return false;
+    }
+
+    this._mergeIntoFrame(frame, prev, line);
     return true;
   }
 
   _tryJoin(frame, line) {
     if (
-      frame.lines.length === 0 ||
       frame.joinLimit <= 1 ||
-      !line.isJoinable() ||
+      !frame.lines.length ||
+      !line.canJoin ||
       line.childNesting > this.cfg.joinNesting
     ) {
       return false;
     }
 
     const prev = frame.lines[frame.lines.length - 1];
-    if (!(
-      prev.isJoinable() &&
-      prev.childNesting <= this.cfg.joinNesting &&
-      this._canJoin(prev, line, frame.joinLimit)
-    )) {
+
+    if (
+      !(
+        prev.canJoin &&
+        prev.childNesting <= this.cfg.joinNesting &&
+        this._canMerge(prev, line, frame.joinLimit)
+      )
+    ) {
       return false;
     }
 
-    this._joinIntoFrame(frame, prev, line);
+    this._mergeIntoFrame(frame, prev, line);
     return true;
   }
 
-  _updateFrame(frame, line) {
-    if (line.closer !== Kind.NONE) return;
-
-    frame.contentLines += 1;
-
-    if (line.parentKind === frame.kind) {
-      frame.leafs += line.leafs;
-      frame.items += line.items;
-    }
-
-    if (line.childNesting >= 0) {
-      frame.childNesting = Math.max(frame.childNesting, line.childNesting + 1);
-    }
-
-    this._checkFoldLimits(frame);
-  }
-
   _checkFoldLimits(frame) {
-    if (frame.contentLines > 1) frame.foldOk = false;
-    if (frame.items > frame.foldLimit) frame.foldOk = false;
-    if (frame.childNesting > this.cfg.foldNesting) frame.foldOk = false;
+    if (!frame.foldOk) return;
+
+    if (frame.contentLines > 1) {
+      frame.foldOk = false;
+      return;
+    }
+
+    if (frame.items > frame.foldLimit) {
+      frame.foldOk = false;
+      return;
+    }
+
+    if (frame.childNesting > this.cfg.foldNesting) {
+      frame.foldOk = false;
+    }
   }
 
   _closeFrame(closer, closingKind) {
-    if (this.stack.length === 0) {
+    if (!this.stack.length) {
       this._writeLine(closer);
       return;
     }
@@ -503,85 +612,77 @@ export class JSONFoldFilter {
     const frame = this.stack.pop();
     frame.lines.push(closer);
 
-    if (frame.kind !== closingKind) frame.foldOk = false;
+    if (frame.kind !== closingKind) {
+      frame.foldOk = false;
+    }
 
     const folded = this._tryFold(frame);
     if (folded !== null) frame.lines = [folded];
 
-    for (const line of frame.lines) this._emitLine(line);
+    this._emitLines(frame.lines);
     frame.lines.length = 0;
   }
 
   _tryFold(frame) {
-    if (!frame.foldOk || frame.contentLines !== 1 || frame.lines.length !== 3) {
+    if (
+      !frame.foldOk ||
+      frame.contentLines !== 1 ||
+      frame.lines.length !== 3
+    ) {
       return null;
     }
 
-    const foldedLength = frame.lines.reduce((sum, line) => sum + 1 + line.text.length, 0) - 1;
-    if (frame.lines[0].indent + foldedLength > this.cfg.width) return null;
+    const foldedLength =
+      frame.lines.reduce((sum, line) => sum + 1 + line.text.length, 0) - 1;
+
+    if (frame.lines[0].indent + foldedLength > this.cfg.width) {
+      return null;
+    }
 
     return new Line({
       indent: frame.lines[0].indent,
-      text: frame.lines.map((line) => line.text).join(" "),
+      text: frame.lines.map(line => line.text).join(" "),
       parentKind: this._parentKind(),
       items: 1,
       leafs: frame.leafs,
       childNesting: Math.max(0, frame.childNesting),
+      canPack: false,
+      canJoin: true,
     });
   }
 
-  _streamFrame(frame, { keepLast }) {
-    const last = frame.lines[frame.lines.length - 1];
-    const keep = keepLast && last && last.isPackable() ? 1 : 0;
-    const emitLines = keep ? frame.lines.slice(0, -keep) : frame.lines;
-    frame.lines = keep ? frame.lines.slice(-keep) : [];
+  _streamFrame(frame) {
+    const lines = frame.lines;
+    let keep = null;
 
-    for (const line of emitLines) {
-      if (frame.depth === 0) {
-        this._writeLine(line);
-      } else {
-        this._addToFrame(this.stack[frame.depth - 1], line);
+    if (lines.length) {
+      const last = lines[lines.length - 1];
+      if (last.canPack || last.canJoin) {
+        keep = lines.pop();
       }
+    }
+
+    this._emitLines(lines, frame.depth - 1);
+    lines.length = 0;
+
+    if (keep) {
+      lines.push(keep);
     }
   }
 
   _markNoFold() {
-    for (const frame of this.stack) frame.foldOk = false;
-    if (this.stack.length) this._streamFrame(this.stack[this.stack.length - 1], { keepLast: true });
+    for (const frame of this.stack) {
+      frame.foldOk = false;
+    }
+
+    if (this.stack.length) {
+      this._streamFrame(this.stack[this.stack.length - 1]);
+    }
   }
 
   _parentKind() {
     return this.stack.length ? this.stack[this.stack.length - 1].kind : Kind.NONE;
   }
-}
-
-function countNewlines(s) {
-  let n = 0;
-  const nl = String.fromCharCode(10);
-  for (let i = 0; i < s.length; i++) if (s[i] === nl) n++;
-  return n;
-}
-
-function sortObjectKeys(value) {
-  if (Array.isArray(value)) {
-    return value.map(sortObjectKeys);
-  }
-
-  if (
-    value &&
-    typeof value === "object" &&
-    Object.getPrototypeOf(value) === Object.prototype
-  ) {
-    const out = {};
-
-    for (const key of Object.keys(value).sort()) {
-      out[key] = sortObjectKeys(value[key]);
-    }
-
-    return out;
-  }
-
-  return value;
 }
 
 export function dump(obj, fp, {
@@ -595,7 +696,16 @@ export function dump(obj, fp, {
       ? fp
       : new JSONFoldFilter(fp, { compact });
 
-  const value = sortKeys ? sortObjectKeys(obj) : obj;
+  // const jsonReplacer = sortKeys
+  //   ? sortedReplacer(replacer)
+  //   : replacer;
+  // const text = JSON.stringify(value, jsonReplacer, indent);
+
+  const value =
+    sortKeys
+      ? sortObjectKeys(obj)
+      : obj;
+
   const text = JSON.stringify(value, replacer, indent);
 
   if (text !== undefined) {
@@ -605,6 +715,7 @@ export function dump(obj, fp, {
 
   out.finish();
 }
+
 
 export function dumpi(obj, fp, options = {}) {
   const out =
@@ -621,16 +732,14 @@ export function dumpi(obj, fp, options = {}) {
 export function stringify(obj, options = {}) {
   let text = "";
 
-  dump(obj, (s) => {
+  dump(obj, s => {
     text += s;
   }, options);
 
   return text;
 }
 
-export function dumps(obj, options = {}) {
-  return stringify(obj, options)
-}
+export const dumps = stringify;
 
 export default {
   JSONFold,
@@ -638,6 +747,6 @@ export default {
   JSONFoldStats,
   dump,
   dumpi,
-  dumps,
   stringify,
+  dumps,
 };

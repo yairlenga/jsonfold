@@ -24,9 +24,9 @@ class NullWriter {
   }
 }
 
-function mb(n) {
-  return n / 1024 / 1024;
-}
+function size_label() { return "Kb" ; }
+
+function size_units(n) { return n/1024 ; }
 
 function makeData(rows) {
   return {
@@ -141,7 +141,7 @@ function timeOne(data, name) {
       "time(ms)": Number(dt.toFixed(1)),
       "CPU(ms)": Number(((cpu.user + cpu.system) / 1000).toFixed(1)),
       "ttfb(ms)": w.ttfbMs() === null ? "" : Number(w.ttfbMs().toFixed(1)),
-      "out(MB)": Number(mb(w.bytes).toFixed(1)),
+      "out(KB)": Number(size_units(w.bytes).toFixed(1)),
       writes: w.writes,
     };
 
@@ -165,7 +165,7 @@ function memoryOne(data, name) {
   if (global.gc) global.gc();
 
   const after = process.memoryUsage().heapUsed;
-  return Number(mb(Math.max(0, after - before)).toFixed(1));
+  return Math.max(0, after - before)
 }
 
 function runOneSize(rows, onlyName = null) {
@@ -189,17 +189,18 @@ function runOneSize(rows, onlyName = null) {
 
   for (const name of names) {
     let speed = {}
-    let peakMB = '-'
+    let peakMem = '-'
     let msg = "FAIL"
     process.stderr.write(`${name} (${rows})... `);
     const rowT0 = performance.now();
     try {
         speed = timeOne(data, name);
-        peakMB = memoryOne(data, name);
+        peakMem = memoryOne(data, name);
         validateCase(data, name);
         const rowMs = performance.now() - rowT0;
-        msg = +rowMs.toFixed(1)
+        msg = Number(rowMs.toFixed(1))
     } catch (e) {
+      console.error(e);
       msg = "ERROR";
     }
     process.stderr.write(`${msg} ms\n`)
@@ -207,8 +208,8 @@ function runOneSize(rows, onlyName = null) {
       rows,
       name,
       ...speed,
-      peakMB,
-      msg,
+      peakMB: Number(size_units(peakMem).toFixed(1)),
+      "duration(ms)": msg,
     });
 
   }
