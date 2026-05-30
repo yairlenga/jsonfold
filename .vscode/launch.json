@@ -6,10 +6,28 @@
     "configurations": [
         {
             "type": "java",
-            "name": "Main",
+            "name": "Java/JSONFold demo - default",
             "request": "launch",
-            "mainClass": "dev.jsonfold.Main",
-            "projectName": "jsonfold"
+            "mainClass": "dev.jsonfold.format.Main",
+            "projectName": "jsonfold",
+            "args": "--demo --verbose"
+        },
+        {
+            "type": "java",
+            "name": "Java JSONFold demo - max",
+            "request": "launch",
+            "mainClass": "dev.jsonfold.format.Main",
+            "projectName": "jsonfold",
+            "args": "--demo --compact=max --verbose"
+        },
+
+                {
+            "type": "java",
+            "name": "Java JSONFold demo - off",
+            "request": "launch",
+            "mainClass": "dev.jsonfold.format.Main",
+            "projectName": "jsonfold",
+            "args": "--demo --compact=off --verbose"
         },
         {
             "name": "benchmark",

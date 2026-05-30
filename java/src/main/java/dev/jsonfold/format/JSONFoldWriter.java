@@ -20,6 +20,7 @@ public final class JSONFoldWriter extends Writer {
 
     private final Writer fp;
     private final JSONFold cfg;
+    boolean keepOpen = false;
     private final Stats stats = new Stats();
 
     /** Partial line data waiting for a newline. */
@@ -32,21 +33,29 @@ public final class JSONFoldWriter extends Writer {
      * Create a writer using the default configuration.
      */
     public JSONFoldWriter(Writer fp) {
-        this(fp, JSONFold.DEFAULT);
+        this(fp, new JSONFold(), false);
     }
 
     /**
      * Create a writer using a specific configuration.
      */
     public JSONFoldWriter(Writer fp, JSONFold cfg) {
+        this(fp, cfg, false);
+    }
+
+    /**
+     * Create a writer using a specific configuration, allow close to be skipped
+     */
+    public JSONFoldWriter(Writer fp, JSONFold cfg, boolean keepOpen) {
         this.fp = fp;
-        this.cfg = cfg == null ? JSONFold.DEFAULT : cfg;
+        this.cfg = cfg ;
+        this.keepOpen = keepOpen ;
     }
 
     /**
      * Return statistics collected by this writer.
      */
-    public Stats stats() {
+    public Stats getStats() {
         return stats;
     }
 
@@ -131,7 +140,7 @@ public final class JSONFoldWriter extends Writer {
     @Override
     public void close() throws IOException {
         finish();
-        fp.close();
+        if ( !keepOpen ) fp.close();
     }
 
     /**

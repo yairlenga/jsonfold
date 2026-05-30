@@ -13,13 +13,29 @@
             "HYPHEN_TO_EN"
         ]
     },
+
+    "cSpell.enabledFileTypes": {
+        "*": false,
+        "markdown": true,
+        "java": true,
+        "python": true,
+    },
+
     "cSpell.languageSettings": [
+
         {
             "languageId": "python",
             "words": [
                 "dumpi",
                 "keepends",
                 ""
+            ]
+        },
+        {
+            "languageId": "java",
+            "includeRegExpList": [
+                "string",
+                "comment"
             ]
         }
     ],

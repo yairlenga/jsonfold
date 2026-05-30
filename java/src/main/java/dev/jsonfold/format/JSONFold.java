@@ -3,219 +3,279 @@ package dev.jsonfold.format;
 import java.util.Map;
 
 /**
- * Immutable configuration for JSON folding, packing and joining.
+ * Mutable configuration object for JSONFold formatting.
  *
- * <p>A value of 0 disables the corresponding feature.
- *
- * <p>Instances are thread-safe and reusable.
+ * <p>Preset instances are kept internally, but {@link #preset(String)}
+ * always returns a clone, so callers may safely modify the returned object
+ * with setters.</p>
  */
-public final class JSONFold {
+public class JSONFold implements Cloneable {
 
     public static final int MAX_ARRAY_ITEMS = 1000;
     public static final int MAX_OBJ_ITEMS = 1000;
     public static final int MAX_NESTING = 10;
 
-    /** Target maximum output line width. */
-    public final int width;
+    int width = 80;
 
-    /** Phase 1: scalar packing. */
-    public final int packArrayItems;
-    public final int packObjItems;
-    public final int packNesting;
+    int packArrayItems = 8;
+    int packObjItems = 4;
+    int packNesting = 1;
 
-    /** Phase 2: container folding. */
-    public final int foldArrayItems;
-    public final int foldObjItems;
-    public final int foldNesting;
+    int foldArrayItems = 8;
+    int foldObjItems = 4;
+    int foldNesting = 1;
 
-    /** Phase 3: folded-line joining. */
-    public final int joinArrayItems;
-    public final int joinObjItems;
-    public final int joinNesting;
+    int joinArrayItems = 8;
+    int joinObjItems = 4;
+    int joinNesting = 1;
 
-    /**
-     * Create a configuration instance.
-     */
-    public JSONFold(
-            int width,
-            int packArrayItems,
-            int packObjItems,
-            int packNesting,
-            int foldArrayItems,
-            int foldObjItems,
-            int foldNesting,
-            int joinArrayItems,
-            int joinObjItems,
-            int joinNesting) {
+    public JSONFold() {
+    }
 
+    @Override
+    public JSONFold clone() {
+        try {
+            return (JSONFold) super.clone();
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    private static final Map<String, JSONFold> PRESETS = Map.ofEntries(
+        Map.entry("", createDefault()),
+        Map.entry("default", createDefault()),
+        Map.entry("none", createNone()),
+        Map.entry("off", createNone()),
+        Map.entry("low", createLow()),
+        Map.entry("med", createMed()),
+        Map.entry("high", createHigh()),
+        Map.entry("max", createMax()),
+        Map.entry("pack", createPack()),
+        Map.entry("fold", createFold()),
+        Map.entry("join", createJoin())
+    );
+
+    public static JSONFold preset(String name) {
+        JSONFold cfg = PRESETS.get(name == null ? "" : name);
+        if (cfg == null) {
+            throw new IllegalArgumentException("Unknown JSONFold preset: " + name);
+        }
+        return cfg.clone();
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public void setWidth(int width) {
         this.width = width;
+    }
 
+    public int getPackArrayItems() {
+        return packArrayItems;
+    }
+
+    public void setPackArrayItems(int packArrayItems) {
         this.packArrayItems = packArrayItems;
+    }
+
+    public int getPackObjItems() {
+        return packObjItems;
+    }
+
+    public void setPackObjItems(int packObjItems) {
         this.packObjItems = packObjItems;
+    }
+
+    public int getPackNesting() {
+        return packNesting;
+    }
+
+    public void setPackNesting(int packNesting) {
         this.packNesting = packNesting;
+    }
 
+    public int getFoldArrayItems() {
+        return foldArrayItems;
+    }
+
+    public void setFoldArrayItems(int foldArrayItems) {
         this.foldArrayItems = foldArrayItems;
-        this.foldObjItems = foldObjItems;
-        this.foldNesting = foldNesting;
+    }
 
+    public int getFoldObjItems() {
+        return foldObjItems;
+    }
+
+    public void setFoldObjItems(int foldObjItems) {
+        this.foldObjItems = foldObjItems;
+    }
+
+    public int getFoldNesting() {
+        return foldNesting;
+    }
+
+    public void setFoldNesting(int foldNesting) {
+        this.foldNesting = foldNesting;
+    }
+
+    public int getJoinArrayItems() {
+        return joinArrayItems;
+    }
+
+    public void setJoinArrayItems(int joinArrayItems) {
         this.joinArrayItems = joinArrayItems;
+    }
+
+    public int getJoinObjItems() {
+        return joinObjItems;
+    }
+
+    public void setJoinObjItems(int joinObjItems) {
         this.joinObjItems = joinObjItems;
+    }
+
+    public int getJoinNesting() {
+        return joinNesting;
+    }
+
+    public void setJoinNesting(int joinNesting) {
         this.joinNesting = joinNesting;
     }
 
-    /**
-     * Return a copy with a different width.
-     */
-    public JSONFold withWidth(int width) {
-        return new JSONFold(
-                width,
-                packArrayItems,
-                packObjItems,
-                packNesting,
-                foldArrayItems,
-                foldObjItems,
-                foldNesting,
-                joinArrayItems,
-                joinObjItems,
-                joinNesting);
+    public void setPackItems(int value) {
+        this.packArrayItems = value;
+        this.packObjItems = value;
     }
 
-    /**
-     * Return a named preset.
-     *
-     * @throws IllegalArgumentException if the preset name is unknown
-     */
-    public static JSONFold preset(String name) {
-        JSONFold cfg = PRESETS.get(name);
-        if (cfg == null) {
-            throw new IllegalArgumentException(
-                    "Unknown JSONFold preset: " + name);
-        }
+    public void setFoldItems(int value) {
+        this.foldArrayItems = value;
+        this.foldObjItems = value;
+    }
+
+    public void setJoinItems(int value) {
+        this.joinArrayItems = value;
+        this.joinObjItems = value;
+    }
+
+    private static JSONFold createDefault() {
+        return new JSONFold();
+    }
+
+    private static JSONFold createNone() {
+        JSONFold cfg = new JSONFold();
+
+        cfg.packArrayItems = 0;
+        cfg.packObjItems = 0;
+        cfg.packNesting = 0;
+
+        cfg.foldArrayItems = 0;
+        cfg.foldObjItems = 0;
+        cfg.foldNesting = 0;
+
+        cfg.joinArrayItems = 0;
+        cfg.joinObjItems = 0;
+        cfg.joinNesting = 0;
+
         return cfg;
     }
 
-    // --------------------------------------------------------------------
-    // Presets
-    // --------------------------------------------------------------------
+    private static JSONFold createLow() {
+        JSONFold cfg = createDefault();
+        cfg.foldNesting = 0;
+        cfg.joinNesting = 0;
+        return cfg;
+    }
 
-    /**
-     * Disable all packing, folding and joining.
-     */
-    public static final JSONFold NONE =
-            new JSONFold(
-                    80,
-                    0, 0, 0,
-                    0, 0, 0,
-                    0, 0, 0);
+    private static JSONFold createMed() {
+        JSONFold cfg = createDefault();
+        cfg.joinNesting = 0;
+        return cfg;
+    }
 
-    /**
-     * Balanced default configuration.
-     */
-    public static final JSONFold DEFAULT =
-            new JSONFold(
-                    80,
-                    8, 4, 1,
-                    8, 4, 1,
-                    8, 4, 1);
+    private static JSONFold createHigh() {
+        JSONFold cfg = createDefault();
 
-    /**
-     * Same as DEFAULT, but disallow nested folding/joining.
-     */
-    public static final JSONFold LOW =
-            new JSONFold(
-                    80,
-                    8, 4, 1,
-                    8, 4, 0,
-                    8, 4, 0);
+        cfg.packArrayItems = 16;
+        cfg.packObjItems = 8;
+        cfg.packNesting = 4;
 
-    /**
-     * Same as DEFAULT, but disallow nested joins.
-     */
-    public static final JSONFold MED =
-            new JSONFold(
-                    80,
-                    8, 4, 1,
-                    8, 4, 1,
-                    8, 4, 0);
+        cfg.foldArrayItems = 16;
+        cfg.foldObjItems = 8;
+        cfg.foldNesting = 4;
 
-    /**
-     * More aggressive packing and folding.
-     */
-    public static final JSONFold HIGH =
-            new JSONFold(
-                    80,
-                    16, 8, 4,
-                    16, 8, 4,
-                    16, 8, 2);
+        cfg.joinArrayItems = 16;
+        cfg.joinObjItems = 8;
+        cfg.joinNesting = 2;
 
-    /**
-     * Aggressive compaction, still width-limited.
-     */
-    public static final JSONFold MAX =
-            new JSONFold(
-                    255,
-                    MAX_ARRAY_ITEMS,
-                    MAX_OBJ_ITEMS,
-                    MAX_NESTING,
-                    MAX_ARRAY_ITEMS,
-                    MAX_OBJ_ITEMS,
-                    MAX_NESTING,
-                    MAX_ARRAY_ITEMS,
-                    MAX_OBJ_ITEMS,
-                    MAX_NESTING);
+        return cfg;
+    }
 
-    /**
-     * Packing only.
-     */
-    public static final JSONFold PACK =
-            new JSONFold(
-                    80,
-                    MAX_ARRAY_ITEMS,
-                    MAX_OBJ_ITEMS,
-                    MAX_NESTING,
-                    0, 0, 0,
-                    0, 0, 0);
+    private static JSONFold createMax() {
+        JSONFold cfg = createNone();
 
-    /**
-     * Folding only.
-     */
-    public static final JSONFold FOLD =
-            new JSONFold(
-                    80,
-                    0, 0, 0,
-                    MAX_ARRAY_ITEMS,
-                    MAX_OBJ_ITEMS,
-                    MAX_NESTING,
-                    0, 0, 0);
+        cfg.packArrayItems = MAX_ARRAY_ITEMS;
+        cfg.packObjItems = MAX_OBJ_ITEMS;
+        cfg.packNesting = MAX_NESTING;
 
-    /**
-     * Folding and joining only.
-     */
-    public static final JSONFold JOIN =
-            new JSONFold(
-                    80,
-                    0, 0, 0,
-                    MAX_ARRAY_ITEMS,
-                    MAX_OBJ_ITEMS,
-                    MAX_NESTING,
-                    MAX_ARRAY_ITEMS,
-                    MAX_OBJ_ITEMS,
-                    MAX_NESTING);
+        cfg.foldArrayItems = MAX_ARRAY_ITEMS;
+        cfg.foldObjItems = MAX_OBJ_ITEMS;
+        cfg.foldNesting = MAX_NESTING;
 
-    /**
-     * Named preset lookup table.
-     */
-    public static final Map<String, JSONFold> PRESETS =
-            Map.ofEntries(
-                    Map.entry("", DEFAULT),
-                    Map.entry("default", DEFAULT),
-                    Map.entry("none", NONE),
-                    Map.entry("low", LOW),
-                    Map.entry("med", MED),
-                    Map.entry("high", HIGH),
-                    Map.entry("max", MAX),
-                    Map.entry("pack", PACK),
-                    Map.entry("fold", FOLD),
-                    Map.entry("join", JOIN)
-            );
+        cfg.joinArrayItems = MAX_ARRAY_ITEMS;
+        cfg.joinObjItems = MAX_OBJ_ITEMS;
+        cfg.joinNesting = MAX_NESTING;
+
+        return cfg;
+    }
+
+    private static JSONFold createPack() {
+        JSONFold cfg = createNone();
+
+        cfg.packArrayItems = MAX_ARRAY_ITEMS;
+        cfg.packObjItems = MAX_OBJ_ITEMS;
+        cfg.packNesting = MAX_NESTING;
+
+        return cfg;
+    }
+
+    private static JSONFold createFold() {
+        JSONFold cfg = createNone();
+
+        cfg.foldArrayItems = MAX_ARRAY_ITEMS;
+        cfg.foldObjItems = MAX_OBJ_ITEMS;
+        cfg.foldNesting = MAX_NESTING;
+
+        return cfg;
+    }
+
+    private static JSONFold createJoin() {
+        JSONFold cfg = createNone();
+
+        cfg.foldArrayItems = MAX_ARRAY_ITEMS;
+        cfg.foldObjItems = MAX_OBJ_ITEMS;
+        cfg.foldNesting = MAX_NESTING;
+
+        cfg.joinArrayItems = MAX_ARRAY_ITEMS;
+        cfg.joinObjItems = MAX_OBJ_ITEMS;
+        cfg.joinNesting = MAX_NESTING;
+
+        return cfg;
+    }
+
+    @Override
+    public String toString() {
+        return "JSONFold{" +
+            "width=" + width +
+            ", packArrayItems=" + packArrayItems +
+            ", packObjItems=" + packObjItems +
+            ", packNesting=" + packNesting +
+            ", foldArrayItems=" + foldArrayItems +
+            ", foldObjItems=" + foldObjItems +
+            ", foldNesting=" + foldNesting +
+            ", joinArrayItems=" + joinArrayItems +
+            ", joinObjItems=" + joinObjItems +
+            ", joinNesting=" + joinNesting +
+            '}';
+    }
 }
