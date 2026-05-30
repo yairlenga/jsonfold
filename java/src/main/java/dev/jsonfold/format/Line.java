@@ -1,19 +1,23 @@
 package dev.jsonfold.format;
 
+import java.util.List;
+
 /**
  * Represents a single pretty-printed JSON line.
  *
- * <p>Lines are the basic unit processed by the folding engine.
+ * <p>
+ * Lines are the basic unit processed by the folding engine.
  * A line may represent:
  *
  * <ul>
- *   <li>a scalar value or property</li>
- *   <li>an opening container ({ or [)</li>
- *   <li>a closing container (} or ])</li>
- *   <li>a previously folded container</li>
+ * <li>a scalar value or property</li>
+ * <li>an opening container ({ or [)</li>
+ * <li>a closing container (} or ])</li>
+ * <li>a previously folded container</li>
  * </ul>
  *
- * <p>Additional metadata tracks packing and folding eligibility.
+ * <p>
+ * Additional metadata tracks packing and folding eligibility.
  */
 final class Line {
 
@@ -35,7 +39,8 @@ final class Line {
     /**
      * Maximum folded child nesting represented by this line.
      *
-     * <p>A value of {@code -1} means this is a scalar/body line.
+     * <p>
+     * A value of {@code -1} means this is a scalar/body line.
      */
     int childNesting = -1;
 
@@ -57,7 +62,7 @@ final class Line {
     /**
      * Parse one pretty-printed JSON line.
      *
-     * @param s line text without trailing newline
+     * @param s          line text without trailing newline
      * @param parentKind parent container kind
      * @return parsed line metadata
      */
@@ -83,10 +88,9 @@ final class Line {
 
         line.closer = closingKind(body);
 
-        boolean isBodyLine =
-                parentKind != Kind.NONE
-                        && line.opener == Kind.NONE
-                        && line.closer == Kind.NONE;
+        boolean isBodyLine = parentKind != Kind.NONE
+                && line.opener == Kind.NONE
+                && line.closer == Kind.NONE;
 
         line.canPack = isBodyLine;
         line.canJoin = isBodyLine;
@@ -115,7 +119,8 @@ final class Line {
     /**
      * Merge another line into this line.
      *
-     * <p>Used by pack/join phases after width and count checks have passed.
+     * <p>
+     * Used by pack/join phases after width and count checks have passed.
      *
      * @param other line to append
      */
@@ -145,4 +150,68 @@ final class Line {
         }
         return s.substring(0, end);
     }
+
+/**
+ * Pack another scalar line into this line.
+ *
+ * <p>This mutates the current line. Eligibility checks belong in
+ * {@link JSONFoldWriter}; this method only performs the merge.
+ */
+void pack(Line other) {
+    merge(other);
+}
+
+/**
+ * Join another line into this line.
+ *
+ * <p>This mutates the current line. Used after folding/packing checks
+ * have already passed.
+ */
+void join(Line other) {
+    merge(other);
+}
+
+/**
+ * Shared implementation for pack/join.
+ */
+private void merge(Line other) {
+    text += " " + other.text;
+    items += other.items;
+    leafs += other.leafs;
+
+    if (other.childNesting > childNesting) {
+        childNesting = other.childNesting;
+        canPack = false;
+    }
+}
+
+/**
+ * Create a folded line from opener, body, and closer lines.
+ */
+static Line fold(
+        List<Line> lines,
+        Kind parentKind,
+        int leafs,
+        int childNesting) {
+
+    Line first = lines.get(0);
+
+    Line line = new Line();
+    line.indent = first.indent;
+    line.text = lines.stream()
+            .map(l -> l.text)
+            .collect(java.util.stream.Collectors.joining(" "));
+    line.parentKind = parentKind;
+    line.items = 1;
+    line.leafs = leafs;
+    line.childNesting = childNesting;
+    line.opener = Kind.NONE;
+    line.closer = Kind.NONE;
+    line.canPack = false;
+    line.canJoin = true;
+
+    return line;
+}
+
+
 }

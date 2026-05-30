@@ -11,3 +11,4 @@ javascript/node_modules
 articles/01-python/out
 python/jsonfold.egg-info
 java/target
+perf.data*

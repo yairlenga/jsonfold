@@ -1,4 +1,4 @@
-package dev.jsonfold;
+package dev.jsonfold.format;
 
 import java.util.ArrayList;
 import java.util.List;
