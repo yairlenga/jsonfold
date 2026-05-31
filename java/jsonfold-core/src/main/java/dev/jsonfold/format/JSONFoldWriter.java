@@ -83,6 +83,11 @@ public final class JSONFoldWriter extends Writer {
         stats.addBytesIn(s.length());
         stats.addLinesIn(countNewlines(s));
 
+        if ( cfg == null ) {
+            writeString(s);
+            return ;
+        }
+
         pending.append(s);
 
         int start = 0;
