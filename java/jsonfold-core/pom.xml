@@ -1,4 +1,6 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
 
@@ -21,25 +23,5 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-
-    <licenses>
-        <license>
-            <name>MIT License</name>
-            <url>https://opensource.org/licenses/MIT</url>
-        </license>
-    </licenses>
-
-    <developers>
-        <developer>
-            <id>yairlenga</id>
-            <name>Yair Lenga</name>
-        </developer>
-    </developers>
-
-    <scm>
-        <connection>scm:git:https://github.com/yairlenga/jsonfold.git</connection>
-        <developerConnection>scm:git:ssh://github.com/yairlenga/jsonfold.git</developerConnection>
-        <url>https://github.com/yairlenga/jsonfold</url>
-    </scm>
 
 </project>
