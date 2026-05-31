@@ -39,5 +39,6 @@
             ]
         }
     ],
-    "sarif-viewer.connectToGithubCodeScanning": "off"
+    "sarif-viewer.connectToGithubCodeScanning": "off",
+    "java.configuration.updateBuildConfiguration": "interactive"
 }

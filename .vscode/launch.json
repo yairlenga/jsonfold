@@ -9,7 +9,7 @@
             "name": "Java/JSONFold demo - default",
             "request": "launch",
             "mainClass": "dev.jsonfold.format.Main",
-            "projectName": "jsonfold",
+            "projectName": "jsonfold-jackson",
             "args": "--demo --verbose"
         },
         {
@@ -17,7 +17,7 @@
             "name": "Java JSONFold demo - max",
             "request": "launch",
             "mainClass": "dev.jsonfold.format.Main",
-            "projectName": "jsonfold",
+            "projectName": "jsonfold-jackson",
             "args": "--demo --compact=max --verbose"
         },
 
@@ -26,7 +26,7 @@
             "name": "Java JSONFold demo - off",
             "request": "launch",
             "mainClass": "dev.jsonfold.format.Main",
-            "projectName": "jsonfold",
+            "projectName": "jsonfold-jackson",
             "args": "--demo --compact=off --verbose"
         },
         {

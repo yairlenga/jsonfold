@@ -3,7 +3,7 @@
   * either compact unreadable
   * or fully pretty-printed
 * real data often needs mixed formatting
-# Key idea
+# Key ideas
 * do not replace the serializer
 * wrap the output stream
 * operate on pretty-printed token stream

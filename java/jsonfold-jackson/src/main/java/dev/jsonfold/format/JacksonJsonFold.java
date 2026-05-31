@@ -1,0 +1,38 @@
+package dev.jsonfold.format;
+
+import com.fasterxml.jackson.core.util.DefaultIndenter;
+import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+/**
+ * Jackson integration helpers for JSONFold.
+ */
+public final class JacksonJsonFold {
+
+    private JacksonJsonFold() {
+    }
+
+    /**
+     * Configure an existing ObjectMapper for use with JSONFold.
+     *
+     * This method mutates the supplied mapper and returns it.
+     */
+    public static ObjectMapper configure(ObjectMapper mapper) {
+        mapper.setDefaultPrettyPrinter(prettyPrinter());
+
+        return mapper;
+    }
+
+    /**
+     * Return a Jackson pretty printer suitable as input to JSONFold.
+     */
+    public static DefaultPrettyPrinter prettyPrinter() {
+        DefaultPrettyPrinter pp = new DefaultPrettyPrinter();
+
+        // Jackson's default keeps arrays inline. JSONFold works better when
+        // arrays are first expanded, then folded back by JSONFold's rules.
+        pp.indentArraysWith(DefaultIndenter.SYSTEM_LINEFEED_INSTANCE);
+
+        return pp;
+    }
+}
