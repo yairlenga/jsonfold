@@ -49,7 +49,7 @@ class JSONFoldWriterTest {
 
     @Test
     void nonePresetLeavesInputUnchanged() throws Exception {
-        assertEquals(INPUT, fold(INPUT, JSONFold.preset("none")));
+        assertEquals(INPUT, fold(INPUT, JSONFold.none())) ;
     }
 
     @Test
@@ -81,7 +81,7 @@ class JSONFoldWriterTest {
             }
             """;
 
-        assertEquals(expected, fold(INPUT, JSONFold.preset("pack")));
+        assertEquals(expected, fold(INPUT, JSONFold.pack())) ;
     }
 
     @Test
@@ -103,7 +103,7 @@ class JSONFoldWriterTest {
             }
             """;
 
-        assertEquals(expected, fold(INPUT, JSONFold.preset("fold")));
+        assertEquals(expected, fold(INPUT, JSONFold.fold()));
     }
 
     @Test
@@ -116,7 +116,7 @@ class JSONFoldWriterTest {
             }
             """;
 
-        assertEquals(expected, fold(INPUT, JSONFold.preset("join")));
+        assertEquals(expected, fold(INPUT, JSONFold.join()));
     }
 
     @Test
@@ -147,7 +147,7 @@ class JSONFoldWriterTest {
             }
             """;
 
-        assertEquals(expected, fold(input, JSONFold.preset("max").withWidth(40)));
+        assertEquals(expected, fold(input, JSONFold.max().withWidth(40)));
     }
 
     @Test
@@ -160,7 +160,7 @@ class JSONFoldWriterTest {
             }
             """;
 
-        assertEquals(expected, fold(input, JSONFold.preset("none")));
+        assertEquals(expected, fold(input, JSONFold.none()));
     }
 
     @Test

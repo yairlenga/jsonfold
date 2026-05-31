@@ -1,8 +1,6 @@
 package dev.jsonfold.format;
 
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.util.DefaultIndenter;
-import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
@@ -61,10 +59,8 @@ public final class Main {
             System.err.println(cfg);
         }
 
-        DefaultPrettyPrinter pp = new DefaultPrettyPrinter();
-        pp.indentArraysWith(DefaultIndenter.SYSTEM_LINEFEED_INSTANCE);
         JsonMapper.Builder builder = JsonMapper.builder()
-            .defaultPrettyPrinter(pp)
+            .defaultPrettyPrinter(JacksonJsonFold.prettyPrinter(args.indent))
             .configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false);
 
         if (args.sortKeys) {

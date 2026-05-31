@@ -26,13 +26,26 @@ public final class JacksonJsonFold {
     /**
      * Return a Jackson pretty printer suitable as input to JSONFold.
      */
-    public static DefaultPrettyPrinter prettyPrinter() {
+    public static DefaultPrettyPrinter prettyPrinter(String indent) {
         DefaultPrettyPrinter pp = new DefaultPrettyPrinter();
 
         // Jackson's default keeps arrays inline. JSONFold works better when
         // arrays are first expanded, then folded back by JSONFold's rules.
         pp.indentArraysWith(DefaultIndenter.SYSTEM_LINEFEED_INSTANCE);
+        DefaultIndenter indenter = new DefaultIndenter();
+        if ( indent != null) indenter.withIndent(indent);
+        pp.indentArraysWith(indenter);
+        pp.indentObjectsWith(indenter);  
 
         return pp;
     }
+
+    public static DefaultPrettyPrinter prettyPrinter() {
+        return prettyPrinter(null) ;
+    }
+
+    public static DefaultPrettyPrinter prettyPrinter(int indent) {
+        return prettyPrinter(" ".repeat(indent)) ;
+    }
+   
 }

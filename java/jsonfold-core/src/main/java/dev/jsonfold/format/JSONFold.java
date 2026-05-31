@@ -274,6 +274,51 @@ public class JSONFold implements Cloneable {
         return cfg;
     }
 
+    public static JSONFold none()
+    {
+        return createNone() ;
+    }
+
+    public static JSONFold low()
+    {
+        return createLow() ;
+    }
+
+    public static JSONFold med()
+    {
+        return createMed() ;
+    }
+
+    public static JSONFold high()
+    {
+        return createHigh();
+    }
+
+    public static JSONFold max()
+    {
+        return max() ;
+    }
+
+    public static JSONFold defaults()
+    {
+        return createDefault() ;
+    }
+
+    static JSONFold pack()
+    {
+        return createPack() ;
+    }
+
+    static JSONFold fold()
+    {
+        return createFold() ;
+    }
+
+    static JSONFold join()
+    {
+        return createJoin() ;
+    }
+    
     @Override
     public String toString() {
         return "JSONFold{" +
