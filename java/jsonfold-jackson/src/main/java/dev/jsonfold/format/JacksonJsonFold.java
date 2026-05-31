@@ -47,6 +47,30 @@ public final class JacksonJsonFold {
         }
 
         @Override
+        public void writeEndObject(JsonGenerator g, int nrOfEntries)
+                throws IOException {
+
+            if (nrOfEntries == 0) {
+                g.writeRaw('}');
+                return;
+            }
+
+            super.writeEndObject(g, nrOfEntries);
+        }
+
+        @Override
+        public void writeEndArray(JsonGenerator g, int nrOfValues)
+                throws IOException {
+
+            if (nrOfValues == 0) {
+                g.writeRaw(']');
+                return;
+            }
+
+            super.writeEndArray(g, nrOfValues);
+        }
+
+        @Override
         public DefaultPrettyPrinter createInstance() {
             return new GoldPrettyPrinter(this);
         }
@@ -60,20 +84,21 @@ public final class JacksonJsonFold {
 
         // Jackson's default keeps arrays inline. JSONFold works better when
         // arrays are first expanded, then folded back by JSONFold's rules.
-        DefaultIndenter indenter = DefaultIndenter.SYSTEM_LINEFEED_INSTANCE ;
-        if ( indent != null) indenter.withIndent(indent);
+        DefaultIndenter indenter = DefaultIndenter.SYSTEM_LINEFEED_INSTANCE;
+        if (indent != null)
+            indenter.withIndent(indent);
         pp.indentArraysWith(indenter);
-        pp.indentObjectsWith(indenter);  
+        pp.indentObjectsWith(indenter);
 
         return pp;
     }
 
     public static DefaultPrettyPrinter prettyPrinter() {
-        return prettyPrinter(null) ;
+        return prettyPrinter(null);
     }
 
     public static DefaultPrettyPrinter prettyPrinter(int indent) {
-        return prettyPrinter(" ".repeat(indent)) ;
+        return prettyPrinter(" ".repeat(indent));
     }
 
     public static DefaultPrettyPrinter goldPettyPrinter(String indent) {
@@ -83,16 +108,16 @@ public final class JacksonJsonFold {
         // arrays are first expanded, then folded back by JSONFold's rules.
         pp.indentArraysWith(DefaultIndenter.SYSTEM_LINEFEED_INSTANCE);
         DefaultIndenter indenter = new DefaultIndenter();
-        if ( indent != null) indenter.withIndent(indent);
+        if (indent != null)
+            indenter.withIndent(indent);
         pp.indentArraysWith(indenter);
-        pp.indentObjectsWith(indenter);  
+        pp.indentObjectsWith(indenter);
 
         return pp;
     }
-    
-    public static DefaultPrettyPrinter goldPettyPrinter(int indent) {
-        return goldPettyPrinter(" ".repeat(indent)) ;
-    }
 
+    public static DefaultPrettyPrinter goldPettyPrinter(int indent) {
+        return goldPettyPrinter(" ".repeat(indent));
+    }
 
 }
