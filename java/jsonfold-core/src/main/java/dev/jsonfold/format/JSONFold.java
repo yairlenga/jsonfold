@@ -56,7 +56,6 @@ public class JSONFold implements Cloneable {
         Map.entry("", createDefault()),
         Map.entry("default", createDefault()),
         Map.entry("none", createNone()),
-        Map.entry("off", null),
         Map.entry("low", createLow()),
         Map.entry("med", createMed()),
         Map.entry("high", createHigh()),
@@ -67,6 +66,8 @@ public class JSONFold implements Cloneable {
     );
 
     public static JSONFold preset(String name) {
+        if ( name.equals("off")) return null ;
+
         JSONFold cfg = PRESETS.get(name == null ? "" : name);
         if (cfg == null) {
             throw new IllegalArgumentException("Unknown JSONFold preset: " + name);

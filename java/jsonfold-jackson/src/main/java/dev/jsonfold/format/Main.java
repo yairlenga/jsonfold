@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 
 import java.io.File;
@@ -65,6 +66,7 @@ public final class Main {
 
         if (args.sortKeys) {
             builder.enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY);
+            builder.enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS);
         }
 
         ObjectMapper mapper = builder.build();
