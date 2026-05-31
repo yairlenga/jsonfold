@@ -1,6 +1,7 @@
 package dev.jsonfold.format;
 
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
@@ -60,8 +61,12 @@ public final class Main {
             System.err.println(cfg);
         }
 
+        DefaultPrettyPrinter pp = args.gold ?
+            JacksonJsonFold.goldPettyPrinter(args.indent) : 
+            JacksonJsonFold.prettyPrinter(args.indent) ;
+
         JsonMapper.Builder builder = JsonMapper.builder()
-            .defaultPrettyPrinter(JacksonJsonFold.prettyPrinter(args.indent))
+            .defaultPrettyPrinter(pp)
             .configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false);
 
         if (args.sortKeys) {
@@ -100,6 +105,7 @@ public final class Main {
         boolean demo;
         boolean verbose;
         boolean sortKeys;
+        boolean gold;    // Match Python/Javascript Style
 
         String input;
         String compact = "default";
@@ -129,6 +135,11 @@ public final class Main {
         for (String arg : argv) {
             if (arg.equals("--help") || arg.equals("-h")) {
                 out.help = true;
+                continue;
+            }
+
+            if (arg.equals("--gold")) {
+                out.gold = true;
                 continue;
             }
 

@@ -20,12 +20,23 @@ public final class JacksonJsonFold {
      *
      * This method mutates the supplied mapper and returns it.
      */
-    private static class JsonFoldPrettyPrinter extends DefaultPrettyPrinter {
-        JsonFoldPrettyPrinter() {
+    public static ObjectMapper configure(ObjectMapper mapper) {
+        mapper.setDefaultPrettyPrinter(prettyPrinter());
+
+        return mapper;
+    }
+
+    /**
+     * Configure an existing ObjectMapper for use with JSONFold.
+     *
+     * This method mutates the supplied mapper and returns it.
+     */
+    private static class GoldPrettyPrinter extends DefaultPrettyPrinter {
+        GoldPrettyPrinter() {
             super();
         }
 
-        JsonFoldPrettyPrinter(JsonFoldPrettyPrinter base) {
+        GoldPrettyPrinter(GoldPrettyPrinter base) {
             super(base);
         }
 
@@ -37,7 +48,7 @@ public final class JacksonJsonFold {
 
         @Override
         public DefaultPrettyPrinter createInstance() {
-            return new JsonFoldPrettyPrinter(this);
+            return new GoldPrettyPrinter(this);
         }
     }
 
@@ -45,12 +56,11 @@ public final class JacksonJsonFold {
      * Return a Jackson pretty printer suitable as input to JSONFold.
      */
     public static DefaultPrettyPrinter prettyPrinter(String indent) {
-        DefaultPrettyPrinter pp = new JsonFoldPrettyPrinter();
+        DefaultPrettyPrinter pp = new DefaultPrettyPrinter();
 
         // Jackson's default keeps arrays inline. JSONFold works better when
         // arrays are first expanded, then folded back by JSONFold's rules.
-        pp.indentArraysWith(DefaultIndenter.SYSTEM_LINEFEED_INSTANCE);
-        DefaultIndenter indenter = new DefaultIndenter();
+        DefaultIndenter indenter = DefaultIndenter.SYSTEM_LINEFEED_INSTANCE ;
         if ( indent != null) indenter.withIndent(indent);
         pp.indentArraysWith(indenter);
         pp.indentObjectsWith(indenter);  
@@ -65,5 +75,24 @@ public final class JacksonJsonFold {
     public static DefaultPrettyPrinter prettyPrinter(int indent) {
         return prettyPrinter(" ".repeat(indent)) ;
     }
-   
+
+    public static DefaultPrettyPrinter goldPettyPrinter(String indent) {
+        DefaultPrettyPrinter pp = new GoldPrettyPrinter();
+
+        // Jackson's default keeps arrays inline. JSONFold works better when
+        // arrays are first expanded, then folded back by JSONFold's rules.
+        pp.indentArraysWith(DefaultIndenter.SYSTEM_LINEFEED_INSTANCE);
+        DefaultIndenter indenter = new DefaultIndenter();
+        if ( indent != null) indenter.withIndent(indent);
+        pp.indentArraysWith(indenter);
+        pp.indentObjectsWith(indenter);  
+
+        return pp;
+    }
+    
+    public static DefaultPrettyPrinter goldPettyPrinter(int indent) {
+        return goldPettyPrinter(" ".repeat(indent)) ;
+    }
+
+
 }

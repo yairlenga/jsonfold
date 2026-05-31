@@ -1,5 +1,12 @@
-#!/bin/sh
-set -e
+#!/bin/sh -ue
+
+case "${@-}" in
+	java) JSONFOLD='java -jar ../../java/jsonfold-jackson/target/jsonfold.jar' ;;
+	javagold) JSONFOLD='java -jar ../../java/jsonfold-jackson/target/jsonfold.jar --gold' ;;
+	python) JSONFOLD='python3 ../../python/jsonfold.py' ;;
+	javascript) JSONFOLD='node --expose-gc ../../javascript/cli.js' ;;
+	?*) JSONFOLD="$@"
+esac
 
 echo "Using: JSONFOLD=${JSONFOLD?No JSONFOLD}"
 
