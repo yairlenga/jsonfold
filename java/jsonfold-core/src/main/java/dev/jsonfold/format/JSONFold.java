@@ -56,7 +56,7 @@ public class JSONFold implements Cloneable {
         Map.entry("", createDefault()),
         Map.entry("default", createDefault()),
         Map.entry("none", createNone()),
-        Map.entry("off", createNone()),
+        Map.entry("off", null),
         Map.entry("low", createLow()),
         Map.entry("med", createMed()),
         Map.entry("high", createHigh()),
