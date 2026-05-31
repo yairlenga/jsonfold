@@ -32,6 +32,12 @@ public class JSONFold implements Cloneable {
     public JSONFold() {
     }
 
+    public JSONFold(int width)
+    {
+        super();
+        this.width = width ;
+    }
+
     @Override
     public JSONFold clone() {
         try {
@@ -39,6 +45,11 @@ public class JSONFold implements Cloneable {
         } catch (CloneNotSupportedException e) {
             throw new AssertionError(e);
         }
+    }
+
+    public JSONFold withWidth(int width) {
+        this.width = width;
+        return this;
     }
 
     private static final Map<String, JSONFold> PRESETS = Map.ofEntries(

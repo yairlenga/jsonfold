@@ -14,6 +14,10 @@ function demoData() {
     ],
     "single-array": [1],
     "single-obj": { value: 2 },
+    wide_array: Array.from({ length: 9 }, (_, i) => `abcdefghijklmnopqrstuvwxyz1${i + 1}`),
+    wide_object: Object.fromEntries(
+      Array.from({ length: 9 }, (_, i) => [`abcdefghijk${i + 1}`, `lmnopqrstuvwxyz${i + 1}`])
+    ),
   };
 }
 

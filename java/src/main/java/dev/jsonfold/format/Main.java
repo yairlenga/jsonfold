@@ -1,5 +1,8 @@
 package dev.jsonfold.format;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.util.DefaultIndenter;
+import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
@@ -12,6 +15,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public final class Main {
 
@@ -56,7 +61,12 @@ public final class Main {
             System.err.println(cfg);
         }
 
-        JsonMapper.Builder builder = JsonMapper.builder();
+        DefaultPrettyPrinter pp = new DefaultPrettyPrinter();
+        pp.indentArraysWith(DefaultIndenter.SYSTEM_LINEFEED_INSTANCE);
+        JsonMapper.Builder builder = JsonMapper.builder()
+            .defaultPrettyPrinter(pp)
+            .configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false);
+
         if (args.sortKeys) {
             builder.enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY);
         }
@@ -76,7 +86,6 @@ public final class Main {
 
         Writer stdout = new OutputStreamWriter(System.out, StandardCharsets.UTF_8);
         JSONFoldWriter out = new JSONFoldWriter(stdout, cfg, true); // keep stdout open
-
         prettyWriter.writeValue(out, value);
         out.finish();
         stdout.flush();
@@ -276,8 +285,26 @@ public final class Main {
                 "third",
                 "fourth"));
 
+        root.put("wide_array", IntStream.rangeClosed(1, 50)
+                .mapToObj(i -> "a" + i)
+                .collect(Collectors.toList()));
+
         root.put("singleArray", List.of(1));
         root.put("singleObject", Map.of("x", 2));
+
+        root.put("wide_array", IntStream.rangeClosed(1, 9)
+            .mapToObj(i -> "abcdefghijklmnopqrstuvwxyz" + i)
+            .toList());
+
+        root.put("wide_object", IntStream.rangeClosed(1, 9)
+            .boxed()
+            .collect(Collectors.toMap(
+            i -> "abcdefghijk" + i,
+            i -> "lmnopqrstuvwxyz" + i,
+            (a, b) -> a,
+            LinkedHashMap::new
+        )));
+
 
         return root;
     }

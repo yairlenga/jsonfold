@@ -795,6 +795,8 @@ def _demo() -> dict[str, Any]:
         ],
         "single-array": [ 1 ],
         "single-obj": [ 2 ],
+        "wide_array": [f"abcdefghijklmnopqrstuvwxyz{i+1}" for i in range(9)],
+        "wide_object": {f"abcdefghijk{i+1}": f"lmnopqrstuvwxyz{i+1}" for i in range(9)},
     }
 
 
