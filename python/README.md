@@ -2,101 +2,29 @@
 
 > Compact and readable JSON formatting for humans.
 
-<table>
-<tr>
-<th align="left" width="25%">Standard Pretty Print</th>
-<th align="left" width="75%">jsonfold</th>
-</tr>
+`jsonfold` makes pretty-printed JSON more compact without turning it back into unreadable one-line JSON.
 
-<tr>
-<td valign="top">
+ Most JSON serializers offer two extremes:
+
+- compact machine output:
+
+```json
+{"meta":{"version":1,"ok":true},"ids":[1,2,3,4],"matrix":[[1,2],[3,4]]}
+```
+- fully expanded pretty-printing for humans
 
 ```json
 {
-```
-
-</td>
-<td valign="top">
-
-```json
-{
-```
-
-</td>
-</tr>
-
-<tr>
-<td valign="top">
-
-```json
   "meta": {
     "version": 1,
     "ok": true
   },
-```
-
-</td>
-<td valign="middle">
-
-```json
-  "meta": { "version": 1, "ok": true },
-```
-
-</td>
-</tr>
-
-<tr>
-<td valign="top">
-
-```json
-  "bbox": {
-    "min": {
-      "x": 1,
-      "y": 2
-    },
-    "max": {
-      "x": 10,
-      "y": 20
-    }
-  },
-```
-
-</td>
-<td valign="middle">
-
-```json
-  "bbox": { "min": { "x": 1, "y": 2 }, "max": { "x": 10, "y": 20 } },
-```
-
-</td>
-</tr>
-
-<tr>
-<td valign="top">
-
-```json
   "ids": [
     1,
     2,
     3,
     4
   ],
-```
-
-</td>
-<td valign="middle">
-
-```json
-  "ids": [ 1, 2, 3, 4 ],
-```
-
-</td>
-</tr>
-
-<tr>
-<td valign="top">
-
-```json
   "matrix": [
     [
       1,
@@ -107,37 +35,20 @@
       4
     ]
   ]
-```
-
-</td>
-<td valign="middle">
-
-```json
-  "matrix": [ [1, 2], [3, 4] ]
-```
-
-</td>
-</tr>
-
-<tr>
-<td valign="top">
-
-```json
 }
 ```
 
-</td>
-<td valign="top">
+`jsonfold` sits in the middle. It keeps the readable structure of pretty JSON, but selectively folds small containers and packs short scalar runs when they fit within a target line width.
 
 ```json
+{
+  "meta": { "version": 1, "ok": true },
+  "ids": [ 1, 2, 3, 4 ],
+  "matrix": [ [ 1, 2 ], [ 3, 4 ] ]
 }
 ```
 
-</td>
-</tr>
-</table>
-
-This repository contains the Python implementation of `jsonfold`, a streaming JSON formatting filter that makes pretty-printed JSON more compact and easier to read.
+This repository contains the Python implementation of `jsonfold`.
 
 If you want the background story, design goals, implementation details, and examples, start with the article:
 
