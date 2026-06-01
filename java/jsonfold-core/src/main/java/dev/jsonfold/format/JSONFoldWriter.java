@@ -227,10 +227,8 @@ public final class JSONFoldWriter extends Writer {
         frame.items += line.items;
         frame.leafs += line.leafs;
 
-        if (line.childNesting >= 0) {
-            frame.childNesting = Math.max(
-                    frame.childNesting,
-                    line.childNesting + 1);
+        if (line.childNesting >= frame.childNesting) {
+            frame.childNesting = line.childNesting+1 ;            
         }
 
         if (frame.foldOk) {
@@ -262,7 +260,7 @@ public final class JSONFoldWriter extends Writer {
     private boolean tryJoin(Frame frame, Line line) {
         if (frame.joinLimit <= 1
                 || !line.canJoin
-                || line.childNesting > cfg.joinNesting
+                || line.childNesting >= cfg.joinNesting
                 || frame.isEmpty()) {
             return false;
         }
@@ -270,7 +268,7 @@ public final class JSONFoldWriter extends Writer {
         Line prev = frame.lastLine();
         if (prev == null
                 || !prev.canJoin
-                || prev.childNesting > cfg.joinNesting
+                || prev.childNesting >= cfg.joinNesting
                 || !canMerge(prev, line, frame.joinLimit)) {
             return false;
         }
@@ -327,7 +325,7 @@ public final class JSONFoldWriter extends Writer {
             return;
         }
 
-        if (frame.childNesting > cfg.foldNesting) {
+        if (frame.childNesting >= cfg.foldNesting) {
             frame.foldOk = false;
         }
     }

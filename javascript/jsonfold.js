@@ -564,7 +564,7 @@ export class JSONFoldFilter {
       frame.joinLimit <= 1 ||
       !frame.lines.length ||
       !line.canJoin ||
-      line.childNesting > this.cfg.joinNesting
+      line.childNesting >= this.cfg.joinNesting
     ) {
       return false;
     }
@@ -574,7 +574,7 @@ export class JSONFoldFilter {
     if (
       !(
         prev.canJoin &&
-        prev.childNesting <= this.cfg.joinNesting &&
+        prev.childNesting < this.cfg.joinNesting &&
         this._canMerge(prev, line, frame.joinLimit)
       )
     ) {
@@ -598,7 +598,7 @@ export class JSONFoldFilter {
       return;
     }
 
-    if (frame.childNesting > this.cfg.foldNesting) {
+    if (frame.childNesting >= this.cfg.foldNesting) {
       frame.foldOk = false;
     }
   }
