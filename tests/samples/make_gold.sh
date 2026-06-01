@@ -1,8 +1,7 @@
 #!/bin/sh
 set -e
 
-PYTHON=${PYTHON:-python3}
-JSONFOLD=${JSONFOLD:-./jsonfold.py}
+JSONFOLD=${JSONFOLD:-python3 ../../python/jsonfold.py}
 
 read_args() {
     sed -e 's/[[:space:]]*#.*$//' -e '/^[[:space:]]*$/d' "$1"
@@ -13,6 +12,6 @@ do
     base=$(basename "$f" .json)
     ARGS=$(read_args "$base.args")
 
-    $PYTHON $JSONFOLD $ARGS < "$f" > "$base.gold"
+    $JSONFOLD $ARGS < "$f" > "$base.gold"
     echo "generated $base.gold"
 done

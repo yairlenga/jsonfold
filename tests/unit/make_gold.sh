@@ -1,8 +1,7 @@
 #!/bin/sh
 set -e
 
-PYTHON=${PYTHON:-python3}
-JSONFOLD=${JSONFOLD:-./jsonfold.py}
+JSONFOLD=${JSONFOLD:-python3 ../../python/jsonfold.py}
 
 read_args() {
     # Strip blank lines and comments from .args files.
@@ -17,7 +16,7 @@ do
     if [ -f "$base.args" ]; then
         ARGS=$(read_args "$base.args")
 
-        $PYTHON $JSONFOLD $ARGS < "$f" > "$base.gold"
+        $JSONFOLD $ARGS < "$f" > "$base.gold"
         echo "generated $base.gold"
     fi
 done

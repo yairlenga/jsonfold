@@ -27,9 +27,9 @@ do
 
         if diff -u "$base.gold" "$base.out"
         then
-            echo "PASS $base"
+            echo "PASS $base" >&2
         else
-            echo "FAIL $base"
+            echo "FAIL $base" >&2
             FAILED=1
         fi
     fi

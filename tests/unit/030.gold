@@ -1,5 +1,12 @@
 {
   "users": [
-    { "id": 1, "roles": [ "admin", "dev" ] }, { "id": 2, "roles": [ "ops" ] }
+    {
+      "id": 1,
+      "roles": [ "admin", "dev" ]
+    },
+    {
+      "id": 2,
+      "roles": [ "ops" ]
+    }
   ]
 }
