@@ -1,0 +1,73 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use Getopt::Long qw(GetOptions);
+use JSON::PP ();
+use JSON::JSONFold qw(dump);
+
+my %opt = (
+    compact => 'default',
+    indent  => 2,
+);
+my $sort_keys = 0;
+my $input;
+my $help = 0;
+
+GetOptions(
+    'compact=s'          => \$opt{compact},
+    'width=i'            => \$opt{width},
+    'indent=i'           => \$opt{indent},
+    'sort-keys!'         => \$sort_keys,
+    'input|i=s'          => \$input,
+    'pack-items=i'       => \$opt{pack_items},
+    'pack-array-items=i' => \$opt{pack_array_items},
+    'pack-obj-items=i'   => \$opt{pack_obj_items},
+    'pack-nesting=i'     => \$opt{pack_nesting},
+    'fold-items=i'       => \$opt{fold_items},
+    'fold-array-items=i' => \$opt{fold_array_items},
+    'fold-obj-items=i'   => \$opt{fold_obj_items},
+    'fold-nesting=i'     => \$opt{fold_nesting},
+    'join-items=i'       => \$opt{join_items},
+    'join-array-items=i' => \$opt{join_array_items},
+    'join-obj-items=i'   => \$opt{join_obj_items},
+    'join-nesting=i'     => \$opt{join_nesting},
+    'help|h'             => \$help,
+) or die "Try --help\n";
+
+if ($help) {
+    print <<'HELP';
+Usage: json-jsonfold [options] < input.json
+
+  --compact=default|none|low|med|high|max|pack|fold|join|off
+  --width=N
+  --indent=N
+  --sort-keys
+  --input=FILE
+  --pack-items=N / --pack-array-items=N / --pack-obj-items=N / --pack-nesting=N
+  --fold-items=N / --fold-array-items=N / --fold-obj-items=N / --fold-nesting=N
+  --join-items=N / --join-array-items=N / --join-obj-items=N / --join-nesting=N
+HELP
+    exit 0;
+}
+
+for my $phase (qw(pack fold join)) {
+    my $k = "${phase}_items";
+    next unless exists $opt{$k} && defined $opt{$k};
+    $opt{"${phase}_array_items"} = $opt{$k};
+    $opt{"${phase}_obj_items"}   = $opt{$k};
+    delete $opt{$k};
+}
+
+my $json_text;
+if (defined $input) {
+    open my $fh, '<', $input or die "$input: $!\n";
+    local $/;
+    $json_text = <$fh>;
+} else {
+    local $/;
+    $json_text = <STDIN>;
+}
+
+my $data = JSON::PP->new->allow_nonref->decode($json_text);
+$opt{sort_keys} = $sort_keys;
+dump($data, \*STDOUT, %opt);
