@@ -637,7 +637,10 @@ class JSONFoldWriter:
 
         prev = frame.lines[-1]
 
-        if not (prev.can_pack and self._can_merge(prev, line, frame.pack_limit)):
+        if not (
+            prev.can_pack and 
+            prev.child_nesting < self.cfg.pack_nesting and
+            self._can_merge(prev, line, frame.pack_limit)):
             return False
 
         self._merge_into_frame(frame, prev, line)
@@ -645,20 +648,21 @@ class JSONFoldWriter:
         return True
     
     @profile
-    def _try_join(self, frame: Frame, line: Line) -> bool:
+    def _try_join(self, frame: Frame, line: Line) -> bool:        
         if (
             frame.join_limit <= 1 or
             not frame.lines or
             not line.can_join or
-            line.child_nesting > self.cfg.join_nesting
+            line.child_nesting >= self.cfg.join_nesting
         ):
             return False
 
         prev = frame.lines[-1]
 
-        if not (prev.can_join and 
-                prev.child_nesting <= self.cfg.join_nesting and
-                self._can_merge(prev, line, frame.join_limit)
+        if not (
+            prev.can_join and 
+            prev.child_nesting < self.cfg.join_nesting and
+            self._can_merge(prev, line, frame.join_limit)
         ):
             return False
 
@@ -677,7 +681,7 @@ class JSONFoldWriter:
         if frame.items > frame.fold_limit:
             return False
 
-        if frame.child_nesting > self.cfg.fold_nesting:
+        if frame.child_nesting >= self.cfg.fold_nesting:
             return False
 
         return True
