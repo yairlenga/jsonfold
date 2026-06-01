@@ -9,7 +9,7 @@
             "name": "Java/JSONFold demo - default",
             "request": "launch",
             "mainClass": "dev.jsonfold.format.Main",
-            "projectName": "jsonfold-jackson",
+            "projectName": "jsonfold-cli",
             "args": "--demo --verbose"
         },
         {
@@ -17,17 +17,25 @@
             "name": "Java JSONFold demo - max",
             "request": "launch",
             "mainClass": "dev.jsonfold.format.Main",
-            "projectName": "jsonfold-jackson",
+            "projectName": "jsonfold-cli",
             "args": "--demo --compact=max --verbose"
         },
 
-                {
+        {
             "type": "java",
             "name": "Java JSONFold demo - off",
             "request": "launch",
             "mainClass": "dev.jsonfold.format.Main",
-            "projectName": "jsonfold-jackson",
+            "projectName": "jsonfold-cli",
             "args": "--demo --compact=off --verbose"
+        },
+                {
+            "type": "java",
+            "name": "Java benchmark",
+            "request": "launch",
+            "mainClass": "dev.jsonfold.format.Benchmark",
+            "projectName": "jsonfold-cli",
+            "args": "--dump"
         },
         {
             "name": "benchmark",
@@ -37,12 +45,12 @@
             "args": []
         },
         {
-            "name": "benchmark dump.done",
+            "name": "benchmark --dump",
             "type": "debugpy",
             "request": "launch",
             "program": "python/benchmark.py",
             "args": [
-                "jsonfold.dump.none"
+                "--dump"
             ]
         },
         {

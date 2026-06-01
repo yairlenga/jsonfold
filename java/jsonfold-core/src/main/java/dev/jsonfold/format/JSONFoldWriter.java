@@ -20,7 +20,7 @@ public final class JSONFoldWriter extends Writer {
 
     private final Writer fp;
     private final JSONFold cfg;
-    boolean keepOpen = false;
+    boolean noClose = false;
     private final Stats stats = new Stats();
 
     /** Partial line data waiting for a newline. */
@@ -46,10 +46,10 @@ public final class JSONFoldWriter extends Writer {
     /**
      * Create a writer using a specific configuration, allow close to be skipped
      */
-    public JSONFoldWriter(Writer fp, JSONFold cfg, boolean keepOpen) {
+    public JSONFoldWriter(Writer fp, JSONFold cfg, boolean noClose) {
         this.fp = fp;
         this.cfg = cfg ;
-        this.keepOpen = keepOpen ;
+        this.noClose = noClose ;
     }
 
     /**
@@ -120,6 +120,7 @@ public final class JSONFoldWriter extends Writer {
         if (!pending.isEmpty()) {
             feed(Line.parse(pending.toString(), parentKind()));
             pending.setLength(0);
+            if ( cfg == null ) fp.write("\n") ;
         }
 
         for (Frame frame : stack) {
@@ -145,7 +146,7 @@ public final class JSONFoldWriter extends Writer {
     @Override
     public void close() throws IOException {
         finish();
-        if ( !keepOpen ) fp.close();
+        if ( !noClose ) fp.close();
     }
 
     /**

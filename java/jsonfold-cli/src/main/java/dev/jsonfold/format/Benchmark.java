@@ -1,6 +1,5 @@
 package dev.jsonfold.format;
 
-import com.fasterxml.jackson.core.JsonEncoding;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.PrettyPrinter;
@@ -11,8 +10,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.StringWriter;
-import java.io.Writer;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
 import java.nio.charset.StandardCharsets;
@@ -60,7 +59,13 @@ public final class Benchmark {
             "jsonfold.dumps.max"
     );
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    static private ObjectMapper createMapper() {
+        ObjectMapper mapper = JacksonJsonFold.configure(new ObjectMapper())
+            .configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false);
+        return mapper ;
+    }
+
+    private static final ObjectMapper MAPPER = createMapper() ;
     private static final ThreadMXBean THREADS = ManagementFactory.getThreadMXBean();
 
     private Benchmark() {
@@ -69,12 +74,18 @@ public final class Benchmark {
     public static void main(String[] args) throws Exception {
         List<String> filter = new ArrayList<>();
         Integer lastSize = null;
+        boolean dump = false ;
         List<Map<String, Object>> results = new ArrayList<>();
 
         for (String arg : args) {
             if (arg.equals("-")) {
                 filter.clear();
                 continue;
+            }
+
+            if ( arg.equals("--show")) {
+                dump = true ;
+                continue ;
             }
 
             Integer rows = parseIntOrNull(arg);
@@ -84,14 +95,35 @@ public final class Benchmark {
             }
 
             lastSize = rows;
+            if ( dump ) {
+                dump(System.out, rows, filter);
+                continue ;
+            }
             results.addAll(runOneSize(rows, filter));
         }
 
         if (lastSize == null) {
-            results.addAll(runOneSize(1_000, filter));
+            if ( dump ) {
+                dump(System.out, 1_000, filter);
+            } else {
+                results.addAll(runOneSize(1_000, filter));
+            }
         }
 
         printTable(results);
+    }
+
+
+    private static void dump(OutputStream out, int rows, List<String> tests) throws Exception {
+        ObjectNode data = makeData(rows);
+        List<String> selected = tests.isEmpty() ? DEFAULT_TESTS : List.copyOf(tests);
+
+        for (String name : selected) {
+            System.err.print(name + " (" + rows + ")\n");
+            writeString(out, "# Case:" + name + "\n");
+            runCase(name, data, out) ;
+            writeString(out, "\n---\n") ;
+        }
     }
 
     private static List<Map<String, Object>> runOneSize(int rows, List<String> tests) throws Exception {
@@ -178,7 +210,7 @@ public final class Benchmark {
             NullOutput out = new NullOutput();
             long t0 = System.nanoTime();
             long c0 = cpuNanos();
-            runCase(name, data, out, t0);
+            runCase(name, data, out);
             long c1 = cpuNanos();
             long t1 = System.nanoTime();
 
@@ -206,22 +238,22 @@ public final class Benchmark {
         Runtime rt = Runtime.getRuntime();
         long before = usedHeap(rt);
         NullOutput out = new NullOutput();
-        runCase(name, data, out, System.nanoTime());
+        runCase(name, data, out);
         long after = usedHeap(rt);
         return Math.max(0, after - before) / 1024.0;
     }
 
-    private static void runCase(String name, ObjectNode data, NullOutput out, long t0) throws Exception {
+    private static void runCase(String name, ObjectNode data, OutputStream out) throws Exception {
         switch (name) {
-            case "baseline.dumps.plain" -> writeString(out, MAPPER.writeValueAsString(data));
+            case "baseline.dumps.plain" -> writeString(out, MAPPER.writeValueAsString(data)) ;
             case "baseline.dumps.pretty" -> writeString(out, prettyMapper().writeValueAsString(data));
-            case "baseline.dump.plain" -> MAPPER.writeValue(out, data);
+            case "baseline.dump.plain" -> MAPPER.writeValue(out, data) ;
             case "baseline.dump.pretty" -> prettyMapper().writeValue(out, data);
             default -> runJsonFoldCase(name, data, out);
         }
     }
 
-    private static void runJsonFoldCase(String name, ObjectNode data, NullOutput out) throws Exception {
+    private static void runJsonFoldCase(String name, ObjectNode data, OutputStream out) throws Exception {
         String[] parts = name.split("\\.");
         if (parts.length != 3 || !parts[0].equals("jsonfold")) {
             throw new IllegalArgumentException("unknown benchmark case: " + name);
@@ -237,24 +269,22 @@ public final class Benchmark {
         }
     }
 
-    private static void writeJsonFoldDump(ObjectNode data, OutputStream out, String compact) throws Exception {
-        if (compact.equals("off")) {
-            prettyMapper().writeValue(out, data);
-            return;
-        }
+    private static void writeJsonFoldDump(
+            ObjectNode data,
+            OutputStream out,
+            String compact) throws Exception {
+        var cfg = JSONFold.preset(compact);
 
-        JsonFactory factory = MAPPER.getFactory();
-        try (JsonGenerator g = factory.createGenerator(out, JsonEncoding.UTF8)) {
-            g.setPrettyPrinter(prettyPrinter(compact));
-            MAPPER.writeValue(g, data);
-        }
+        var base = new OutputStreamWriter(out, StandardCharsets.UTF_8);
+        var folded = new JSONFoldWriter(base, cfg);
+
+        MAPPER.writer(prettyPrinter("  "))
+                .writeValue(folded, data);
+
+        folded.flush();
     }
 
     private static String jsonFoldString(ObjectNode data, String compact) throws Exception {
-        if (compact.equals("off")) {
-            return prettyMapper().writeValueAsString(data);
-        }
-
         StringWriter sw = new StringWriter();
         JsonFactory factory = MAPPER.getFactory();
         try (JsonGenerator g = factory.createGenerator(sw)) {
@@ -279,7 +309,7 @@ public final class Benchmark {
         return JacksonJsonFold.prettyPrinter(compact);
     }
 
-    private static void writeString(NullOutput out, String s) throws IOException {
+    private static void writeString(OutputStream out, String s) throws IOException {
         out.write(s.getBytes(StandardCharsets.UTF_8));
     }
 
