@@ -35,7 +35,7 @@
             "request": "launch",
             "mainClass": "dev.jsonfold.format.Benchmark",
             "projectName": "jsonfold-cli",
-            "args": "--dump"
+            "args": ""
         },
         {
             "name": "benchmark",
@@ -54,13 +54,14 @@
             ]
         },
         {
-            "name": "Python Debugger: unit/010",
+            "name": "Python Debugger: Unit Test",
             "type": "debugpy",
             "request": "launch",
             "program": "python/jsonfold.py",
             "args": [
-                "--input=tests/unit/010.gold",
-                "--compact=pack"
+                "--input=tests/unit/050.json",
+                "--fold-nesting=0",
+                "--width=80"
             ]
         },
         {
