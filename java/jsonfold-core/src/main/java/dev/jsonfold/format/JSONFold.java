@@ -226,6 +226,7 @@ public class JSONFold implements Cloneable {
     private static JSONFold createMax() {
         JSONFold cfg = createNone();
 
+        cfg.width = 255 ;
         cfg.packArrayItems = MAX_ARRAY_ITEMS;
         cfg.packObjItems = MAX_OBJ_ITEMS;
         cfg.packNesting = MAX_NESTING;
