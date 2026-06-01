@@ -75,12 +75,12 @@ function makeData(rows) {
 function runCase(data, name, t0) {
   const w = new NullWriter(t0);
 
-  if (name === "baseline.dumps.plain") {
+  if (name === "base.dumps.plain") {
     w.write(JSON.stringify(data));
     return w;
   }
 
-  if (name === "baseline.dumps.pretty") {
+  if (name === "base.dumps.pretty") {
     w.write(JSON.stringify(data, null, 2));
     return w;
   }
@@ -103,9 +103,9 @@ function runCase(data, name, t0) {
 function validateCase(data, name) {
   let text;
 
-  if (name === "baseline.dumps.plain") {
+  if (name === "base.dumps.plain") {
     text = JSON.stringify(data);
-  } else if (name === "baseline.dumps.pretty") {
+  } else if (name === "base.dumps.pretty") {
     text = JSON.stringify(data, null, 2);
   } else if (name.startsWith("jsonfold.dumps.")) {
     text = dumps(data, { compact: name.split(".")[2], indent: 2 });
@@ -172,13 +172,20 @@ function runOneSize(rows, onlyName = null) {
   const data = makeData(rows);
 
   const names = onlyName ? [onlyName] : [
-    "baseline.dumps.plain",
-    "baseline.dumps.pretty",
+    "base.dump.plain",
+    "base.dump.pretty",
     "jsonfold.dump.off",
     "jsonfold.dump.none",
     "jsonfold.dump.default",
+    "jsonfold.dump.low",
+    "jsonfold.dump.med",
     "jsonfold.dump.high",
     "jsonfold.dump.max",
+    "jsonfold.dump.pack",
+    "jsonfold.dump.fold",
+    "jsonfold.dump.join",
+    "base.dumps.plain",
+    "base.dumps.pretty",
     "jsonfold.dumps.none",
     "jsonfold.dumps.default",
     "jsonfold.dumps.high",

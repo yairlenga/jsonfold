@@ -46,6 +46,7 @@ def make_data(rows):
                 "tags": ["alpha", "beta", "gamma", "delta"],
                 "pos": {"x": i, "y": i + 1, "z": i + 2},
                 "values": [i, i + 1, i + 2, i + 3, i + 4],
+                "pairs": [ [ i, i+1, [i+2, i+3], [i+4, i+5]]],
             }
             for i in range(rows)
         ],
@@ -60,13 +61,13 @@ def mem_units(n):
 
 
 def run_case(data, name):
-    if name == "baseline.dumps.plain":
+    if name == "base.dumps.plain":
         return lambda t0: write_string(t0, json.dumps(data))
-    if name == "baseline.dumps.pretty":
+    if name == "base.dumps.pretty":
         return lambda t0: write_string(t0, json.dumps(data, indent=2))
-    if name == "baseline.dump.pretty":
+    if name == "base.dump.pretty":
         return lambda t0: run_json_dump(data, t0)
-    if name == "baseline.dump.plain":
+    if name == "base.dump.plain":
         return lambda t0: run_json_dump_plain(data, t0)
 
     kind, func, compact = name.split(".")
@@ -173,8 +174,8 @@ def run_one_size(rows, tests):
 
     if not tests:
         tests = [
-            "baseline.dump.plain",
-            "baseline.dump.pretty",
+            "base.dump.plain",
+            "base.dump.pretty",
             "jsonfold.dump.off",
             "jsonfold.dump.none",
             "jsonfold.dump.default",
@@ -185,10 +186,11 @@ def run_one_size(rows, tests):
             "jsonfold.dump.pack",
             "jsonfold.dump.fold",
             "jsonfold.dump.join",
-            "baseline.dumps.plain",
-            "baseline.dumps.pretty",
+            "base.dumps.plain",
+            "base.dumps.pretty",
             "jsonfold.dumps.none",
             "jsonfold.dumps.default",
+            "jsonfold.dumps.high",
             "jsonfold.dumps.max",
             ]
     results = []

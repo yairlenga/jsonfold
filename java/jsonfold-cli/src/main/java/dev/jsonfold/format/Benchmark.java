@@ -40,8 +40,8 @@ public final class Benchmark {
     private static final int REPEATS = 3;
 
     private static final List<String> DEFAULT_TESTS = List.of(
-            "baseline.dump.plain",
-            "baseline.dump.pretty",
+            "base.dump.plain",
+            "base.dump.pretty",
             "jsonfold.dump.off",
             "jsonfold.dump.none",
             "jsonfold.dump.default",
@@ -52,10 +52,11 @@ public final class Benchmark {
             "jsonfold.dump.pack",
             "jsonfold.dump.fold",
             "jsonfold.dump.join",
-            "baseline.dumps.plain",
-            "baseline.dumps.pretty",
+            "base.dumps.plain",
+            "base.dumps.pretty",
             "jsonfold.dumps.none",
             "jsonfold.dumps.default",
+            "jsonfold.dumps.high",
             "jsonfold.dumps.max"
     );
 
@@ -245,10 +246,10 @@ public final class Benchmark {
 
     private static void runCase(String name, ObjectNode data, OutputStream out) throws Exception {
         switch (name) {
-            case "baseline.dumps.plain" -> writeString(out, MAPPER.writeValueAsString(data)) ;
-            case "baseline.dumps.pretty" -> writeString(out, prettyMapper().writeValueAsString(data));
-            case "baseline.dump.plain" -> MAPPER.writeValue(out, data) ;
-            case "baseline.dump.pretty" -> prettyMapper().writeValue(out, data);
+            case "base.dumps.plain" -> writeString(out, MAPPER.writeValueAsString(data)) ;
+            case "base.dumps.pretty" -> writeString(out, prettyMapper().writeValueAsString(data));
+            case "base.dump.plain" -> MAPPER.writeValue(out, data) ;
+            case "base.dump.pretty" -> prettyMapper().writeValue(out, data);
             default -> runJsonFoldCase(name, data, out);
         }
     }
@@ -285,12 +286,15 @@ public final class Benchmark {
     }
 
     private static String jsonFoldString(ObjectNode data, String compact) throws Exception {
+        var cfg = JSONFold.preset(compact);
+
         StringWriter sw = new StringWriter();
-        JsonFactory factory = MAPPER.getFactory();
-        try (JsonGenerator g = factory.createGenerator(sw)) {
-            g.setPrettyPrinter(prettyPrinter(compact));
-            MAPPER.writeValue(g, data);
-        }
+        var folded = new JSONFoldWriter(sw, cfg);
+
+        MAPPER.writer(prettyPrinter("  "))
+                .writeValue(folded, data);
+
+        folded.flush();
         return sw.toString();
     }
 
@@ -306,7 +310,7 @@ public final class Benchmark {
      * keep the benchmark unchanged and modify only this adapter.
      */
     private static PrettyPrinter prettyPrinter(String compact) {
-        return JacksonJsonFold.prettyPrinter(compact);
+        return JacksonJsonFold.goldPettyPrinter(compact);
     }
 
     private static void writeString(OutputStream out, String s) throws IOException {
