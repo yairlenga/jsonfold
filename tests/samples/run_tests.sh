@@ -5,6 +5,7 @@ case "${@-}" in
 	javagold) JSONFOLD='java -jar ../../java/jsonfold-cli/target/jsonfold.jar --gold' ;;
 	python) JSONFOLD='python3 ../../python/jsonfold.py' ;;
 	javascript) JSONFOLD='node --expose-gc ../../javascript/cli.js' ;;
+	perl) JSONFOLD='perl perl/script/jsonfold' ;;
 	?*) JSONFOLD="$@"
 esac
 

@@ -134,7 +134,7 @@ sub get_config {
 
 sub show_verbose {
     my ($label) = shift ;
-    my $dumper = new Data::Dumper([])->Terse(1)->Indent(1)->Sortkeys(0)->Pair('=')->Quotekeys(0) ;
+    my $dumper = new Data::Dumper([])->Terse(1)->Indent(1)->Sortkeys(1)->Pair('=')->Quotekeys(0) ;
 
     my $s = $dumper->Values( \@_)->Dump ;
     $s =~ s/\s+/ /gsm ;
@@ -142,6 +142,19 @@ sub show_verbose {
     warn "$label: $s\n" ;
 
 }
+
+sub stdout_width {
+    return 80 unless -t STDOUT;
+
+    eval {
+        require Term::ReadKey;
+        my ($cols) = Term::ReadKey::GetTerminalSize(*STDOUT);
+        return $cols if $cols;
+    };
+
+    return $ENV{COLUMNS} || 80;
+}
+
 
 sub main {
     my $opt = parse_options();
@@ -153,13 +166,15 @@ sub main {
 
     my $verose = $opt->{verbose} ;
 
-    my $data = $opt->{demo} ? demo_data() : read_input($opt);
+    my $data = $opt->{demo} ? demo_data() : read_input($opt->{input});
+    $opt->{cfg}{width} //= stdout_width() ;
+
     my $cfg = get_config($opt);
     my $verbose = $opt->{verbose} ;
 
     show_verbose("config", { % $cfg }) if $verbose ;
  
-    my $info = dumpi($data, \*STDOUT, compact => $cfg);
+    my $info = dumpi($data, \*STDOUT, compact => $cfg, sort_keys => $opt->{sort_keys});
 
     show_verbose("stats", { % $info }) if $verbose ;
     return 0;
