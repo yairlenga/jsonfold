@@ -5,6 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "type": "perl",
+            "request": "launch",
+            "name": "Perl-Debug",
+            "cwd": "${workspaceFolder}/perl",
+            "program": "${workspaceFolder}/perl/script/jsonfold",
+            "stopOnEntry": true,
+            "args": [ "--demo", "--compact=max" ]
+        },
+        {
             "type": "java",
             "name": "Java/JSONFold demo - default",
             "request": "launch",

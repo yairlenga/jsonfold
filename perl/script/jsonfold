@@ -8,6 +8,12 @@ use JSON::PP       ();
 use JSON::JSONFold qw(dumpi);
 use Data::Dumper;
 
+use Carp qw(confess);
+
+BEGIN {
+# Debug Only
+    *CORE::GLOBAL::die = \&confess;
+}
 
 sub demo_data {
     return {
@@ -36,7 +42,7 @@ sub parse_options {
         indent    => 2,
         demo      => 0,
         verbose   => 0,
-        sort_keys => 0,
+        sort_keys => 1,
         help      => 0,
         cfg       => \%cfg,
     );
@@ -48,7 +54,7 @@ sub parse_options {
         'input|i=s'  => \$opt{input},
         'compact=s'  => \$opt{compact},
         'indent=i'   => \$opt{indent},
-        'sort-keys!' => \$opt{sort_keys},
+        'sort-keys!' => \$cfg{sort_keys},
 
         'width=i'            => \$cfg{width},
         'pack-items=i'       => \$cfg{pack_items},
@@ -118,6 +124,9 @@ sub get_config {
     }
     # Get only set options
     %cfg = map { ($_ => $cfg{$_}) } grep { defined $cfg{$_} } keys(%cfg) ;
+# Temporary hack until we figure sort order.
+
+    $cfg{sort_keys} = 1 ;
 
     my $config = JSON::JSONFold::config($opt->{compact}, %cfg);
     return $config ;
@@ -150,7 +159,7 @@ sub main {
 
     show_verbose("config", { % $cfg }) if $verbose ;
  
-    my $info = dumpi($data, \*STDOUT, %$cfg);
+    my $info = dumpi($data, \*STDOUT, compact => $cfg);
 
     show_verbose("stats", { % $info }) if $verbose ;
     return 0;

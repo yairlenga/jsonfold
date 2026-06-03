@@ -39,47 +39,38 @@ sub _json_coder {
     return $json;
 }
 
-sub dump {
-    my ($obj, $fh, %opt) = @_;
+sub _print_stream {
+    my ($obj, $fh, $compact, %opt) = @_;
     my $text = _json_coder(%opt)->encode($obj);
-    my $compact = delete $opt{compact} // '' ;
     my $out = JSON::JSONFold::Writer->new($fh, $compact, %opt);
     $out->write($text);
     $out->finish;
+    return $out->stats ;
+}
+
+sub dump {
+    my ($obj, $fh, %opt) = @_;
+    my $compact = delete $opt{compact} // '' ;
+    my $info = _print_stream($obj, $fh, $compact, %opt) ;
     return;
 }
 
 sub dumpi {
     my ($obj, $fh, %opt) = @_;
-    my $text = _json_coder(%opt)->encode($obj);
     my $compact = delete $opt{compact} // '' ;
-    my $out = JSON::JSONFold::Writer->new($fh, $compact, %opt);
-    $out->write($text);
-    $out->finish;
-    return $out->stats;
+    my $info = _print_stream($obj, $fh, $compact, %opt) ;
+    return $info ;
 }
 
 sub dumps {
     my ($obj, %opt) = @_;
-    my $text = _json_coder(%opt)->encode($obj);
     my $compact = delete $opt{compact} // '' ;
     my $output = '' ;
     open my $fh, '>', \$output or die "open output: $!" ;
-    my $out = JSON::JSONFold::Writer->new($fh, $compact, %opt);
-    $out->write($text);
-    $out->finish ;
+    my $info = _print_stream($obj, $fh, $compact, %opt) ;
     close $fh or die "close output: $!" ;
-    $output .= "\n" unless $text =~ /\n\z/;
+    $output .= "\n" unless $output =~ /\n\z/;
     return $output ;
-}
-
-sub fold_text {
-    my ($text, %opt) = @_;
-    my $compact = exists $opt{compact} ? delete $opt{compact} : '';
-    my $out = JSON::JSONFold::Writer->new(compact => $compact, %opt);
-    $out->write($text);
-    $out->finish;
-    return $out->output;
 }
 
 # -------------------------------------------------------------------------
@@ -130,21 +121,25 @@ sub _replace {
     # Clone only if there are overrides
     return $base unless @_ ;
     # Overrides can be single HASH reference, or keyword=value, ...
-    my $overrides = scalar(@_) == 1 && ref($_[0]) ? $_[0] : { @_ } ;
+    my $overrides = @_ == 1 && ref($_[0]) ? $_[0] : { @_ } ;
     return $base unless %$overrides ;
     return bless { %$base, %$overrides }, ref($base) ;
 }
 
+sub _config {
+    my $config = shift ;
+    $config = _preset($config) unless ref($config) ;
+    return $config ;
+}
+
 sub config {
     my ($preset, %overrides)  = @_ ;
-    my $cfg = scalar($preset) ? _preset($preset) : $preset ;
-    return _replace($cfg, \%overrides) ;
+    return _replace(_config($preset) , \%overrides) ;
 }
 
 sub new {
-    my ($class, $preset, @args) = @_;
-    my $cfg = scalar($preset) ? _preset($preset) : $preset ;
-    return _replace($cfg, @args) ;
+    my ($class, $config, @args) = @_;
+    return _replace(_config($config), @args) ;
 }
 
 our %PRESETS = (
