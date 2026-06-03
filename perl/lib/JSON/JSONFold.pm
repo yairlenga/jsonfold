@@ -18,23 +18,136 @@ use constant MAX_ARRAY_ITEMS => 1000;
 use constant MAX_OBJ_ITEMS   => 1000;
 use constant MAX_NESTING     => 10;
 
-sub config { return JSON::JSONFold::Config->new(@_) }
-
-my $NONE = config(
-    pack_array_items => 0, pack_obj_items => 0, pack_nesting => 0,
-    fold_array_items => 0, fold_obj_items => 0, fold_nesting => 0,
-    join_array_items => 0, join_obj_items => 0, join_nesting => 0,
-);
-
-my $DEFAULT = config();
-
-sub _replace {
-    my ($base, %overrides) = @_;
-    return undef if !defined $base;
-    return $base->replace(%overrides);
+sub config {
+    my ($preset) = @_ ;
+    return JSON::JSONFold::Config::config(@_) ;
 }
 
-my %PRESETS = (
+# Backward-compatible constructor: the public package acts as a writer/filter.
+sub new {
+    my ($class, %args) = @_;
+    return JSON::JSONFold::Writer->new(%args);
+}
+
+sub _json_coder {
+    my (%opt) = @_;
+    my $indent = exists $opt{indent} ? $opt{indent} : 2;
+    my $json = JSON::PP->new->allow_nonref->canonical($opt{sort_keys} ? 1 : 0);
+    if ($indent && $indent > 0) {
+        $json->pretty->indent_length($indent)->space_before(0)->space_after(1);
+    }
+    return $json;
+}
+
+sub dump {
+    my ($obj, $fh, %opt) = @_;
+    my $text = _json_coder(%opt)->encode($obj);
+    my $compact = delete $opt{compact} // '' ;
+    my $out = JSON::JSONFold::Writer->new($fh, $compact, %opt);
+    $out->write($text);
+    $out->finish;
+    return;
+}
+
+sub dumpi {
+    my ($obj, $fh, %opt) = @_;
+    my $text = _json_coder(%opt)->encode($obj);
+    my $compact = delete $opt{compact} // '' ;
+    my $out = JSON::JSONFold::Writer->new($fh, $compact, %opt);
+    $out->write($text);
+    $out->finish;
+    return $out->stats;
+}
+
+sub dumps {
+    my ($obj, %opt) = @_;
+    my $text = _json_coder(%opt)->encode($obj);
+    my $compact = delete $opt{compact} // '' ;
+    my $output = '' ;
+    open my $fh, '>', \$output or die "open output: $!" ;
+    my $out = JSON::JSONFold::Writer->new($fh, $compact, %opt);
+    $out->write($text);
+    $out->finish ;
+    close $fh or die "close output: $!" ;
+    $output .= "\n" unless $text =~ /\n\z/;
+    return $output ;
+}
+
+sub fold_text {
+    my ($text, %opt) = @_;
+    my $compact = exists $opt{compact} ? delete $opt{compact} : '';
+    my $out = JSON::JSONFold::Writer->new(compact => $compact, %opt);
+    $out->write($text);
+    $out->finish;
+    return $out->output;
+}
+
+# -------------------------------------------------------------------------
+# Internal package: immutable-ish configuration record
+# -------------------------------------------------------------------------
+
+package JSON::JSONFold::Config;
+
+use strict;
+use warnings;
+
+use constant MAX_ARRAY_ITEMS => 1000;
+use constant MAX_OBJ_ITEMS   => 1000;
+use constant MAX_NESTING     => 10;
+
+our $NONE = bless {
+    pack_array_items => 0,
+    pack_obj_items   => 0,
+    pack_nesting     => 0,
+
+    fold_array_items => 0,
+    fold_obj_items   => 0,
+    fold_nesting     => 0,
+
+    join_array_items => 0,
+    join_obj_items   => 0,
+    join_nesting     => 0,
+}, __PACKAGE__;
+
+our $DEFAULT = bless {
+    width            => 80,
+
+    pack_array_items => 8,
+    pack_obj_items   => 4,
+    pack_nesting     => 1,
+
+    fold_array_items => 8,
+    fold_obj_items   => 4,
+    fold_nesting     => 1,
+
+    join_array_items => 8,
+    join_obj_items   => 4,
+    join_nesting     => 1,
+}, __PACKAGE__;
+
+sub _replace {
+    my ($base) = shift ;
+    # Clone only if there are overrides
+    return $base unless @_ ;
+    # Overrides can be single HASH reference, or keyword=value, ...
+    my $overrides = scalar(@_) == 1 && ref($_[0]) ? $_[0] : { @_ } ;
+    return $base unless %$overrides ;
+    return bless { %$base, %$overrides }, ref($base) ;
+}
+
+sub config {
+    my ($preset, %overrides)  = @_ ;
+    my $cfg = scalar($preset) ? _preset($preset) : $preset ;
+    return _replace($cfg, \%overrides) ;
+}
+
+sub new {
+    my ($class, $preset, @args) = @_;
+    my $cfg = scalar($preset) ? _preset($preset) : $preset ;
+    return _replace($cfg, @args) ;
+}
+
+our %PRESETS = (
     off     => undef,
     ''      => $DEFAULT,
     default => $DEFAULT,
@@ -71,118 +184,17 @@ my %PRESETS = (
     ),
 );
 
-sub preset {
-    my ($name, %overrides) = @_;
-    $name = '' unless defined $name;
-    die "unknown JSON::JSONFold preset: $name" unless exists $PRESETS{$name};
-    return _replace($PRESETS{$name}, %overrides);
+sub _preset {
+    my ($name) = @_;
+
+    $name //= '';
+
+    die "unknown JSON::JSONFold preset: $name\n"
+        unless exists $PRESETS{$name};
+
+    return $PRESETS{$name};
 }
 
-sub _as_config {
-    my ($compact, %overrides) = @_;
-    $compact //= '' ;
-
-    my $cfg;
-    if (ref($compact) && eval { $compact->isa('JSON::JSONFold::Config') }) {
-        $cfg = $compact;
-    } elsif (ref($compact) eq 'HASH') {
-        $cfg = config(%$compact);
-    } else {
-        die "unknown JSON::JSONFold preset: $compact" unless exists $PRESETS{$compact};
-        return undef if !defined $PRESETS{$compact};
-        $cfg = $PRESETS{$compact};
-    }
-
-    return $cfg->replace(%overrides);
-}
-
-# Backward-compatible constructor: the public package acts as a writer/filter.
-sub new {
-    my ($class, %args) = @_;
-    return JSON::JSONFold::Writer->new(%args);
-}
-
-sub _json_coder {
-    my (%opt) = @_;
-    my $indent = exists $opt{indent} ? $opt{indent} : 2;
-    my $json = JSON::PP->new->allow_nonref->canonical($opt{sort_keys} ? 1 : 0);
-    if ($indent && $indent > 0) {
-        $json->pretty->indent_length($indent)->space_before(0)->space_after(1);
-    }
-    return $json;
-}
-
-sub dump {
-    my ($obj, $fh, %opt) = @_;
-    my $compact = exists $opt{compact} ? delete $opt{compact} : '';
-    my $out = JSON::JSONFold::Writer->new(fh => $fh, compact => $compact, %opt);
-    my $text = _json_coder(%opt)->encode($obj);
-    $out->write($text);
-    $out->write("\n") unless $text =~ /\n\z/;
-    $out->finish;
-    return;
-}
-
-sub dumpi {
-    my ($obj, $fh, %opt) = @_;
-    my $compact = exists $opt{compact} ? delete $opt{compact} : '';
-    my $out = JSON::JSONFold::Writer->new(fh => $fh, compact => $compact, %opt);
-    my $text = _json_coder(%opt)->encode($obj);
-    $out->write($text);
-    $out->write("\n") unless $text =~ /\n\z/;
-    $out->finish;
-    return $out->stats;
-}
-
-sub dumps {
-    my ($obj, %opt) = @_;
-    my $compact = exists $opt{compact} ? delete $opt{compact} : '';
-    my $out = JSON::JSONFold::Writer->new(compact => $compact, %opt);
-    my $text = _json_coder(%opt)->encode($obj);
-    $out->write($text);
-    $out->write("\n") unless $text =~ /\n\z/;
-    $out->finish;
-    return $out->output;
-}
-
-sub fold_text {
-    my ($text, %opt) = @_;
-    my $compact = exists $opt{compact} ? delete $opt{compact} : '';
-    my $out = JSON::JSONFold::Writer->new(compact => $compact, %opt);
-    $out->write($text);
-    $out->finish;
-    return $out->output;
-}
-
-# -------------------------------------------------------------------------
-# Internal package: immutable-ish configuration record
-# -------------------------------------------------------------------------
-
-package JSON::JSONFold::Config;
-use strict;
-use warnings;
-
-sub new {
-    my ($class, %arg) = @_;
-    return bless {
-        width            => 80,
-        pack_array_items => 8,
-        pack_obj_items   => 4,
-        pack_nesting     => 1,
-        fold_array_items => 8,
-        fold_obj_items   => 4,
-        fold_nesting     => 1,
-        join_array_items => 8,
-        join_obj_items   => 4,
-        join_nesting     => 1,
-        %arg,
-    }, $class;
-}
-
-sub replace {
-    my ($self, %overrides) = @_;
-    return ref($self)->new(%$self, %overrides);
-}
 
 # -------------------------------------------------------------------------
 # Internal package: one physical pretty-printed line
@@ -324,14 +336,11 @@ use strict;
 use warnings;
 
 sub new {
-    my ($class, %args) = @_;
-    my $fh = delete $args{fh};
-    my $compact = exists $args{compact} ? delete $args{compact} : '';
-    my $cfg = JSON::JSONFold::_as_config($compact, %args);
+    my ($class, $fh, $compact) = @_;
 
     return bless {
         fh      => $fh,
-        cfg     => $cfg,
+        cfg     => JSON::JSONFold::config($compact),
         pending => '',
         stack   => [],
         stats   => JSON::JSONFold::Stats->new,
@@ -340,7 +349,6 @@ sub new {
 }
 
 sub stats  { return $_[0]->{stats} }
-sub output { return $_[0]->{out} }
 
 sub write {
     my ($self, $s) = @_;
