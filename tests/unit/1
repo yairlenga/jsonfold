@@ -1,0 +1,711 @@
++ set -eu
++ JSONFOLD=perl ../../perl/script/jsonfold
++ echo Using: JSONFOLD=perl ../../perl/script/jsonfold
+Using: JSONFOLD=perl ../../perl/script/jsonfold
++ FAILED=0
++ basename 001.json .json
++ base=001
++ [ -f 001.gold ]
++ read_args 001.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 001.args
++ ARGS=--compact=default
++ perl ../../perl/script/jsonfold --compact=default
++ diff -u 001.gold 001.out
++ echo PASS 001
+PASS 001
++ basename 002.json .json
++ base=002
++ [ -f 002.gold ]
++ read_args 002.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 002.args
++ ARGS=--compact=high
++ perl ../../perl/script/jsonfold --compact=high
++ diff -u 002.gold 002.out
++ echo PASS 002
+PASS 002
++ basename 003.json .json
++ base=003
++ [ -f 003.gold ]
++ read_args 003.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 003.args
++ ARGS=--compact=default
++ perl ../../perl/script/jsonfold --compact=default
++ diff -u 003.gold 003.out
++ echo PASS 003
+PASS 003
++ basename 004.json .json
++ base=004
++ [ -f 004.gold ]
++ read_args 004.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 004.args
++ ARGS=--compact=default
++ perl ../../perl/script/jsonfold --compact=default
++ diff -u 004.gold 004.out
++ echo PASS 004
+PASS 004
++ basename 005.json .json
++ base=005
++ [ -f 005.gold ]
++ read_args 005.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 005.args
++ ARGS=--compact=high
++ perl ../../perl/script/jsonfold --compact=high
++ diff -u 005.gold 005.out
++ echo PASS 005
+PASS 005
++ basename 006.json .json
++ base=006
++ [ -f 006.gold ]
++ read_args 006.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 006.args
++ ARGS=--compact=default
++ perl ../../perl/script/jsonfold --compact=default
++ diff -u 006.gold 006.out
++ echo PASS 006
+PASS 006
++ basename 007.json .json
++ base=007
++ [ -f 007.gold ]
++ read_args 007.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 007.args
++ ARGS=--compact=high
++ perl ../../perl/script/jsonfold --compact=high
++ diff -u 007.gold 007.out
+--- 007.gold	2026-06-01 14:19:09.263821207 +0300
++++ 007.out	2026-06-03 18:29:40.280224187 +0300
+@@ -1 +1 @@
+-{ "name": "alpha", "kind": "test", "ok": true }
++{ "kind": "test", "name": "alpha", "ok": true }
++ echo FAIL 007
+FAIL 007
++ FAILED=1
++ basename 008.json .json
++ base=008
++ [ -f 008.gold ]
++ read_args 008.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 008.args
++ ARGS=--compact=high --width=60
++ perl ../../perl/script/jsonfold --compact=high --width=60
++ diff -u 008.gold 008.out
++ echo PASS 008
+PASS 008
++ basename 009.json .json
++ base=009
++ [ -f 009.gold ]
++ read_args 009.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 009.args
++ ARGS=--compact=default --sort-keys
++ perl ../../perl/script/jsonfold --compact=default --sort-keys
++ diff -u 009.gold 009.out
++ echo PASS 009
+PASS 009
++ basename 010.json .json
++ base=010
++ [ -f 010.gold ]
++ read_args 010.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 010.args
++ ARGS=--compact=pack
++ perl ../../perl/script/jsonfold --compact=pack
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 424, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 385, <STDIN> line 1.
++ diff -u 010.gold 010.out
+--- 010.gold	2026-06-01 14:19:09.451821247 +0300
++++ 010.out	2026-06-03 18:29:40.391824187 +0300
+@@ -1,3 +1,6 @@
+ {
+-  "a": 1, "b": 2, "c": 3, "d": 4
++  "a": 1,
++  "b": 2,
++  "c": 3,
++  "d": 4
+ }
++ echo FAIL 010
+FAIL 010
++ FAILED=1
++ basename 011.json .json
++ base=011
++ [ -f 011.gold ]
++ read_args 011.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 011.args
++ ARGS=--compact=pack --width=60
++ perl ../../perl/script/jsonfold --compact=pack --width=60
++ diff -u 011.gold 011.out
++ echo PASS 011
+PASS 011
++ basename 012.json .json
++ base=012
++ [ -f 012.gold ]
++ read_args 012.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 012.args
++ ARGS=--compact=pack --pack-array-items=4 --width=80
++ perl ../../perl/script/jsonfold --compact=pack --pack-array-items=4 --width=80
++ diff -u 012.gold 012.out
++ echo PASS 012
+PASS 012
++ basename 013.json .json
++ base=013
++ [ -f 013.gold ]
++ read_args 013.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 013.args
++ ARGS=--compact=pack --width=30
++ perl ../../perl/script/jsonfold --compact=pack --width=30
++ diff -u 013.gold 013.out
++ echo PASS 013
+PASS 013
++ basename 014.json .json
++ base=014
++ [ -f 014.gold ]
++ read_args 014.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 014.args
++ ARGS=--compact=pack --pack-obj-items=4
++ perl ../../perl/script/jsonfold --compact=pack --pack-obj-items=4
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 424, <STDIN> line 1.
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 424, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 385, <STDIN> line 1.
++ diff -u 014.gold 014.out
+--- 014.gold	2026-06-01 14:19:09.711821302 +0300
++++ 014.out	2026-06-03 18:29:40.561024187 +0300
+@@ -1,5 +1,8 @@
+ {
+   "obj": {
+-    "a": 1, "b": 2, "c": 3, "d": 4
++    "a": 1,
++    "b": 2,
++    "c": 3,
++    "d": 4
+   }
+ }
++ echo FAIL 014
+FAIL 014
++ FAILED=1
++ basename 015.json .json
++ base=015
++ [ -f 015.gold ]
++ read_args 015.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 015.args
++ ARGS=--compact=pack --pack-nesting=3
++ perl ../../perl/script/jsonfold --compact=pack --pack-nesting=3
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 424, <STDIN> line 1.
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 424, <STDIN> line 1.
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 424, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 424, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 385, <STDIN> line 1.
++ diff -u 015.gold 015.out
+--- 015.gold	2026-06-01 14:19:09.779821317 +0300
++++ 015.out	2026-06-03 18:29:40.600624187 +0300
+@@ -1,10 +1,14 @@
+ {
+   "outer": [
+     [
+-      1, 2, 3
++      1,
++      2,
++      3
+     ],
+     [
+-      4, 5, 6
++      4,
++      5,
++      6
+     ]
+   ]
+ }
++ echo FAIL 015
+FAIL 015
++ FAILED=1
++ basename 016.json .json
++ base=016
++ [ -f 016.gold ]
++ read_args 016.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 016.args
++ ARGS=--compact=fold
++ perl ../../perl/script/jsonfold --compact=fold
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 424, <STDIN> line 1.
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 424, <STDIN> line 1.
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 385, <STDIN> line 1.
++ diff -u 016.gold 016.out
++ echo PASS 016
+PASS 016
++ basename 017.json .json
++ base=017
++ [ -f 017.gold ]
++ read_args 017.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 017.args
++ ARGS=--compact=fold
++ perl ../../perl/script/jsonfold --compact=fold
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 424, <STDIN> line 1.
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 424, <STDIN> line 1.
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 385, <STDIN> line 1.
++ diff -u 017.gold 017.out
+--- 017.gold	2026-06-01 14:19:09.927821348 +0300
++++ 017.out	2026-06-03 18:29:40.676224187 +0300
+@@ -1,6 +1,6 @@
+ {
+   "meta": {
+-    "version": 1,
+-    "ok": true
++    "ok": true,
++    "version": 1
+   }
+ }
++ echo FAIL 017
+FAIL 017
++ FAILED=1
++ basename 018.json .json
++ base=018
++ [ -f 018.gold ]
++ read_args 018.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 018.args
++ ARGS=--compact=fold --fold-array-items=3
++ perl ../../perl/script/jsonfold --compact=fold --fold-array-items=3
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 424, <STDIN> line 1.
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 424, <STDIN> line 1.
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 385, <STDIN> line 1.
++ diff -u 018.gold 018.out
++ echo PASS 018
+PASS 018
++ basename 019.json .json
++ base=019
++ [ -f 019.gold ]
++ read_args 019.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 019.args
++ ARGS=--compact=fold --fold-array-items=8
++ perl ../../perl/script/jsonfold --compact=fold --fold-array-items=8
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 424, <STDIN> line 1.
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 424, <STDIN> line 1.
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 385, <STDIN> line 1.
++ diff -u 019.gold 019.out
++ echo PASS 019
+PASS 019
++ basename 020.json .json
++ base=020
++ [ -f 020.gold ]
++ read_args 020.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 020.args
++ ARGS=--compact=fold --width=28
++ perl ../../perl/script/jsonfold --compact=fold --width=28
++ diff -u 020.gold 020.out
++ echo PASS 020
+PASS 020
++ basename 021.json .json
++ base=021
++ [ -f 021.gold ]
++ read_args 021.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 021.args
++ ARGS=--compact=join
++ perl ../../perl/script/jsonfold --compact=join
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 424, <STDIN> line 1.
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 424, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 424, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 424, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 385, <STDIN> line 1.
++ diff -u 021.gold 021.out
+--- 021.gold	2026-06-01 14:19:10.187821404 +0300
++++ 021.out	2026-06-03 18:29:40.834624187 +0300
+@@ -1 +1,14 @@
+-[ [ 1, 2 ], [ 3, 4 ], [ 5, 6 ] ]
++[
++  [
++    1,
++    2
++  ],
++  [
++    3,
++    4
++  ],
++  [
++    5,
++    6
++  ]
++]
++ echo FAIL 021
+FAIL 021
++ FAILED=1
++ basename 022.json .json
++ base=022
++ [ -f 022.gold ]
++ read_args 022.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 022.args
++ ARGS=--compact=join
++ perl ../../perl/script/jsonfold --compact=join
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 424, <STDIN> line 1.
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 424, <STDIN> line 1.
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 424, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 424, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 424, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric le (<=) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 485, <STDIN> line 1.
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 385, <STDIN> line 1.
++ diff -u 022.gold 022.out
+--- 022.gold	2026-06-01 14:19:10.247821417 +0300
++++ 022.out	2026-06-03 18:29:40.874224187 +0300
+@@ -1 +1,16 @@
+-{ "matrix": [ [ 1, 2 ], [ 3, 4 ], [ 5, 6 ] ] }
++{
++  "matrix": [
++    [
++      1,
++      2
++    ],
++    [
++      3,
++      4
++    ],
++    [
++      5,
++      6
++    ]
++  ]
++}
++ echo FAIL 022
+FAIL 022
++ FAILED=1
++ basename 023.json .json
++ base=023
++ [ -f 023.gold ]
++ read_args 023.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 023.args
++ ARGS=--compact=join --width=30
++ perl ../../perl/script/jsonfold --compact=join --width=30
++ diff -u 023.gold 023.out
++ echo PASS 023
+PASS 023
++ basename 024.json .json
++ base=024
++ [ -f 024.gold ]
++ read_args 024.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 024.args
++ ARGS=--compact=max --width=80
++ perl ../../perl/script/jsonfold --compact=max --width=80
++ diff -u 024.gold 024.out
++ echo PASS 024
+PASS 024
++ basename 025.json .json
++ base=025
++ [ -f 025.gold ]
++ read_args 025.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 025.args
++ ARGS=--compact=high --width=50
++ perl ../../perl/script/jsonfold --compact=high --width=50
++ diff -u 025.gold 025.out
++ echo PASS 025
+PASS 025
++ basename 026.json .json
++ base=026
++ [ -f 026.gold ]
++ read_args 026.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 026.args
++ ARGS=--compact=med
++ perl ../../perl/script/jsonfold --compact=med
++ diff -u 026.gold 026.out
++ echo PASS 026
+PASS 026
++ basename 027.json .json
++ base=027
++ [ -f 027.gold ]
++ read_args 027.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 027.args
++ ARGS=--compact=high
++ perl ../../perl/script/jsonfold --compact=high
++ diff -u 027.gold 027.out
++ echo PASS 027
+PASS 027
++ basename 028.json .json
++ base=028
++ [ -f 028.gold ]
++ read_args 028.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 028.args
++ ARGS=--compact=high
++ perl ../../perl/script/jsonfold --compact=high
++ diff -u 028.gold 028.out
+--- 028.gold	2026-06-01 14:19:10.635821499 +0300
++++ 028.out	2026-06-03 18:29:41.101024187 +0300
+@@ -1 +1 @@
+-{ "config": { "ports": [ 80, 443 ], "enabled": true } }
++{ "config": { "enabled": true, "ports": [ 80, 443 ] } }
++ echo FAIL 028
+FAIL 028
++ FAILED=1
++ basename 029.json .json
++ base=029
++ [ -f 029.gold ]
++ read_args 029.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 029.args
++ ARGS=--compact=high --width=80
++ perl ../../perl/script/jsonfold --compact=high --width=80
++ diff -u 029.gold 029.out
++ echo PASS 029
+PASS 029
++ basename 030.json .json
++ base=030
++ [ -f 030.gold ]
++ read_args 030.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 030.args
++ ARGS=--compact=med
++ perl ../../perl/script/jsonfold --compact=med
++ diff -u 030.gold 030.out
++ echo PASS 030
+PASS 030
++ basename 031.json .json
++ base=031
++ [ -f 031.gold ]
++ read_args 031.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 031.args
++ ARGS=--compact=max --width=80
++ perl ../../perl/script/jsonfold --compact=max --width=80
++ diff -u 031.gold 031.out
++ echo PASS 031
+PASS 031
++ basename 032.json .json
++ base=032
++ [ -f 032.gold ]
++ read_args 032.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 032.args
++ ARGS=--compact=default --width=80
++ perl ../../perl/script/jsonfold --compact=default --width=80
++ diff -u 032.gold 032.out
++ echo PASS 032
+PASS 032
++ basename 033.json .json
++ base=033
++ [ -f 033.gold ]
++ read_args 033.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 033.args
++ ARGS=--compact=high --width=60
++ perl ../../perl/script/jsonfold --compact=high --width=60
++ diff -u 033.gold 033.out
++ echo PASS 033
+PASS 033
++ basename 034.json .json
++ base=034
++ [ -f 034.gold ]
++ read_args 034.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 034.args
++ ARGS=--compact=default --pack-items=6 --width=80
++ perl ../../perl/script/jsonfold --compact=default --pack-items=6 --width=80
++ diff -u 034.gold 034.out
++ echo PASS 034
+PASS 034
++ basename 035.json .json
++ base=035
++ [ -f 035.gold ]
++ read_args 035.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 035.args
++ ARGS=--compact=default --fold-items=10 --width=80
++ perl ../../perl/script/jsonfold --compact=default --fold-items=10 --width=80
++ diff -u 035.gold 035.out
++ echo PASS 035
+PASS 035
++ basename 036.json .json
++ base=036
++ [ -f 036.gold ]
++ read_args 036.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 036.args
++ ARGS=--compact=high --join-nesting=2
++ perl ../../perl/script/jsonfold --compact=high --join-nesting=2
++ diff -u 036.gold 036.out
++ echo PASS 036
+PASS 036
++ basename 037.json .json
++ base=037
++ [ -f 037.gold ]
++ read_args 037.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 037.args
++ ARGS=--compact=default
++ perl ../../perl/script/jsonfold --compact=default
++ diff -u 037.gold 037.out
++ echo PASS 037
+PASS 037
++ basename 038.json .json
++ base=038
++ [ -f 038.gold ]
++ read_args 038.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 038.args
++ ARGS=--compact=high
++ perl ../../perl/script/jsonfold --compact=high
++ diff -u 038.gold 038.out
+--- 038.gold	2026-06-01 14:19:11.283821637 +0300
++++ 038.out	2026-06-03 18:29:41.489824187 +0300
+@@ -1,4 +1,4 @@
+ {
+-  "meta": { "version": 1, "ok": true },
+-  "items": [ { "id": 1, "name": "alpha" }, { "id": 2, "name": "beta" } ]
++  "items": [ { "id": 1, "name": "alpha" }, { "id": 2, "name": "beta" } ],
++  "meta": { "ok": true, "version": 1 }
+ }
++ echo FAIL 038
+FAIL 038
++ FAILED=1
++ basename 039.json .json
++ base=039
++ [ -f 039.gold ]
++ read_args 039.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 039.args
++ ARGS=--compact=high --width=70
++ perl ../../perl/script/jsonfold --compact=high --width=70
++ diff -u 039.gold 039.out
+--- 039.gold	2026-06-01 14:19:11.343821650 +0300
++++ 039.out	2026-06-03 18:29:41.529424187 +0300
+@@ -1,4 +1,4 @@
+ {
+-  "matrix": [ [ 1, 2 ], [ 3, 4 ] ],
+-  "long": [ "short", "also short", "third" ]
++  "long": [ "short", "also short", "third" ],
++  "matrix": [ [ 1, 2 ], [ 3, 4 ] ]
+ }
++ echo FAIL 039
+FAIL 039
++ FAILED=1
++ basename 040.json .json
++ base=040
++ [ -f 040.gold ]
++ read_args 040.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 040.args
++ ARGS=--compact=high --indent=4
++ perl ../../perl/script/jsonfold --compact=high --indent=4
++ diff -u 040.gold 040.out
++ echo PASS 040
+PASS 040
++ basename 041.json .json
++ base=041
++ [ -f 041.gold ]
++ read_args 041.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 041.args
++ ARGS=--compact=none
++ perl ../../perl/script/jsonfold --compact=none
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 371, <STDIN> line 1.
++ diff -u 041.gold 041.out
++ echo PASS 041
+PASS 041
++ basename 042.json .json
++ base=042
++ [ -f 042.gold ]
++ read_args 042.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 042.args
++ ARGS=--compact=none
++ perl ../../perl/script/jsonfold --compact=none
+Use of uninitialized value in numeric gt (>) at /home/user/github/jsonfold/perl/script/../lib/JSON/JSONFold.pm line 371, <STDIN> line 1.
++ diff -u 042.gold 042.out
++ echo PASS 042
+PASS 042
++ basename 043.json .json
++ base=043
++ [ -f 043.gold ]
++ read_args 043.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 043.args
++ ARGS=--width=40
++ perl ../../perl/script/jsonfold --width=40
++ diff -u 043.gold 043.out
++ echo PASS 043
+PASS 043
++ basename 044.json .json
++ base=044
++ [ -f 044.gold ]
++ read_args 044.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 044.args
++ ARGS=--compact=high
++ perl ../../perl/script/jsonfold --compact=high
++ diff -u 044.gold 044.out
+--- 044.gold	2026-06-01 14:19:11.659821717 +0300
++++ 044.out	2026-06-03 18:29:41.716624187 +0300
+@@ -1 +1 @@
+-{ "unicode": "\u05e9\u05dc\u05d5\u05dd \u4e16\u754c \ud83d\ude00" }
++{ "unicode": "שלום 世界 😀" }
++ echo FAIL 044
+FAIL 044
++ FAILED=1
++ basename 045.json .json
++ base=045
++ [ -f 045.gold ]
++ read_args 045.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 045.args
++ ARGS=--compact=default
++ perl ../../perl/script/jsonfold --compact=default
++ diff -u 045.gold 045.out
++ echo PASS 045
+PASS 045
++ basename 046.json .json
++ base=046
++ [ -f 046.gold ]
++ read_args 046.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 046.args
++ ARGS=--compact=max
++ perl ../../perl/script/jsonfold --compact=max
++ diff -u 046.gold 046.out
++ echo PASS 046
+PASS 046
++ basename 047.json .json
++ base=047
++ [ -f 047.gold ]
++ read_args 047.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 047.args
++ ARGS=--width=30
++ perl ../../perl/script/jsonfold --width=30
++ diff -u 047.gold 047.out
++ echo PASS 047
+PASS 047
++ basename 048.json .json
++ base=048
++ [ -f 048.gold ]
++ read_args 048.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 048.args
++ ARGS=--compact=high
++ perl ../../perl/script/jsonfold --compact=high
++ diff -u 048.gold 048.out
++ echo PASS 048
+PASS 048
++ basename 049.json .json
++ base=049
++ [ -f 049.gold ]
++ read_args 049.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 049.args
++ ARGS=--width=20
++ perl ../../perl/script/jsonfold --width=20
++ diff -u 049.gold 049.out
++ echo PASS 049
+PASS 049
++ basename 050.json .json
++ base=050
++ [ -f 050.gold ]
++ read_args 050.args
++ sed -e s/[[:space:]]*#.*$// -e /^[[:space:]]*$/d 050.args
++ ARGS=--fold-nesting=0
++ perl ../../perl/script/jsonfold --fold-nesting=0
++ diff -u 050.gold 050.out
++ echo PASS 050
+PASS 050
++ exit 1
