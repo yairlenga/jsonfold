@@ -186,7 +186,8 @@ class JSONFold:
     subject to the configured width limit.
     """
     width: int = 80
-    _: KW_ONLY
+# Commented out next line - trouble with kernprof
+#    _: KW_ONLY
     # Phase 1 – pack scalars N-per-line
     pack_array_items: int = 8       # max scalars per line inside a list
     pack_obj_items:   int = 4       # max scalars per line inside a dict

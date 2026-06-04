@@ -556,7 +556,7 @@ sub _close_frame {
 
     my $frame = pop @{ $self->{stack} };
     push @{ $frame->{lines} }, $closer;
-    $frame->{fold_ok} = 0 if $frame->{kind} != $closing_kind;
+#   MAYBE: $frame->{fold_ok} = 0 if $frame->{kind} != $closing_kind;
 
     my $folded = $self->_try_fold($frame);
     $frame->{lines} = [ $folded ] if $folded;

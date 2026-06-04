@@ -198,8 +198,11 @@ def run_one_size(rows, tests):
     for name in tests:
         print(f"{name} ({rows})... ", end="", file=sys.stderr, flush=True)
 
-        dt, speed = time_one(name, data)
+        t0 = time.perf_counter() ;
+        best_dt, speed = time_one(name, data)
         peak_mb = memory_one(name, data)
+        t1 = time.perf_counter() ;
+        dt = t1-t0 ;
 
         print(f"{round(dt*1000,0)} ms", file=sys.stderr)
 
@@ -212,15 +215,32 @@ def run_one_size(rows, tests):
 
     return results
 
+def show_data(rows):
+    data = make_data(rows)
+    json.dump(make_data(rows), fp=sys.stdout, indent=2)
+
 
 def main(argv):
+    import argparse
+
+    p = argparse.ArgumentParser(
+        description="Read JSON from stdin; write folded JSON to stdout.")
+    p.add_argument("--show", type=int, default=None)
+    args, rest = p.parse_known_args(argv)
+
     filter = []
     last_sz = None
     results = []
-    for arg in argv[1:]:
+    if (args.show):
+        show_data(args.show)
+        return
+
+    for arg in rest[1:]:
+        print(arg, file=sys.stderr)
         if arg == "-":
             filter = []
             continue
+
         try:
             last_sz = int(arg)
         except ValueError:

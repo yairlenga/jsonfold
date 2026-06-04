@@ -221,12 +221,13 @@ sub time_one {
     my ($name, $data, $show) = @_;
     my ($best, $best_dt);
 
+
     for (1 .. $REPEATS) {
         gc_collect();
 
         my $t0 = time();
         my $p0 = process_time();
-        my $w  = run_case($data, $name, $show)->($t0);
+        my $w  = run_case($data, $name, $show && $_ == 1)->($t0);
         my $p1 = process_time();
         my $t1 = time();
         my $dt = $t1 - $t0;
@@ -375,8 +376,11 @@ sub run_one_size {
     for my $name (@tests) {
         print STDERR "$name ($rows)... ";
 
-        my ($dt, $speed) = time_one($name, $data, $show);
+        my $t0 = time ;
+        my ($best_dt, $speed) = time_one($name, $data, $show);
         my $peak = memory_one($name, $data);
+        my $t1 = time ;
+        my $dt = $t1 - $t0 ;
 
         print STDERR round1($dt * 1000.0) . " ms\n";
 
@@ -444,6 +448,7 @@ sub main {
     my $last_sz;
     my @results;
 
+    my $t0 = time ;
     for my $arg (@argv) {
         if ($arg eq '-') {
             @filter = ();
@@ -462,8 +467,10 @@ sub main {
     if (!defined $last_sz) {
         push @results, run_one_size(1_000, \@filter, $show);
     }
-
+    my $t1 = time ;
     print_table(\@results) unless $show;
+    print STDERR "Completed in: ", round1($t1-$t0), " Seconds\n" ;
+
     return 0;
 }
 
