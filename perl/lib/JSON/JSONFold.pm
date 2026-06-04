@@ -586,11 +586,8 @@ sub _write_line { $_[0]->_write_str($_[1]->raw) }
 
 sub _write_str {
     my ($self, $s) = @_;
-    if (my $fh = $self->{fh}) {
-        print {$fh} $s or die "write failed: $!";
-    } else {
-        $self->{out} .= $s;
-    }
+
+    $self->{fh}->print($s) ;
     $self->{stats}{bytes_out} += length($s);
     $self->{stats}{lines_out} += _count_newlines($s);
     return length($s);

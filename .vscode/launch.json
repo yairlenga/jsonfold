@@ -11,7 +11,16 @@
             "cwd": "${workspaceFolder}/perl",
             "program": "${workspaceFolder}/perl/script/jsonfold",
             "stopOnEntry": true,
-            "args": [ "--compact=pack", "--input=../tests/unit/010.json" ]
+            "args": [ "--compact=", "--input=../tests/unit/010.json" ]
+        },
+        {
+            "type": "perl",
+            "request": "launch",
+            "name": "Perl-Benchmark",
+            "cwd": "${workspaceFolder}/perl",
+            "program": "${workspaceFolder}/perl/script/benchmark.pl",
+            "stopOnEntry": true,
+            "args": [  ]
         },
         {
             "type": "java",

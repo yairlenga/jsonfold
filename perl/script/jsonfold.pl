@@ -1,6 +1,8 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
+use 5.014 ;
+
 use FindBin;
 use lib "$FindBin::RealBin/../lib";
 use Getopt::Long   qw(GetOptions);
@@ -8,11 +10,20 @@ use JSON::PP       ();
 use JSON::JSONFold qw(dumpi);
 use Data::Dumper;
 
-use Carp qw(confess);
+use Carp qw(confess cluck);
 
 BEGIN {
-# Debug Only
-    *CORE::GLOBAL::die = \&confess;
+    $SIG{__DIE__} = sub {
+        return if $^S;
+        local $SIG{__DIE__};
+        Carp::confess(@_);
+    };
+
+
+    $SIG{__WARN__} = sub {
+        local $SIG{__WARN__};
+        Carp::cluck(@_);
+    };
 }
 
 sub demo_data {
