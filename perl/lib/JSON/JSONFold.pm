@@ -8,16 +8,6 @@ use Exporter 'import';
 our $VERSION = '0.002';
 our @EXPORT_OK = qw(dump dumps dumpi fold_text preset config);
 
-use constant {
-    KIND_NONE => 0,
-    KIND_DICT => 1,
-    KIND_LIST => 2,
-};
-
-use constant MAX_ARRAY_ITEMS => 1000;
-use constant MAX_OBJ_ITEMS   => 1000;
-use constant MAX_NESTING     => 10;
-
 sub config {
     my ($preset) = @_ ;
     return JSON::JSONFold::Config::config(@_) ;
@@ -72,6 +62,37 @@ sub dumps {
     $output .= "\n" unless $output =~ /\n\z/;
     return $output ;
 }
+
+
+package JSON::JSONFold::Kind;
+
+use strict ;
+use warnings ;
+use Exporter 'import';
+
+our @EXPORT_OK = qw(
+    KIND_NONE
+    KIND_DICT
+    KIND_LIST
+    %OPENING_KIND
+    %CLOSING_KIND
+);
+
+use constant KIND_NONE => 0;
+use constant KIND_DICT => 1;
+use constant KIND_LIST => 2;
+
+our %OPENING_KIND = (
+    '{' => KIND_DICT,
+    '[' => KIND_LIST,
+);
+
+our %CLOSING_KIND = (
+    '}'  => KIND_DICT,
+    '},' => KIND_DICT,
+    ']'  => KIND_LIST,
+    '],' => KIND_LIST,
+);
 
 # -------------------------------------------------------------------------
 # Internal package: immutable-ish configuration record
@@ -199,66 +220,52 @@ package JSON::JSONFold::Line;
 use strict;
 use warnings;
 
-sub new {
-    my ($class, %arg) = @_;
-    return bless {
-        indent        => $arg{indent} // 0,
-        text          => $arg{text} // '',
-        parent_kind   => $arg{parent_kind} // JSON::JSONFold::KIND_NONE(),
-        items         => $arg{items} // 1,
-        leafs         => $arg{leafs} // 1,
-        child_nesting => $arg{child_nesting} // -1,
-        opener        => $arg{opener} // JSON::JSONFold::KIND_NONE(),
-        closer        => $arg{closer} // JSON::JSONFold::KIND_NONE(),
-        can_join      => exists $arg{can_join} ? $arg{can_join} : 1,
-        can_pack      => exists $arg{can_pack} ? $arg{can_pack} : 1,
-    }, $class;
-}
+use constant KIND_NONE => $JSON::JSONFold::Kind::KIND_NONE ;
 
 sub parse {
     my ($class, $s, $parent_kind) = @_;
-    $parent_kind //= JSON::JSONFold::KIND_NONE();
+    $parent_kind //= KIND_NONE;
 
     my ($spaces) = $s =~ /^(\s*)/;
     my $body = substr($s, length($spaces));
     $body =~ s/\s+\z//;
 
-    my $opener = $body =~ /\{\z/ ? JSON::JSONFold::KIND_DICT()
-               : $body =~ /\[\z/ ? JSON::JSONFold::KIND_LIST()
-               : JSON::JSONFold::KIND_NONE();
+    my $last = substr($body, -1, 1);
 
-    my $closer =
-        ($body eq '}' || $body eq '},') ? JSON::JSONFold::KIND_DICT() :
-        ($body eq ']' || $body eq '],') ? JSON::JSONFold::KIND_LIST() :
-        JSON::JSONFold::KIND_NONE();
+    my $opener = $OPENING_KIND{$last} // KIND_NONE ;
+    my $closer = $CLOSING_KIND{$body} // KIND_NONE;
 
     my $is_body = $parent_kind && !$opener && !$closer ? 1 : 0;
 
-    return $class->new(
+    return bless {
         indent      => length($spaces),
         text        => $body,
         parent_kind => $parent_kind,
+        items       => 1,
+        leafs       => 1,
+        child_nesting => -1,
         opener      => $opener,
         closer      => $closer,
         can_join    => $is_body,
         can_pack    => $is_body,
-    );
+    }, $class ;
 }
 
-sub folded {
+sub fold {
     my ($class, $lines, $parent_kind, $leafs, $child_nesting) = @_;
-    return $class->new(
-        indent        => $lines->[0]{indent},
+    my $first_line = $lines->[0] ;
+    return bless {
+        indent        => $first_line->{indent},
         text          => join(' ', map { $_->{text} } @$lines),
-        parent_kind   => $parent_kind,
+        parent_kind   => $first_line->{parent_kind},
         items         => 1,
         leafs         => $leafs,
-        child_nesting => $child_nesting > 0 ? $child_nesting : 0,
-        opener        => JSON::JSONFold::KIND_NONE(),
-        closer        => JSON::JSONFold::KIND_NONE(),
+        child_nesting => $child_nesting,
+        opener        => KIND_NONE,
+        closer        => KIND_NONE,
         can_pack      => 0,
         can_join      => 1,
-    );
+    }, $class ;
 }
 
 sub raw   { return (' ' x $_[0]{indent}) . $_[0]{text} . "\n" }
@@ -339,7 +346,6 @@ sub new {
         pending => '',
         stack   => [],
         stats   => JSON::JSONFold::Stats->new,
-        out     => '',
     }, $class;
 }
 
@@ -368,7 +374,6 @@ sub write {
         my $line_text = $self->{pending} . substr($s, 0, $nl);
         $self->{pending} = substr($s, $nl + 1);
         $self->_feed(JSON::JSONFold::Line->parse($line_text, $self->_parent_kind));
-        $self->_mark_no_fold if length($self->{pending}) > $self->{cfg}{width};
         return $len;
     }
 
@@ -382,7 +387,6 @@ sub write {
         $self->_feed(JSON::JSONFold::Line->parse($part, $self->_parent_kind));
     }
 
-    $self->_mark_no_fold if length($self->{pending}) > $self->{cfg}{width};
     return $len;
 }
 
@@ -421,7 +425,6 @@ sub _feed {
             fold_limit => $self->_fold_limit($line->{opener}),
             join_limit => $self->_join_limit($line->{opener}),
         );
-        $self->_mark_no_fold if $line->width > $self->{cfg}{width};
         return;
     }
 
@@ -468,9 +471,12 @@ sub _add_to_frame {
         $self->_write_line($line);
         return;
     }
- 
 
     push @{ $frame->{lines} }, $line;
+
+    if ( $frame->{fold_ok} && $line->width > $self->{cfg}{width} ) {
+        $self->_mark_no_fold ;
+    }
 
     if (!$line->{closer}) {
         $frame->{content_lines}++;
@@ -502,7 +508,10 @@ sub _merge_into_frame {
     $prev->{can_pack} = 0 if $prev->{items} >= $frame->{pack_limit};
     $prev->{can_join} = 0 if $prev->{items} >= $frame->{join_limit};
     if ( $frame->{fold_ok} ) {
-        $self->_mark_no_fold unless $self->_check_fold_limits($frame) 
+        unless ( $self->_check_fold_limits($frame)) {
+            $self->_mark_no_fold ;
+            $self->_stream_frame($frame) ;
+        }
     }
 }
 
@@ -564,7 +573,7 @@ sub _try_fold {
     $folded_len += 1 + length($_->{text}) for @{ $frame->{lines} };
     return undef if $frame->{lines}[0]{indent} + $folded_len > $self->{cfg}{width};
 
-    return JSON::JSONFold::Line->folded(
+    return JSON::JSONFold::Line->fold(
         $frame->{lines},
         $self->_parent_kind,
         $frame->{leafs},
@@ -603,12 +612,12 @@ sub _write_str {
     return length($s);
 }
 
-sub _parent_kind { return @{ $_[0]->{stack} } ? $_[0]->{stack}[-1]{kind} : JSON::JSONFold::KIND_NONE() }
+sub _parent_kind { return @{ $_[0]->{stack} } ? $_[0]->{stack}[-1]{kind} : JSON::JSONFold::Kind::KIND_NONE() }
 
 sub _choose_limit {
     my ($kind, $list, $dict) = @_;
-    return $kind == JSON::JSONFold::KIND_LIST() ? $list
-         : $kind == JSON::JSONFold::KIND_DICT() ? $dict
+    return $kind == JSON::JSONFold::Kind::KIND_LIST() ? $list
+         : $kind == JSON::JSONFold::Kind::KIND_DICT() ? $dict
          : 0;
 }
 sub _pack_limit { _choose_limit($_[1], $_[0]->{cfg}{pack_array_items}, $_[0]->{cfg}{pack_obj_items}) }
