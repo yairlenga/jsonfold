@@ -460,7 +460,15 @@ sub _add_to_frame {
     if (!$frame->is_empty) {
         return if $line->{can_pack} && $self->_try_pack($frame, $line);
         return if $line->{can_join} && $self->_try_join($frame, $line);
+
+        # If frame is empty, may be it's in "streaming" mode, which
+        # mean that lines that can not be packed/joined can be sent
+        # directly to the output:
+    } elsif (!$frame->{fold_ok} && !$line->{can_pack} && !$line->{can_join}) {
+        $self->_write_line($line);
+        return;
     }
+ 
 
     push @{ $frame->{lines} }, $line;
 
@@ -471,11 +479,12 @@ sub _add_to_frame {
         if ($line->{child_nesting} >= $frame->{child_nesting}) {
             $frame->{child_nesting} = $line->{child_nesting} + 1;
         }
-        $self->_check_fold_limits($frame) if $frame->{fold_ok};
+        if ( $frame->{fold_ok} ) {
+            $self->_mark_no_fold unless $self->_check_fold_limits($frame) 
+        }
     }
 
-    $self->_mark_no_fold if $frame->{fold_ok} && $line->width > $self->{cfg}{width};
-    $self->_stream_frame($frame) if !$frame->{fold_ok};
+    $self->_stream_frame($frame) unless $frame->{fold_ok};
 }
 
 sub _can_merge {
@@ -492,7 +501,9 @@ sub _merge_into_frame {
     $frame->{leafs} += $line->{leafs};
     $prev->{can_pack} = 0 if $prev->{items} >= $frame->{pack_limit};
     $prev->{can_join} = 0 if $prev->{items} >= $frame->{join_limit};
-    $self->_check_fold_limits($frame) if $frame->{fold_ok};
+    if ( $frame->{fold_ok} ) {
+        $self->_mark_no_fold unless $self->_check_fold_limits($frame) 
+    }
 }
 
 sub _try_pack {
@@ -520,11 +531,11 @@ sub _try_join {
 
 sub _check_fold_limits {
     my ($self, $frame) = @_;
-    return if !$frame->{fold_ok};
-    if ($frame->{content_lines} > 1 || $frame->{items} > $frame->{fold_limit}
-        || $frame->{child_nesting} >= $self->{cfg}{fold_nesting}) {
-        $frame->{fold_ok} = 0;
-    }
+
+    return if $frame->{content_lines} > 1 ;
+    return if $frame->{items} > $frame->{fold_limit} ;
+    return if $frame->{child_nesting} >= $self->{cfg}{fold_nesting} ;
+    return 1 ;
 }
 
 sub _close_frame {
@@ -579,7 +590,6 @@ sub _stream_frame {
 sub _mark_no_fold {
     my ($self) = @_;
     $_->{fold_ok} = 0 for @{ $self->{stack} };
-    $self->_stream_frame($self->{stack}[-1]) if @{ $self->{stack} };
 }
 
 sub _write_line { $_[0]->_write_str($_[1]->raw) }
