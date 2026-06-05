@@ -739,15 +739,17 @@ class JSONFoldWriter:
     @profile
     def _stream_frame(self, frame: Frame) -> None:
         lines = frame.lines
-        keep_last = False
-        if lines:
-            last = lines[-1]
-            keep_last = last.can_pack or last.can_join
-        keep = lines.pop() if keep_last else None
+        if not lines:
+            return 
+
+        last = lines[-1]
+        keep_last = last.can_pack or last.can_join
+        if keep_last:
+            lines.pop()
         self._emit_lines(lines, frame.depth-1)
         lines.clear()
-        if keep:
-            lines.append(keep)
+        if keep_last:
+            lines.append(last)
 
     # --------------------------------------------------------- misc helpers
     @profile

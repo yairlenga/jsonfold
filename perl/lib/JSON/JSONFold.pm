@@ -148,7 +148,7 @@ sub _replace {
 }
 
 sub _config {
-    my $config = shift ;
+    my ($config) = @_ ;
     $config = _preset($config) unless ref($config) ;
     return $config ;
 }
@@ -357,7 +357,7 @@ sub write {
     my $len = length($s);
     $self->{stats}{bytes_in} += $len;
 
-    if (!$self->{cfg}) {
+    unless ($self->{cfg}) {
         $self->{stats}{lines_in} += _count_newlines($s);
         return $self->_write_str($s);
     }
@@ -441,20 +441,22 @@ sub _feed {
     } else {
         $self->_write_line($line);
     }
+    return ;
 }
 
 sub _emit_lines {
     my ($self, $lines, $depth) = @_;
-    return if !@$lines;
+    return unless @$lines;
     $depth = @{ $self->{stack} } - 1 unless defined $depth;
 
     if ($depth < 0) {
         $self->_write_line($_) for @$lines;
-        return;
+        return
     }
 
     my $frame = $self->{stack}[$depth];
     $self->_add_to_frame($frame, $_) for @$lines;
+    return
 }
 
 sub _add_to_frame {
@@ -478,7 +480,7 @@ sub _add_to_frame {
         $self->_mark_no_fold ;
     }
 
-    if (!$line->{closer}) {
+    unless ($line->{closer}) {
         $frame->{content_lines}++;
         $frame->{items} += $line->{items};
         $frame->{leafs} += $line->{leafs};
@@ -491,6 +493,7 @@ sub _add_to_frame {
     }
 
     $self->_stream_frame($frame) unless $frame->{fold_ok};
+    return
 }
 
 sub _can_merge {
@@ -503,6 +506,7 @@ sub _can_merge {
 sub _merge_into_frame {
     my ($self, $frame, $prev, $line) = @_;
     $prev->join_line($line);
+    $frame->{child_nesting} = $line->{child_nesting} + 1 if $line->{child_nesting} >= $frame->{child_nesting} ;
     $frame->{items} += $line->{items};
     $frame->{leafs} += $line->{leafs};
     $prev->{can_pack} = 0 if $prev->{items} >= $frame->{pack_limit};
@@ -530,6 +534,9 @@ sub _try_join {
     my ($self, $frame, $line) = @_;
     return 0 if $frame->{join_limit} <= 1 || $frame->is_empty
         || !$line->{can_join} || $line->{child_nesting} >= $self->{cfg}{join_nesting};
+#    return 0 if $frame->{join_limit} <= 1 ||
+#        $line->{child_nesting} >= $self->{cfg}{join_nesting} ||
+        $frame->is_empty ;
     my $prev = $frame->last_line;
     return 0 unless $prev->{can_join}
         && $prev->{child_nesting} < $self->{cfg}{join_nesting}
@@ -549,20 +556,21 @@ sub _check_fold_limits {
 
 sub _close_frame {
     my ($self, $closer, $closing_kind) = @_;
-    if (!@{ $self->{stack} }) {
+    unless (@{ $self->{stack} }) {
         $self->_write_line($closer);
         return;
     }
 
+    # Frame is removed/destroyed
     my $frame = pop @{ $self->{stack} };
-    push @{ $frame->{lines} }, $closer;
+    my $lines = $frame->{lines} ;
+    push @$lines, $closer ;
 #   MAYBE: $frame->{fold_ok} = 0 if $frame->{kind} != $closing_kind;
 
-    my $folded = $self->_try_fold($frame);
-    $frame->{lines} = [ $folded ] if $folded;
-
-    $self->_emit_lines($frame->{lines});
-    @{ $frame->{lines} } = ();
+    if ( my $folded = $self->_try_fold($frame)) {
+        $lines = [ $folded ] ;
+    }
+    $self->_emit_lines($lines);
 }
 
 sub _try_fold {
@@ -584,16 +592,15 @@ sub _try_fold {
 sub _stream_frame {
     my ($self, $frame) = @_;
     my $lines = $frame->{lines};
-    return if !@$lines;
+    return unless @$lines ;
 
-    my $keep;
-    if ($lines->[-1]{can_pack} || $lines->[-1]{can_join}) {
-        $keep = pop @$lines;
-    }
-
+    my $last = $lines->[-1] ;
+    my $keep_last = $last->{can_pack} || $last->{can_join} ;
+    pop @$lines if $keep_last ;
     $self->_emit_lines($lines, $frame->{depth} - 1);
     @$lines = ();
-    push @$lines, $keep if $keep;
+    push @$lines, $last if $keep_last ;
+    return
 }
 
 sub _mark_no_fold {
@@ -601,7 +608,10 @@ sub _mark_no_fold {
     $_->{fold_ok} = 0 for @{ $self->{stack} };
 }
 
-sub _write_line { $_[0]->_write_str($_[1]->raw) }
+sub _write_line {
+    my ($self, $line) = @_ ;
+    return $self->_write_str($line->raw) ;
+}
 
 sub _write_str {
     my ($self, $s) = @_;
@@ -612,7 +622,12 @@ sub _write_str {
     return length($s);
 }
 
-sub _parent_kind { return @{ $_[0]->{stack} } ? $_[0]->{stack}[-1]{kind} : JSON::JSONFold::Kind::KIND_NONE() }
+sub _parent_kind {
+    my ($self) = @_ ;
+    my $stack = $self->{stack} ;
+    return unless @$stack ;
+    return @$stack ? $stack->[-1]{kind} : JSON::JSONFold::Kind::KIND_NONE ;
+}
 
 sub _choose_limit {
     my ($kind, $list, $dict) = @_;
