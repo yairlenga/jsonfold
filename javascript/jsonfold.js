@@ -556,6 +556,7 @@ export class JSONFoldFilter {
     }
 
     this._mergeIntoFrame(frame, prev, line);
+    if ( !prev.canPack) prev.canJoin = false
     return true;
   }
 

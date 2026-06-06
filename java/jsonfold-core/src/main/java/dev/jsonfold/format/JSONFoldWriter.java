@@ -251,6 +251,7 @@ public final class JSONFoldWriter extends Writer {
 
         prev.pack(line);
         updateAfterMerge(frame, prev, line);
+        if ( !prev.canPack) prev.canJoin = false ;
         return true;
     }
 
