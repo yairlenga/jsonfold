@@ -450,7 +450,7 @@ sub _feed {
         my $frame = $self->{stack}[-1];
         $line->{can_pack} = 0 if $line->{items} >= $frame->{pack_limit};
         $line->{can_join} = 0 if $line->{items} >= $frame->{join_limit};
-        $self->_add_to_frame($frame, $line, 1);
+        $self->_add_to_frame($frame, $line);
     } else {
         $self->_write_line($line);
     }
@@ -468,14 +468,14 @@ sub _emit_lines {
     }
 
     my $frame = $self->{stack}[$depth];
-    $self->_add_to_frame($frame, $_, 0) for @$lines;
+    $self->_add_to_frame($frame, $_) for @$lines;
     return
 }
 
 
 
 sub _add_to_frame {
-    my ($self, $frame, $line, $is_feed) = @_;
+    my ($self, $frame, $line) = @_;
 
     if (!$frame->is_empty) {
         return if $line->{can_pack} && $self->_try_pack($frame, $line);

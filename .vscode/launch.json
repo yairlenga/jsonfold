@@ -77,8 +77,10 @@
             "request": "launch",
             "program": "python/jsonfold.py",
             "args": [
-                "--input=tests/unit/028.json",
-                "--compact=high",
+                "--input=tests/unit/034.json",
+                "--compact=default",
+                "--pack-items=6",
+                "--width=80"
             ]
         },
         {

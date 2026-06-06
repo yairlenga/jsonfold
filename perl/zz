@@ -1,0 +1,66 @@
+add_to_frame(1/0):1,1,1,1//"name": "jsonfold benchmark",
+add_to_frame(2/1):2,1,1,1//"ok": true,
+add_to_frame(3/2):2,1,1,1//"version": 1
+add_to_frame(4/3):1,1,0,1//"meta": { "name": "jsonfold benchmark", "ok": true, "version": 1 },
+add_to_frame(5/4):1,1,1,1//"active": false,
+add_to_frame(6/5):2,1,1,1//"id": 1,
+add_to_frame(7/6):2,1,1,1//"name": "name_1",
+add_to_frame(8/7):1,1,1,1//1,
+add_to_frame(9/8):2,1,1,1//2,
+add_to_frame(10/9):1,1,1,1//3,
+add_to_frame(11/10):2,1,1,1//4
+add_to_frame(12/11):2,1,0,1//[ 3, 4 ],
+add_to_frame(13/12):1,1,1,1//5,
+add_to_frame(14/13):2,1,1,1//6
+add_to_frame(15/14):2,1,0,1//[ 5, 6 ]
+add_to_frame(16/15):1,1,0,1//[ 1, 2, [ 3, 4 ], [ 5, 6 ] ]
+add_to_frame(17/16):2,0,0,0//"pairs": [
+add_to_frame(18/16):1,0,0,0//{
+add_to_frame(19/16):1,0,0,0//"rows": [
+add_to_frame(20/16):0,0,0,0//{
+add_to_frame(21/16):0,0,1,1//"active": false, "id": 1, "name": "name_1",
+add_to_frame(22/16):1,0,0,0//"pairs": [
+add_to_frame(23/16):0,0,1,1//"active": false, "id": 1, "name": "name_1",
+add_to_frame(24/16):1,0,0,0//"pairs": [
+add_to_frame(25/16):0,0,0,1//[ 1, 2, [ 3, 4 ], [ 5, 6 ] ]
+add_to_frame(26/16):1,0,0,0//],
+add_to_frame(27/16):0,0,0,1//[ 1, 2, [ 3, 4 ], [ 5, 6 ] ]
+add_to_frame(28/16):1,0,0,0//],
+add_to_frame(29/16):0,0,0,1//[ 1, 2, [ 3, 4 ], [ 5, 6 ] ]
+add_to_frame(30/16):1,0,0,0//],
+add_to_frame(31/16):1,1,1,1//"x": 1,
+add_to_frame(32/17):2,1,1,1//"y": 2,
+add_to_frame(33/18):2,1,1,1//"z": 3
+add_to_frame(34/19):0,0,0,1//"pos": { "x": 1, "y": 2, "z": 3 },
+add_to_frame(35/19):1,0,1,1//"score": 1.25,
+add_to_frame(36/19):1,1,1,1//"alpha",
+add_to_frame(37/20):2,1,1,1//"beta",
+add_to_frame(38/21):2,1,1,1//"gamma",
+add_to_frame(39/22):2,1,1,1//"delta"
+add_to_frame(40/23):1,0,0,1//"tags": [ "alpha", "beta", "gamma", "delta" ],
+add_to_frame(41/23):0,0,0,1//"pos": { "x": 1, "y": 2, "z": 3 }, "score": 1.25,
+add_to_frame(42/23):1,1,1,1//1,
+add_to_frame(43/24):2,1,1,1//2,
+add_to_frame(44/25):2,1,1,1//3,
+add_to_frame(45/26):2,1,1,1//4,
+add_to_frame(46/27):2,1,1,1//5
+add_to_frame(47/28):1,0,0,1//"values": [ 1, 2, 3, 4, 5 ]
+add_to_frame(48/28):1,0,0,1//"tags": [ "alpha", "beta", "gamma", "delta" ], "values": [ 1, 2, 3, 4, 5 ]
+add_to_frame(49/28):0,0,0,1//"pos": { "x": 1, "y": 2, "z": 3 }, "score": 1.25,
+add_to_frame(50/28):1,0,0,0//}
+add_to_frame(51/28):1,0,0,1//"tags": [ "alpha", "beta", "gamma", "delta" ], "values": [ 1, 2, 3, 4, 5 ]
+add_to_frame(52/28):1,0,0,0//}
+add_to_frame(53/28):0,0,0,0//]
+{
+  "meta": { "name": "jsonfold benchmark", "ok": true, "version": 1 },
+  "rows": [
+    {
+      "active": false, "id": 1, "name": "name_1",
+      "pairs": [
+        [ 1, 2, [ 3, 4 ], [ 5, 6 ] ]
+      ],
+      "pos": { "x": 1, "y": 2, "z": 3 }, "score": 1.25,
+      "tags": [ "alpha", "beta", "gamma", "delta" ], "values": [ 1, 2, 3, 4, 5 ]
+    }
+  ]
+}
