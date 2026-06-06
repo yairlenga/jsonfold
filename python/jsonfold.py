@@ -516,7 +516,7 @@ class JSONFoldWriter:
                line.can_pack = False
             if line.items >= frame.join_limit:
                 line.can_join = False
-            self._add_to_frame(frame, line)
+            self._add_to_frame(frame, line, True)
         else:
             self._write_line(line)
 
@@ -535,7 +535,7 @@ class JSONFoldWriter:
         
         frame = self.stack[depth]
         for line in lines:
-            self._add_to_frame(frame, line)
+            self._add_to_frame(frame, line, False)
         
     def _choose_limit(self, kind: Kind, *, default: int =0, list_limit: int =0, dict_limit: int):
         return (
@@ -563,7 +563,7 @@ class JSONFoldWriter:
     # --------------------------------------------------------- phase 1: pack
 
     @profile
-    def _add_to_frame(self, frame: Frame, line: Line) -> None:
+    def _add_to_frame(self, frame: Frame, line: Line, is_feed: bool) -> None:
 
         # Consider adding the line to previous line
 
@@ -645,6 +645,8 @@ class JSONFoldWriter:
             return False
 
         self._merge_into_frame(frame, prev, line)
+        if not prev.can_pack:
+            prev.can_join = False
 
         return True
     
