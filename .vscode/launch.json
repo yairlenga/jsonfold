@@ -9,9 +9,9 @@
             "request": "launch",
             "name": "Perl-Debug",
             "cwd": "${workspaceFolder}/perl",
-            "program": "${workspaceFolder}/perl/script/jsonfold",
+            "program": "${workspaceFolder}/perl/script/jsonfold.pl",
             "stopOnEntry": true,
-            "args": [ "--compact=", "--input=../tests/unit/010.json" ]
+            "args": [ "--input=../tests/unit/028.json", "--compact=high" ]
         },
         {
             "type": "perl",
@@ -56,11 +56,11 @@
             "args": ""
         },
         {
-            "name": "benchmark",
+            "name": "python benchmark",
             "type": "debugpy",
             "request": "launch",
             "program": "python/benchmark.py",
-            "args": []
+            "args": [ "--show=100"]
         },
         {
             "name": "benchmark --dump",
@@ -77,9 +77,8 @@
             "request": "launch",
             "program": "python/jsonfold.py",
             "args": [
-                "--input=tests/unit/050.json",
-                "--fold-nesting=0",
-                "--width=80"
+                "--input=tests/unit/028.json",
+                "--compact=high",
             ]
         },
         {
