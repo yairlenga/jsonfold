@@ -252,7 +252,7 @@ sub parse {
 }
 
 sub fold {
-    my ($class, $lines, $parent_kind, $leafs, $child_nesting) = @_;
+    my ($class, $lines, $leafs, $child_nesting) = @_;
     my $first_line = $lines->[0] ;
     return bless {
         indent        => $first_line->{indent},
@@ -306,6 +306,16 @@ sub new {
         fold_ok       => 1,
         child_nesting => -1,
     }, $class;
+}
+
+# Update Frame information based on added line
+sub update_add {
+    my ($self, $line) = @_ ;
+    $self->{items} += $line->{items};
+    $self->{leafs} += $line->{leafs};
+    if ($line->{child_nesting} >= $self->{child_nesting}) {
+        $self->{child_nesting} = $line->{child_nesting} + 1;
+    }
 }
 
 sub is_empty { return @{ $_[0]{lines} } == 0 }
@@ -416,6 +426,7 @@ sub close { return $_[0]->finish }
 
 sub _feed {
     my ($self, $line) = @_;
+    # Opener
     if ($line->{opener}) {
         push @{ $self->{stack} }, JSON::JSONFold::Frame->new(
             kind       => $line->{opener},
@@ -428,16 +439,18 @@ sub _feed {
         return;
     }
 
+    # Closer
     if ($line->{closer}) {
         $self->_close_frame($line, $line->{closer});
         return;
     }
 
+    # Regular Line
     if (@{ $self->{stack} }) {
         my $frame = $self->{stack}[-1];
         $line->{can_pack} = 0 if $line->{items} >= $frame->{pack_limit};
         $line->{can_join} = 0 if $line->{items} >= $frame->{join_limit};
-        $self->_add_to_frame($frame, $line);
+        $self->_add_to_frame($frame, $line, 1);
     } else {
         $self->_write_line($line);
     }
@@ -455,12 +468,14 @@ sub _emit_lines {
     }
 
     my $frame = $self->{stack}[$depth];
-    $self->_add_to_frame($frame, $_) for @$lines;
+    $self->_add_to_frame($frame, $_, 0) for @$lines;
     return
 }
 
+
+
 sub _add_to_frame {
-    my ($self, $frame, $line) = @_;
+    my ($self, $frame, $line, $is_feed) = @_;
 
     if (!$frame->is_empty) {
         return if $line->{can_pack} && $self->_try_pack($frame, $line);
@@ -482,11 +497,7 @@ sub _add_to_frame {
 
     unless ($line->{closer}) {
         $frame->{content_lines}++;
-        $frame->{items} += $line->{items};
-        $frame->{leafs} += $line->{leafs};
-        if ($line->{child_nesting} >= $frame->{child_nesting}) {
-            $frame->{child_nesting} = $line->{child_nesting} + 1;
-        }
+        $frame->update_add($line) ;
         if ( $frame->{fold_ok} ) {
             $self->_mark_no_fold unless $self->_check_fold_limits($frame) 
         }
@@ -506,9 +517,8 @@ sub _can_merge {
 sub _merge_into_frame {
     my ($self, $frame, $prev, $line) = @_;
     $prev->join_line($line);
-    $frame->{child_nesting} = $line->{child_nesting} + 1 if $line->{child_nesting} >= $frame->{child_nesting} ;
-    $frame->{items} += $line->{items};
-    $frame->{leafs} += $line->{leafs};
+    $frame->update_add($line) ;
+
     $prev->{can_pack} = 0 if $prev->{items} >= $frame->{pack_limit};
     $prev->{can_join} = 0 if $prev->{items} >= $frame->{join_limit};
     if ( $frame->{fold_ok} ) {
@@ -527,6 +537,8 @@ sub _try_pack {
         && $prev->{child_nesting} < $self->{cfg}{pack_nesting}
         && $self->_can_merge($prev, $line, $frame->{pack_limit});
     $self->_merge_into_frame($frame, $prev, $line);
+    # Disable join, or pack limits reached
+    $prev->{can_join} = 0 unless $prev->{can_pack} ;
     return 1;
 }
 
@@ -583,7 +595,6 @@ sub _try_fold {
 
     return JSON::JSONFold::Line->fold(
         $frame->{lines},
-        $self->_parent_kind,
         $frame->{leafs},
         $frame->{child_nesting},
     );

@@ -150,7 +150,7 @@ sub show_verbose {
     my $s = $dumper->Values( \@_)->Dump ;
     $s =~ s/\s+/ /gsm ;
 
-    warn "$label: $s\n" ;
+    print STDERR "$label: $s\n" ;
 
 }
 
