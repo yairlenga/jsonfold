@@ -1,3 +1,21 @@
+
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "jsonfold"
-version = "0.1.0"
+version = "0.1.8"
+description = "Compact readable JSON formatter"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+  { name = "Yair Lenga" }
+]
+
+[project.scripts]
+jsonfold = "jsonfold_cli:main"
+
+[tool.setuptools]
+py-modules = ["jsonfold", "jsonfold_cli"]

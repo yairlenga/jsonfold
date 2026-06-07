@@ -824,31 +824,6 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--verbose", "-v", action="store_true", help="Enable verbose/debug output")
     p.add_argument("--input", "-i", metavar="FILE", help="Read JSON input from file instead of stdin")
 
-    # Pack phase
-    g = p.add_argument_group("pack phase (combine scalars N-per-line)")
-    g.add_argument("--pack-items",       type=int, default=None,
-                   help="set both --pack-array-items and --pack-obj-items")
-    g.add_argument("--pack-array-items", type=int, default=None)
-    g.add_argument("--pack-obj-items",   type=int, default=None)
-    g.add_argument("--pack-nesting",     type=int, default=None)
-
-    # Fold phase
-    g = p.add_argument_group("fold phase (collapse single-content-line containers)")
-    g.add_argument("--fold-items",       type=int, default=None,
-                   help="set both --fold-array-items and --fold-obj-items")
-    g.add_argument("--fold-array-items", type=int, default=None)
-    g.add_argument("--fold-obj-items",   type=int, default=None)
-    g.add_argument("--fold-nesting",     type=int, default=None)
-
-    # Join phase
-    g = p.add_argument_group("Join phase (combine scalars/folded containers)")
-    g.add_argument("--join-items",       type=int, default=None,
-                   help="set both --join-array-items and --join-obj-items")
-    g.add_argument("--join-array-items", type=int, default=None)
-    g.add_argument("--join-obj-items",   type=int, default=None)
-    g.add_argument("--join-nesting",     type=int, default=None)
-
-
     p.add_argument("--indent",    type=int, default=2)
     p.add_argument("--sort-keys", action="store_true")
     args = p.parse_args(argv)
@@ -856,36 +831,14 @@ def main(argv: list[str] | None = None) -> int:
     # Start from preset, apply overrides where explicitly given.
     cfg = JSONFold.PRESETS[args.compact]
 
-    overrides: dict[str, int] = {}
-
-    # Convenience shorthands (lower priority than individual flags).
-    if args.pack_items is not None:
-        overrides["pack_array_items"] = args.pack_items
-        overrides["pack_obj_items"]   = args.pack_items
-    if args.fold_items is not None:
-        overrides["fold_array_items"] = args.fold_items
-        overrides["fold_obj_items"]   = args.fold_items
-    if args.join_items is not None:
-        overrides["join_array_items"] = args.join_items
-        overrides["join_obj_items"]   = args.join_items
-
-    # Individual flags (higher priority — applied after shorthands).
-    for key in ("width",
-                  "pack_array_items", "pack_obj_items", "pack_nesting",
-                  "fold_array_items", "fold_obj_items", "fold_nesting",
-                  "join_array_items", "join_obj_items", "join_nesting",
-    ):
-        val = getattr(args, key)
-        if val is not None:
-            overrides[key] = val
-
+    width = args.width
     if args.width is None:
         if sys.stdout.isatty():
             import shutil
-            overrides["width"] = shutil.get_terminal_size(fallback=(24,80)).columns
+            width = shutil.get_terminal_size(fallback=(24,80)).columns
 
-    cfg = replace(cfg, **overrides)
-        
+    cfg = replace(cfg, width=width)
+
     if args.verbose:
         print(cfg, file= sys.stderr)
 
