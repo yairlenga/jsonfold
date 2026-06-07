@@ -13,8 +13,8 @@ MEM_FRACTION = 0.10
 
 
 class NullWriter:
-    def __init__(self, t0):
-        self.t0 = t0
+    def __init__(self, t0=None):
+        self.t0 = t0 if t0 else time.perf_counter ;
         self.first_write = None
         self.bytes = 0
         self.writes = 0
@@ -228,6 +228,7 @@ def main(argv):
     p.add_argument("--show", type=int, default=None)
     args, rest = p.parse_known_args(argv)
 
+    t0 = time.perf_counter() ;
     filter = []
     last_sz = None
     results = []
@@ -236,7 +237,6 @@ def main(argv):
         return
 
     for arg in rest[1:]:
-        print(arg, file=sys.stderr)
         if arg == "-":
             filter = []
             continue
@@ -251,7 +251,10 @@ def main(argv):
     if last_sz is None:
         results.extend(run_one_size(1_000, filter))
 
+    t1 = time.perf_counter() ;
+
     print_table(results)
+    print(f"completed in: {round(t1-t0, 1)}", file=sys.stderr)
 
 if __name__ == "__main__":
     main(sys.argv)

@@ -154,7 +154,7 @@ sub run_case {
     if (defined($kind) && $kind eq 'jsonfold') {
         if (defined($func) && $func eq 'dumps') {
             return sub {
-                write_string(jsonfold_dumps($data, $compact), $show);
+                run_jsonfold_dumps($data, $compact, $show);
             };
         }
         if (defined($func) && $func eq 'dump') {
@@ -191,10 +191,13 @@ sub run_json_dump_plain {
     return $w;
 }
 
-sub jsonfold_dumps {
-    my ($data, $compact) = @_;
+sub run_jsonfold_dumps {
+    my ($data, $compact, $show) = @_;
 
-    return JSON::JSONFold::dumps($data, compact => $compact, indent => 2);
+    my $w = NullWriter->new()->capture($show);
+    $w->print(JSON::JSONFold::dumps($data, compact => $compact, indent => 2));
+    print STDOUT $w->data if $show;
+    return $w ;
 }
 
 sub run_jsonfold_dump {
