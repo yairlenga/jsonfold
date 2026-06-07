@@ -40,9 +40,9 @@ BEGIN {
     use Time::HiRes qw(time);
 
     sub new {
-        my ($class, $t0) = @_;
+        my ($class, %args) = @_;
         return bless {
-            t0          => $t0,
+            t0          => $args{t0} // time(),
             first_write => undef,
             bytes       => 0,
             writes      => 0,
@@ -137,16 +137,16 @@ sub run_case {
     my ($data, $name, $show) = @_;
 
     if ($name eq 'base.dumps.plain') {
-        return sub { write_string($_[0], json_plain_encoder()->encode($data), $show) };
+        return sub { write_string(json_plain_encoder()->encode($data), $show) };
     }
     if ($name eq 'base.dumps.pretty') {
-        return sub { write_string($_[0], json_pretty_encoder()->encode($data), $show) };
+        return sub { write_string(json_pretty_encoder()->encode($data), $show) };
     }
     if ($name eq 'base.dump.pretty') {
-        return sub { run_json_dump($data, $_[0], $show) };
+        return sub { run_json_dump($data, $show) };
     }
     if ($name eq 'base.dump.plain') {
-        return sub { run_json_dump_plain($data, $_[0], $show) };
+        return sub { run_json_dump_plain($data, $show) };
     }
 
     my ($kind, $func, $compact) = split /\./, $name;
@@ -154,11 +154,11 @@ sub run_case {
     if (defined($kind) && $kind eq 'jsonfold') {
         if (defined($func) && $func eq 'dumps') {
             return sub {
-                write_string($_[0], jsonfold_dumps($data, $compact), $show);
+                write_string(jsonfold_dumps($data, $compact), $show);
             };
         }
         if (defined($func) && $func eq 'dump') {
-            return sub { run_jsonfold_dump($data, $_[0], $compact, $show) };
+            return sub { run_jsonfold_dump($data, $compact, $show) };
         }
     }
 
@@ -166,16 +166,16 @@ sub run_case {
 }
 
 sub write_string {
-    my ($t0, $s, $show) = @_;
-    my $w = NullWriter->new($t0)->capture($show);
+    my ($s, $show) = @_;
+    my $w = NullWriter->new()->capture($show);
     $w->print($s);
     print STDOUT $w->data if $show;
     return $w;
 }
 
 sub run_json_dump {
-    my ($data, $t0, $show) = @_;
-    my $w = NullWriter->new($t0)->capture($show);
+    my ($data, $show) = @_;
+    my $w = NullWriter->new()->capture($show);
     # Perl JSON encoders return a string; count this as one write, matching
     # the dumps path. JSONFold::dump, below, may stream multiple writes.
     $w->print(json_pretty_encoder()->encode($data));
@@ -184,8 +184,8 @@ sub run_json_dump {
 }
 
 sub run_json_dump_plain {
-    my ($data, $t0, $show) = @_;
-    my $w = NullWriter->new($t0)->capture($show);
+    my ($data, $show) = @_;
+    my $w = NullWriter->new()->capture($show);
     $w->print(json_plain_encoder()->encode($data));
     print STDOUT $w->data if $show;
     return $w;
@@ -198,8 +198,8 @@ sub jsonfold_dumps {
 }
 
 sub run_jsonfold_dump {
-    my ($data, $t0, $compact, $show) = @_;
-    my $w = NullWriter->new($t0)->capture($show);
+    my ($data, $compact, $show) = @_;
+    my $w = NullWriter->new()->capture($show);
 
     JSON::JSONFold::dump($data, $w, compact => $compact, indent => 2);
 
@@ -227,7 +227,7 @@ sub time_one {
 
         my $t0 = time();
         my $p0 = process_time();
-        my $w  = run_case($data, $name, $show && $_ == 1)->($t0);
+        my $w  = run_case($data, $name, $show && $_ == 1)->();
         my $p1 = process_time();
         my $t1 = time();
         my $dt = $t1 - $t0;

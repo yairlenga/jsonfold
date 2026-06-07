@@ -581,15 +581,15 @@ sub write {
         return $len;
     }
 
-    $self->[W_PENDING] .= $s;
-    while (1) {
-        my $pos = index($self->[W_PENDING], "\n");
-        last if $pos < 0;
-        my $part = substr($self->[W_PENDING], 0, $pos, '');
-        substr($self->[W_PENDING], 0, 1, '');
-        $self->[W_STATS]{lines_in}++;
+    # We have multiple lines - at least 2 new lines in the new buffer
+    my @lines = split("\n", $s, -1) ;
+    $lines[0] = $self->[W_PENDING] . $lines[0] ;
+    $self->[W_PENDING] = pop @lines ;
+    for my $part ( @lines ) {
         $self->_feed(JSON::JSONFold::Line->parse($part, $self->_parent_kind));
-    }
+
+    }    
+    $self->[W_STATS]{lines_in} += @lines;
 
     return $len;
 }
