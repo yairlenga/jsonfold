@@ -12,9 +12,10 @@ setup:
 build:
 	mvn validate
 	mvn compile
+	mvn test
+	mvn package
 
 test:
-	mvn test
 	cd ../tests/unit && ./run_tests.sh javagold
 	cd ../tests/sample && ./run_tests.sh javagold
 

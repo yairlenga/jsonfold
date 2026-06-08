@@ -1,6 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             https://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
 
@@ -18,13 +19,11 @@
         <dependency>
             <groupId>dev.jsonfold</groupId>
             <artifactId>jsonfold-core</artifactId>
-            <version>${project.version}</version>
         </dependency>
 
         <dependency>
             <groupId>dev.jsonfold</groupId>
             <artifactId>jsonfold-jackson</artifactId>
-            <version>${project.version}</version>
         </dependency>
     </dependencies>
 
@@ -33,18 +32,22 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
+
                 <executions>
                     <execution>
+                        <id>shade-cli</id>
                         <phase>package</phase>
                         <goals>
                             <goal>shade</goal>
                         </goals>
+
                         <configuration>
-                            <finalName>jsonfold-${project.version}</finalName>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <shadedArtifactAttached>true</shadedArtifactAttached>
+                            <shadedClassifierName>all</shadedClassifierName>
+
                             <transformers>
-                                <transformer
-                                    implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>dev.jsonfold.format.Main</mainClass>
                                 </transformer>
                             </transformers>
@@ -52,6 +55,7 @@
                     </execution>
                 </executions>
             </plugin>
+
             <plugin>
                 <artifactId>maven-antrun-plugin</artifactId>
                 <version>3.1.0</version>
@@ -66,13 +70,14 @@
                         <configuration>
                             <target>
                                 <copy
-                                    file="${project.build.directory}/jsonfold-${project.version}.jar"
-                                    tofile="${project.build.directory}/jsonfold.jar" />
+                                    file="${project.build.directory}/${project.artifactId}-${project.version}-all.jar"
+                                    tofile="${project.build.directory}/jsonfold.jar"/>
                             </target>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
+
         </plugins>
     </build>
 

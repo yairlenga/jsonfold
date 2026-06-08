@@ -32,6 +32,12 @@
             </dependency>
 
             <dependency>
+                <groupId>dev.jsonfold</groupId>
+                <artifactId>jsonfold-jackson</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>org.junit.jupiter</groupId>
                 <artifactId>junit-jupiter</artifactId>
                 <version>${junit.version}</version>
