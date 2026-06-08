@@ -18,3 +18,5 @@ prof
 nytprof
 *.tgz
 tmp
+*.log
+.*.xml

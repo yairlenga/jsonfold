@@ -7,7 +7,7 @@
     <parent>
         <groupId>dev.jsonfold</groupId>
         <artifactId>jsonfold-parent</artifactId>
-        <version>0.1.5-SNAPSHOT</version>
+        <version>0.1.5</version>
     </parent>
 
     <artifactId>jsonfold-cli</artifactId>
@@ -33,7 +33,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.6.0</version>
                 <executions>
                     <execution>
                         <phase>package</phase>

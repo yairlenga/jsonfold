@@ -13,6 +13,7 @@ case "${1-}" in
 	dev.jsonfold.*)
 		exec java -cp "$JAR" "$@"
 		;;
+
 esac
 	
 exec java -jar "$JAR" "$@"
