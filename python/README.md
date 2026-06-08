@@ -230,6 +230,12 @@ python -m jsonfold --width=100 < input.json
 python -m jsonfold --input data.json
 ```
 
+## Use standard 'demo' document
+
+```bash
+python -m jsonfold --compact=high --demo
+```
+
 ## Sort keys:
 Passed as-is to default serializer:
 
@@ -244,6 +250,7 @@ To help with debugging, the `verbose` mode can be used. It will print all the co
 ```bash
 python -m jsonfold --verbose < input.json
 ```
+
 ---
 
 ## Repository/development usage:
@@ -276,21 +283,34 @@ Join consecutive scalar items onto the same line.
 Example:
 
 ```json
-[
-  1,
-  2,
-  3,
-  4
-]
+{
+  "obj:" {
+    "version": 1,
+    "ok": true
+  },
+  "list": [
+    1,
+    2,
+    3,
+    4
+  ]
+}
 ```
 
 becomes:
 
 ```json
-[ 1, 2, 3, 4 ]
+{
+  "obj:" {
+    "version": 1, "ok": true
+  },
+  "list": [
+    1, 2, 3, 4
+  ]
+}
 ```
 
-subject to width and item limits.
+Subject to width and item limits.
 
 ---
 
@@ -302,15 +322,24 @@ Example:
 
 ```json
 {
-  "version": 1,
-  "ok": true
+  "obj:" {
+    "version": 1, "ok": true
+  },
+  "list": [
+    1, 2, 3, 4
+  ]
 }
+
+
 ```
 
 becomes:
 
 ```json
-{ "version": 1, "ok": true }
+{
+  "obj:" { "version": 1, "ok": true },
+  "list": [ 1, 2, 3, 4 ]
+}
 ```
 
 ---
