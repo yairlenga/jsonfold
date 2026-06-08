@@ -4,7 +4,7 @@ set -eu
 case "${@-}" in
 	java) JSONFOLD='java -jar ../../java/jsonfold-cli/target/jsonfold.jar' ;;
 	javagold) JSONFOLD='java -jar ../../java/jsonfold-cli/target/jsonfold.jar --gold' ;;
-	python) JSONFOLD='python3 ../../python/jsonfold.py' ;;
+	python) JSONFOLD='python3 ../../python/jsonfold_cli.py' ;;
 	javascript) JSONFOLD='node --expose-gc ../../javascript/cli.js' ;;
 	perl) JSONFOLD='perl ../../perl/script/jsonfold.pl' ;;
 	?*) JSONFOLD="$@"

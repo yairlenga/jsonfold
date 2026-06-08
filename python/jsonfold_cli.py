@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""jsonfold.py - hybrid pretty/compact JSON output.
+"""jsonfold_cli.py - hybrid pretty/compact JSON output.
 
 jsonfold wraps Python's standard json.dump/json.dumps output and keeps the
 normal pretty-printed structure, but selectively compacts small containers and
@@ -93,7 +93,7 @@ from typing import Any
 from dataclasses import replace
 import json
 
-from jsonfold import JSONFold, dumpi
+from jsonfold import config, write_json, JSONFold
 
 # ---------------------------------------------------------------------------
 # Demo data
@@ -158,9 +158,6 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--sort-keys", action="store_true")
     args = p.parse_args(argv)
 
-    # Start from preset, apply overrides where explicitly given.
-    cfg = JSONFold.PRESETS[args.compact]
-
     overrides: dict[str, int] = {}
 
     # Convenience shorthands (lower priority than individual flags).
@@ -175,7 +172,7 @@ def main(argv: list[str] | None = None) -> int:
         overrides["join_obj_items"]   = args.join_items
 
     # Individual flags (higher priority — applied after shorthands).
-    for key in ("width",
+    for key in (
                   "pack_array_items", "pack_obj_items", "pack_nesting",
                   "fold_array_items", "fold_obj_items", "fold_nesting",
                   "join_array_items", "join_obj_items", "join_nesting",
@@ -184,12 +181,13 @@ def main(argv: list[str] | None = None) -> int:
         if val is not None:
             overrides[key] = val
 
-    if args.width is None:
+    width = args.width
+    if width is None:
         if sys.stdout.isatty():
             import shutil
-            overrides["width"] = shutil.get_terminal_size(fallback=(24,80)).columns
+            width = shutil.get_terminal_size(fallback=(24,80)).columns
 
-    cfg = replace(cfg, **overrides)
+    cfg = config(args.compact, **overrides)
         
     if args.verbose:
         print(cfg, file= sys.stderr)
@@ -201,7 +199,7 @@ def main(argv: list[str] | None = None) -> int:
         with fp:
             data = json.load(fp)
 
-    info = dumpi(data, sys.stdout, compact=cfg, indent=args.indent,
+    info = write_json(data, sys.stdout, width = width, config=cfg, indent=args.indent,
          sort_keys=args.sort_keys)
     if args.verbose:
         print(info, file=sys.stderr)

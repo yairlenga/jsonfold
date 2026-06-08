@@ -5,6 +5,26 @@ jsonfold wraps Python's standard json.dump/json.dumps output and keeps the
 normal pretty-printed structure, but selectively compacts small containers and
 runs of scalar items when they fit within a configured line width.
 
+Example
+-------
+
+    from jsonfold import dump, dumps
+    import sys
+    
+    data = {
+        "ids": [1, 2, 3, 4],
+        "meta": {"version": 1, "ok": True},
+    }
+
+    # write Compacted JSON stdout, 80 columns
+    dump(data, fp=sys.stdout)
+
+    # Getting JSON String, use "high" compact level, width=120
+    json_str = dumps(data, compact="high", width=120)
+
+
+
+
 The goal is readable JSON:
     - large or complex structures stay expanded;
     - small lists and objects can stay on one line;
@@ -13,18 +33,31 @@ The goal is readable JSON:
 
 Public API
 ----------
-    dump(obj, fp, *, compact="", indent=2, **kwargs)
-        Serialize obj to fp using json.dump(), then fold the generated stream.
+    config(base_config="", **overrides) -> JSONFold
+        Build a JSONFold configuration from a preset or existing config.
 
-    dumps(obj, *, compact="", indent=2, **kwargs) -> str
-        Return the folded JSON as a string.
+    format_json(obj, width, config="", indent=2, **json_options) -> str
+        Serialize obj and return folded JSON text.
 
-    JSONFold(...)
-        Immutable configuration object controlling width, packing, and folding.
+    write_json(obj, fp, width, config="", indent=2, **json_options) -> JSONFoldStats
+        Serialize obj to fp and return formatting statistics.
 
-    JSONFoldWriter(fp, *, compact="")
-        File-like wrapper used internally by dump(), but also usable directly
-        with json.dump(obj, JSONFoldWriter(fp, compact=cfg), indent=2).
+    filter_stream(fp, width, config="") -> JSONFoldWriter
+        Wrap a text stream with a JSONFold formatting filter.
+
+Compatibility API
+-----------------
+JSONFold also provides drop-in replacements for Python's standard
+json.dump() and json.dumps() functions.
+
+    dump(..., compact="default", width=80)
+        Compatible with json.dump(), with additional JSONFold options:
+
+    dumps(..., compact="default", width=80)
+        Compatible with json.dumps(), with additional JSONFold options:
+
+The compatibility API defaults to indent=2 and supports the
+JSONFold-specific compact and width parameters.       
 
 Configuration
 -------------
@@ -67,6 +100,8 @@ Presets
     "max"
         Enable aggressive packing and folding, still subject to width.
 
+Test Presets
+------------- 
     "pack"
         Enable packing only; disable folding.
 
@@ -156,8 +191,8 @@ Example
 CLI
 ---
     python jsonfold.py < input.json
+    python jsonfold.py --demo 
     python jsonfold.py --compact=max --width=100 < input.json
-    python jsonfold.py --pack-items=20 --fold-items=8 < input.json
 """
 
 from __future__ import annotations
@@ -389,14 +424,17 @@ class JSONFoldWriter:
     """
 
     def __init__(self, fp: TextIO, *,
-                 compact: JSONFold | str = ""):
+                 config: JSONFold | str | None = "",
+                 close_fp: bool= False,
+    ) -> None:           
         self.fp = fp
         self.stats = JSONFoldStats()
-        if isinstance(compact, str):
-            compact = JSONFold.PRESETS[compact]
-        self.cfg = compact
+        if isinstance(config, str):
+            config = JSONFold.PRESETS[config]
+        self.cfg = config
         self.pending = ""
         self.stack: list[Frame] = []
+        self.close_fp = close_fp
 
     # ------------------------------------------------------------------ I/O
     try:
@@ -453,7 +491,8 @@ class JSONFoldWriter:
         self.fp.flush()
 
     def close(self) -> None:
-        self.finish()
+        if self.close_fp:
+            self.finish()
 
     def finish(self) -> None:
         if self.pending:
@@ -765,29 +804,144 @@ class JSONFoldWriter:
 # Public helpers
 # ---------------------------------------------------------------------------
 
+def _stream(fp: TextIO, config: JSONFold | str = ""):
+    return JSONFoldWriter(fp, config=config)
 
-def dump(obj: Any, fp: TextIO, *,
-         compact: JSONFold | str = "",
-         indent: int = 2, **kwargs: Any) -> None:
+def _config(config: JSONFold | str, width: int | None = None, **overrides) -> JSONFold:
+    if isinstance(config, str):
+        config = JSONFold.PRESETS[config]
+    if width is not None:
+        overrides["width"] = width
+    if overrides:
+        config = replace(config, **overrides)
+    return config
 
-    with JSONFoldWriter(fp, compact=compact) as out:
-        json.dump(obj, out, indent=indent, **kwargs)
+# Generic API
 
-def dumpi(obj: Any, fp: TextIO, *,
-         compact: JSONFold | str = "",
-         indent: int = 2, **kwargs: Any) -> None:
+def config(base_config: JSONFold | str = "", **overrides):
+    """Create a JSONFold configuration.
 
-    with JSONFoldWriter(fp, compact=compact) as out:
+    Starts from a preset name or existing JSONFold object and applies
+    any supplied overrides.
+
+    Examples:
+        config("high", width=120)
+        config(JSONFold.DEFAULT, fold_nesting=2)
+    """
+    return _config(base_config, **overrides)
+
+def format_json(obj: Any, width: int, config: JSONFold | str = "", indent = 2, **kwargs: Any) -> str:
+    """Format an object as JSON and return the resulting string.
+
+    The output is first pretty-printed using ``json.dump()`` and then
+    compacted by JSONFold according to the selected configuration.
+
+    Args:
+        obj: Object to serialize.
+        width: Maximum output line width.
+        config: JSONFold preset name or configuration object.
+        indent: JSON indentation level.
+        **kwargs: Additional arguments passed to ``json.dump()``.
+
+    Returns:
+        Compacted formatted JSON text.
+    """
+
+    with io.StringIO() as str_io:
+        with _stream(str_io, _config(config, width=width)) as out:
+            json.dump(obj, out, indent=indent, **kwargs)
+        return str_io.getvalue()
+
+def write_json(obj: Any, fp : TextIO, width: int, config: JSONFold | str = "", indent=2, **kwargs: Any) -> JSONFoldStats:
+    """Write compacted formatted JSON to a stream.
+
+    The output is pretty-printed using ``json.dump()`` and then compacted
+    by JSONFold according to the selected configuration.
+
+    Args:
+        obj: Object to serialize.
+        fp: Output text stream.
+        width: Maximum output line width.
+        config: JSONFold preset name or configuration object.
+        indent: JSON indentation level.
+        **kwargs: Additional arguments passed to ``json.dump()``.
+
+    Returns:
+        Statistics describing the formatting operation.
+    """
+    with _stream(fp, _config(config, width=width)) as out:
         json.dump(obj, out, indent=indent, **kwargs)
     return out.stats
 
-def dumps(obj: Any, *,
-          compact: JSONFold | str = "",
-          indent: int = 2, **kwargs: Any) -> str:
-    out = io.StringIO()
-    dump(obj, out, compact=compact, indent=indent, **kwargs)
-    return out.getvalue()
+def filter_stream(fp: TextIO, width: int, config: JSONFold | str = "") -> JSONFoldWriter:
+    """Create a JSONFold filtering stream.
 
+    Returns a writable stream wrapper that accepts pretty-printed JSON
+    and emits compacted JSONFold output to the underlying stream.
+
+    Args:
+        fp: Destination text stream.
+        width: Maximum output line width.
+        config: JSONFold preset name or configuration object.
+
+    Returns:
+        A JSONFoldWriter instance.
+    """
+    return _stream(fp, _config(config, width=width))
+
+# Python json compatible API
+
+def dump(
+        obj: Any, fp: TextIO, *,
+        compact: JSONFold | str = "",
+        width: int | None = None,
+        indent: int = 2,
+        **kwargs: Any,
+        ) -> None:
+    """Serialize an object as JSON and write it to a stream.
+
+    This function is compatible with ``json.dump()`` and accepts the
+    same serialization options. Output is compacted using JSONFold.
+
+    Args:
+        obj: Object to serialize.
+        fp: Output text stream.
+        compact: JSONFold preset name or configuration object.
+        width: Optional line width override.
+        indent: JSON indentation level.
+        **kwargs: Additional arguments passed to ``json.dump()``.
+    """
+    config = _config(compact, width=width)
+    with _stream(fp, config) as out:
+        json.dump(obj, out, indent=indent, **kwargs)
+    return
+
+def dumps(
+        obj: Any, *,
+        compact: JSONFold | str = "",
+        width: int | None = None,
+        indent: int = 2,
+        **kwargs: Any) -> str:
+    """Serialize an object to a JSON string.
+
+    This function is compatible with ``json.dumps()`` and accepts the
+    same serialization options. Output is compacted using JSONFold.
+
+    Args:
+        obj: Object to serialize.
+        compact: JSONFold preset name or configuration object.
+        width: Optional line width override.
+        indent: JSON indentation level.
+        **kwargs: Additional arguments passed to ``json.dump()``.
+
+    Returns:
+        compacted JSON text.
+    """
+    config = _config(compact, width=width)
+    with io.StringIO() as str_io:
+        with _stream(str_io, config) as out:
+            json.dump(obj, out, indent=indent, **kwargs)
+        return str_io.getvalue()
 
 # ---------------------------------------------------------------------------
 # Demo data
@@ -829,15 +983,13 @@ def main(argv: list[str] | None = None) -> int:
     args = p.parse_args(argv)
 
     # Start from preset, apply overrides where explicitly given.
-    cfg = JSONFold.PRESETS[args.compact]
-
     width = args.width
-    if args.width is None:
+    if width is None:
         if sys.stdout.isatty():
             import shutil
-            width = shutil.get_terminal_size(fallback=(24,80)).columns
+            #width = shutil.get_terminal_size(fallback=(24,80)).columns
 
-    cfg = replace(cfg, width=width)
+    cfg = config(args.compact)
 
     if args.verbose:
         print(cfg, file= sys.stderr)
@@ -849,7 +1001,7 @@ def main(argv: list[str] | None = None) -> int:
         with fp:
             data = json.load(fp)
 
-    info = dumpi(data, sys.stdout, compact=cfg, indent=args.indent,
+    info = write_json(data, sys.stdout, width, config=cfg, indent=args.indent,
          sort_keys=args.sort_keys)
     if args.verbose:
         print(info, file=sys.stderr)
