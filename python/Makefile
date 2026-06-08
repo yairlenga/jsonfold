@@ -17,6 +17,10 @@ build:
 #	$(PYTHON) -m py_compile cli.py
 
 test:
+	./api_test.py
+	./jsonfold.py --demo
+	./jsonfold_cli.py --demo
+	./benchmark.py 10
 	cd ../tests/unit && ./run_tests.sh python
 	cd ../tests/samples && ./run_tests.sh python
 
