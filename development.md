@@ -8,6 +8,7 @@
 
 # Python API
 
+## Public
 - config(base_config="", **overrides) -> JSONFold
   
   Build a JSONFold configuration from a preset or existing config.
@@ -24,6 +25,6 @@
   
   Wrap a text stream with a JSONFold formatting filter.
 
-Compatible with json, 
+Compatability:
 - dump(..., compact="default", width=80)
 - dumps(..., compact="default", width=80)

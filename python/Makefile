@@ -29,6 +29,27 @@ package:
 	$(PYTHON) -m build
 	twine check dist/*
 
+T=tmp
+setup-verify:
+	rm -rf $T
+	mkdir -p $T
+	python3 -m pip install --no-deps --target $T dist/jsonfold-*.whl
+
+R=run
+run-verify:
+	rm -rf $R
+	mkdir -p $R
+	cd $R && python3 -S -c 'import runpy ; import os ; runpy.run_path("${CURDIR}/api_test.py", run_name="__main__")'
+	cd $R && python3 -S -m runpy jsonfold --demo
+	cd $R && python3 -S -m runpy jsonfold_cli --demo
+	cd $R && python3 -S -c 'import runpy ; import os ; runpy.run_path("${CURDIR}/benchmark.py", run_name="__main__")' 10
+
+verify:
+	$(MAKE) setup-verify
+	PYTHONPATH=$(CURDIR)/$T $(MAKE) run-verify > verify.log
+	wc verify.log
+	echo "Passed: $@"
+
 publish:
 	echo twine upload dist/*
 
