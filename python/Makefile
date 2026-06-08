@@ -16,13 +16,16 @@ build:
 	$(PYTHON) -m py_compile benchmark.py
 #	$(PYTHON) -m py_compile cli.py
 
-test:
+run-test:
 	./api_test.py
 	./jsonfold.py --demo
 	./jsonfold_cli.py --demo
 	./benchmark.py 10
 	cd ../tests/unit && ./run_tests.sh python
 	cd ../tests/samples && ./run_tests.sh python
+
+test:
+	$(MAKE) run-test > test.log
 
 package:
 	rm -rf dist

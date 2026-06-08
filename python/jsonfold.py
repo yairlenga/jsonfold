@@ -23,8 +23,6 @@ Example
     json_str = dumps(data, compact="high", width=120)
 
 
-
-
 The goal is readable JSON:
     - large or complex structures stay expanded;
     - small lists and objects can stay on one line;
@@ -160,7 +158,24 @@ Phase 3: Join
         - nesting limit,
         - same indentation level.
 
+Example - Using jsonfold API:
+-----------------------------
 
+    import jsonfold
+    import sys
+    data = ...
+
+    # Write to a stream/file
+    jsonfold.write_json(data, sys.stdout, width=120, config="max")
+
+    # Create a string, limit nesting in joined lines.
+    cfg = jsonfold.config("high", join_nesting=2)
+    json_str = jsonfold.format_json(data, width=120, config=cfg)
+
+    # Format existing JSON string.
+    json_in = ... # Pretty-printed JSON
+    with jsonfold.filter_stream(sys.stdout, width=120, config="max") as out
+        print(json_in, out)      
 
 Streaming behavior
 ------------------
@@ -176,17 +191,6 @@ Limitations
     - It is a formatting filter, not a validating JSON parser.
     - Folding decisions are based on physical line structure, indentation,
       item counts, nesting limits, and width.
-
-Example
--------
-    from jsonfold import dumps, JSONFold
-
-    data = {
-        "ids": [1, 2, 3, 4],
-        "meta": {"version": 1, "ok": True},
-    }
-
-    print(dumps(data, compact=JSONFold(width=80)))
 
 CLI
 ---

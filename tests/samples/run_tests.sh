@@ -15,7 +15,10 @@ read_args() {
     sed -e 's/[[:space:]]*#.*$//' -e '/^[[:space:]]*$/d' "$1"
 }
 
-FAILED=0
+echo "Testing: $(pwd)" >&2
+
+passed=0
+failed=0
 
 for f in *.json
 do
@@ -28,12 +31,13 @@ do
 
         if diff -u "$base.gold" "$base.out"
         then
-            echo "PASS $base" >&2
+            passed=$((passed+1))
+            echo "PASS $base"
         else
+            failed=$((failed+1))
             echo "FAIL $base" >&2
-            FAILED=1
         fi
     fi
 done
-
-exit $FAILED
+echo "Passed: $passed, failed: $failed" >&2
+[ $failed = 0 ]
