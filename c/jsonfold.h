@@ -33,10 +33,10 @@ struct jsonfold_config {
 typedef const struct jsonfold_config *JFConfig;
 
 struct jsonfold_stats {
-    size_t bytes_in;
-    size_t bytes_out;
-    size_t lines_in;
-    size_t lines_out;
+    int bytes_in;
+    int bytes_out;
+    int lines_in;
+    int lines_out;
 } ;
 
 // Immutable stats object
