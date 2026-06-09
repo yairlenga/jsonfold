@@ -1,8 +1,14 @@
 default: all
 
 CC = gcc -std=c2x
+CFLAGS = -Wall -W
+CFLAGS = -g -D_DEFAULT_SOURCE -Og -march=native -std=c11 -Wall -Wextra -Werror
+LDFLAGS =-lm
 
 all: generated.exe jsonfold.exe
+
+clean:
+	rm -f *.o *.exe
 
 jsonfold.o: jsonfold.h
 cli.o: jsonfold.h

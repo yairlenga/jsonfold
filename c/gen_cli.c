@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "jsonfold.h"
+#include "generated.h"
 
 static const char DEMO_JSON[] =
 "{\n"
