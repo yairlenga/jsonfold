@@ -344,8 +344,8 @@ class Line:
     opener: Kind = Kind.NONE
     closer: Kind = Kind.NONE
     # Line state
-    can_join: bool = True
-    can_pack: bool = True
+    can_pack: bool = True        # Line is possible candidate for pack
+    can_join: bool = True        # Line is possible candidate for join
 
     try:
         profile
@@ -611,10 +611,17 @@ class JSONFoldWriter:
         # Consider adding the line to previous line
 
         if frame.lines:
-            if line.can_pack and self._try_pack(frame, line):
+            prev = frame.lines[-1]
+            if (line.can_pack and
+                prev.can_pack and
+                self._try_pack(frame, prev, line)
+            ):
                 return
         
-            if line.can_join and self._try_join(frame, line):
+            if (line.can_join and
+                prev.can_join and
+                self._try_join(frame, prev, line)
+            ):
                 return
             
         # If frame is empty, may be it's in "streaming" mode, which
@@ -630,13 +637,13 @@ class JSONFoldWriter:
         if frame.fold_ok and line.width() > self.cfg.width:
             self._mark_no_fold()
 
+        if line.child_nesting >= frame.child_nesting:
+            frame.child_nesting = line.child_nesting+1
+
         if not line.closer:
             frame.content_lines += 1
             frame.leafs += line.leafs
             frame.items += line.items
-
-            if line.child_nesting >= frame.child_nesting:
-                frame.child_nesting = line.child_nesting+1
 
             if frame.fold_ok:
                 if not self._check_fold_limits(frame):
@@ -657,6 +664,12 @@ class JSONFoldWriter:
     def _merge_into_frame(self, frame: Frame, prev: Line, line: Line) -> None:
         prev.join_line(line)
 
+        if prev.child_nesting >= self.cfg.pack_nesting:
+            prev.can_pack = False
+        
+        if prev.child_nesting >= self.cfg.join_nesting:
+            prev.can_join = False
+
         frame.items += line.items
         frame.leafs += line.leafs
 
@@ -671,20 +684,11 @@ class JSONFoldWriter:
                 self._stream_frame(frame)
 
     @profile
-    def _try_pack(self, frame: Frame, line: Line) -> bool:
-        if (
-            frame.pack_limit <= 1 or
-            not line.can_pack or
-            not frame.lines
-        ):
-            return False
-
-        prev = frame.lines[-1]
-
-        if not (
-            prev.can_pack and 
-            prev.child_nesting < self.cfg.pack_nesting and
-            self._can_merge(prev, line, frame.pack_limit)):
+    def _try_pack(self, frame: Frame, prev: Line, line: Line) -> bool:
+        if ( frame.pack_limit <= 1 or
+#            line.child_nesting >= self.cfg.pack_nesting or
+#            prev.child_nesting >= self.cfg.pack_nesting or
+            not self._can_merge(prev, line, frame.pack_limit)):
             return False
 
         self._merge_into_frame(frame, prev, line)
@@ -694,21 +698,12 @@ class JSONFoldWriter:
         return True
     
     @profile
-    def _try_join(self, frame: Frame, line: Line) -> bool:        
+    def _try_join(self, frame: Frame, prev, line: Line) -> bool:        
         if (
             frame.join_limit <= 1 or
-            not frame.lines or
-            not line.can_join or
-            line.child_nesting >= self.cfg.join_nesting
-        ):
-            return False
-
-        prev = frame.lines[-1]
-
-        if not (
-            prev.can_join and 
-            prev.child_nesting < self.cfg.join_nesting and
-            self._can_merge(prev, line, frame.join_limit)
+#            line.child_nesting >= self.cfg.join_nesting or
+#            prev.child_nesting >= self.cfg.join_nesting or
+            not self._can_merge(prev, line, frame.join_limit)
         ):
             return False
 
@@ -747,38 +742,46 @@ class JSONFoldWriter:
 #       Need to handle mismatch between closing and opening.
 #        if frame.kind != closing_kind: ...
 
-        folded = self._try_fold(frame)
-
-        if folded is not None:
-            frame.lines = [ folded]
+        if frame.fold_ok:
+            self._try_fold(frame)
 
         self._emit_lines(frame.lines)
         frame.lines.clear()
 
+    # Fold a frame with 3 lines into a single line:
+    #   {
+    #       "a": "b"
+    #   }
+    # To a single line:
+    #   { "a" : "b" }
+    # Which is returned.
     def _try_fold(self, frame: Frame) -> Line | None:
         
         if (not frame.fold_ok or
             frame.content_lines != 1 or
             len(frame.lines) != 3 
         ):
-            return None
+            return False
 
         folded_length = sum(1 + len(line.text) for line in frame.lines) - 1
 
         if frame.lines[0].indent + folded_length > self.cfg.width:
-            return None
+            return False
 
         text = " ".join(line.text for line in frame.lines)
 
-        return Line(
+        line = Line(
             indent=frame.lines[0].indent,
             text=text,
             parent_kind=self._parent_kind(),
             items=1,
             leafs=frame.leafs,
-            child_nesting=max(0, frame.child_nesting),
+            child_nesting=frame.child_nesting,
             can_pack=False,
+            can_join=frame.child_nesting < self.cfg.join_nesting
         )
+        frame.lines = [ line ]
+        return True
 
     # --------------------------------------------------------- streaming
     @profile
