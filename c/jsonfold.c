@@ -231,9 +231,11 @@ static inline JFConfig writer_config(JFWriter w)
 
 ////////// JSONFOLD Line
 
+static const struct line EMPTY_LINE = {0} ;
+
 static void line_free(JFLine l) {
     free(l->text);
-    *l = (struct line) { 0 } ;
+    *l = EMPTY_LINE ;
 }
 
 static count_t line_width(const JFLine l) {
@@ -287,14 +289,14 @@ static JFLine line_vec_reserve(JFLineVec vec) {
 static JFLine line_vec_append(JFLineVec lv, JFLine l) {
     JFLine new_entry = line_vec_reserve(lv) ;
     *new_entry = *l ;
-    *l = (struct line) { 0 } ;
+    *l = EMPTY_LINE ;
     return new_entry ;
 }
 
 static struct line line_vec_pop(JFLineVec lv) {
     JFLine p_last = &lv->v[--lv->n] ;
     struct line ln = *p_last ;
-    *p_last = (struct line) {0} ;
+    *p_last = EMPTY_LINE ;
     return ln;
 }
 
@@ -548,7 +550,7 @@ static void emit_lines(jsonfold_writer *w, JFLineVec lines, int depth) {
     JFFrame f = &w->stack.v[depth];
     for (count_t i=0;i<lines->n;i++) {
         struct line tmp = lines->v[i];
-        lines->v[i] = (struct line) { 0 } ;
+        lines->v[i] = EMPTY_LINE ;
         add_to_frame(w, f, &tmp);
     }
     lines->n = 0;
@@ -556,9 +558,13 @@ static void emit_lines(jsonfold_writer *w, JFLineVec lines, int depth) {
 
 static bool stream_frame(jsonfold_writer *w, JFFrame f) {
     if (!f->lines.n) return false;
-    struct line keep = {0}; int has_keep = 0;
+    struct line keep = EMPTY_LINE;
+    bool has_keep = false;
     JFLine last = &f->lines.v[f->lines.n - 1];
-    if (last->can_pack || last->can_join) { keep = line_vec_pop(&f->lines); has_keep = 1; }
+    if (last->can_pack || last->can_join) {
+        keep = line_vec_pop(&f->lines);
+        has_keep = true;
+    }
     emit_lines(w, &f->lines, f->depth - 1) ;
     if (has_keep) line_vec_append(&f->lines, &keep) ;
     return true ;
@@ -681,11 +687,16 @@ jsonfold_writer *jsonfold_writer_new(jsonfold_write_fn write_fn, void *write_ctx
     return w;
 }
 
+jsonfold_writer *jsonfold_create(jsonfold_write_fn write_fn, void *write_ctx, const JFConfig cfg) {
+    return jsonfold_writer_new(write_fn, write_ctx, cfg) ;
+}
+
+
 void jsonfold_destroy(jsonfold_writer *w) {
-    if (!w) return;
     for (count_t i=0;i<w->stack.n;i++) frame_free(&w->stack.v[i]);
     free(w->stack.v);
     free(w->pending);
+    *w = (struct jsonfold_writer) { 0 } ;
     free(w);
 }
 
@@ -706,7 +717,7 @@ ptrdiff_t jsonfold_write(jsonfold_writer *w, const char *buf, size_t len) {
         void *p = memchr(w->pending + start, '\n', w->pending_len - start);
         if (!p) break;
         count_t nl = (char *)p - w->pending;
-        struct line ln = {0};
+        struct line ln = EMPTY_LINE ;
         parse_line(&ln, w->pending + start, nl - start, parent_kind(w)) ;
         feed(w, &ln) ;
         start = nl + 1;
@@ -725,7 +736,7 @@ bool jsonfold_finish(jsonfold_writer *w) {
 
     if ( w->pending_len ) {
         if ( cfg ) {
-            struct line ln = {0};
+            struct line ln = EMPTY_LINE ;
             parse_line(&ln, w->pending, w->pending_len, parent_kind(w)) ;
             w->pending_len = 0;
             feed(w, &ln) ;

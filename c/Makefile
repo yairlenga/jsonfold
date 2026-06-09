@@ -16,6 +16,9 @@ cli.o: jsonfold.h
 jsonfold.exe: jsonfold.o cli.o
 	$(LINK.c) $^ $(LOADLIBES) $(LDLIBS) -o $@
 
+benchmark.exe: benchmark.o jsonfold.o
+	$(LINK.c) $^ $(LOADLIBES) $(LDLIBS) -o $@
+
 generated.o: generated.h
 gen_cli.o: generated.h
 
