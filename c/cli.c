@@ -443,7 +443,7 @@ int main(int argc, char **argv)
             fclose(fp);
     }
 
-    if (ok && jsonfold_finish(w) != 0) {
+    if (ok && !jsonfold_finish(w)) {
         fprintf(stderr, "jsonfold: finish failed\n");
         ok = 0;
     }

@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,6 +32,7 @@ struct jsonfold_config {
 
 // Immultable config object
 typedef const struct jsonfold_config *JFConfig;
+
 
 struct jsonfold_stats {
     int bytes_in;
@@ -71,8 +73,8 @@ JFWriter jsonfold_create(jsonfold_write_fn write_fn,
 void jsonfold_destroy(JFWriter w);
 
 ptrdiff_t jsonfold_write(JFWriter w, const char *buf, size_t len);
-int jsonfold_finish(JFWriter w);
-int jsonfold_flush(JFWriter w);
+bool jsonfold_finish(JFWriter w);
+bool jsonfold_flush(JFWriter w);
 
 JFStats jsonfold_get_stats(JFWriter w);
 void jsonfold_stats_destroy(JFStats stats) ;
