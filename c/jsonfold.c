@@ -1,10 +1,237 @@
-#include "generated.h"
+#include "jsonfold.h"
 
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
-const jsonfold_config JSONFOLD_CONFIG_NONE = {
+#include <stddef.h>
+#include <stdio.h>
+
+#define JSONFOLD_MAX_ARRAY_ITEMS 1000
+#define JSONFOLD_MAX_OBJ_ITEMS   1000
+#define JSONFOLD_MAX_NESTING     10
+
+typedef enum jsonfold_kind {
+    JSONFOLD_KIND_NONE = 0,
+    JSONFOLD_KIND_DICT = 1,
+    JSONFOLD_KIND_LIST = 2
+} jsonfold_kind, JFKind ;
+
+typedef struct line {
+    int indent;
+    char *text;
+    size_t len;
+    jsonfold_kind parent_kind;
+    int items;
+    int leafs;
+    int child_nesting;
+    jsonfold_kind opener;
+    jsonfold_kind closer;
+    unsigned can_join:1;
+    unsigned can_pack:1;
+} line;
+
+typedef struct line_vec {
+    line *v;
+    int n;
+    int cap;
+} line_vec;
+
+typedef struct frame {
+    jsonfold_kind kind;
+    int depth;
+    line_vec lines;
+    int pack_limit;
+    int fold_limit;
+    int join_limit;
+    int content_lines;
+    int items;
+    int leafs;
+    int fold_ok;
+    int child_nesting;
+} frame;
+
+typedef struct frame_vec {
+    frame *v;
+    int n;
+    int cap;
+} frame_vec;
+
+typedef struct char_vec {
+    char *v ;
+    int n ;
+    int cap ;
+};
+
+struct jsonfold_writer {
+    jsonfold_write_fn write_fn;
+    void *write_ctx;
+    struct jsonfold_config cfg ;
+    struct jsonfold_stats stats;
+    char *pending;
+    size_t pending_len;
+    size_t pending_cap;
+    frame_vec stack;
+    int error;
+};
+
+typedef ptrdiff_t (*jsonfold_write_fn)(void *ctx, const char *buf, size_t len);
+
+typedef struct jsonfold_writer jsonfold_writer;
+
+////////// JSONFOLD_CONFIG
+
+static const struct jsonfold_config CFG_NONE = {
+    .width            = 80,
+} ;
+
+static const struct jsonfold_config CFG_DEFAULT = {
+    .width            = 80,
+    .pack_array_items = 8,
+    .pack_obj_items   = 4,
+    .pack_nesting     = 1,
+    .fold_array_items = 8,
+    .fold_obj_items   = 4,
+    .fold_nesting     = 1,
+    .join_array_items = 8,
+    .join_obj_items   = 4,
+    .join_nesting     = 1,
+};
+
+static const struct jsonfold_config CFG_LOW = {
+    .width            = 80,
+    .pack_array_items = 8,
+    .pack_obj_items   = 4,
+    .pack_nesting     = 1,
+    .fold_array_items = 8,
+    .fold_obj_items   = 4,
+    .fold_nesting     = 0,
+    .join_array_items = 8,
+    .join_obj_items   = 4,
+    .join_nesting     = 0,
+};
+
+static const struct jsonfold_config CFG_MED = {
+    .width            = 80,
+    .pack_array_items = 8,
+    .pack_obj_items   = 4,
+    .pack_nesting     = 1,
+    .fold_array_items = 8,
+    .fold_obj_items   = 4,
+    .fold_nesting     = 1,
+    .join_array_items = 8,
+    .join_obj_items   = 4,
+    .join_nesting     = 0,
+};
+
+static const struct jsonfold_config CFG_HIGH = {
+    .width            = 80,
+    .pack_array_items = 16,
+    .pack_obj_items   = 8,
+    .pack_nesting     = 4,
+    .fold_array_items = 16,
+    .fold_obj_items   = 8,
+    .fold_nesting     = 4,
+    .join_array_items = 16,
+    .join_obj_items   = 8,
+    .join_nesting     = 2,
+};
+
+static const struct jsonfold_config CFG_MAX = {
+    .width            = 255,
+    .pack_array_items = JSONFOLD_MAX_ARRAY_ITEMS,
+    .pack_obj_items   = JSONFOLD_MAX_OBJ_ITEMS,
+    .pack_nesting     = JSONFOLD_MAX_NESTING,
+    .fold_array_items = JSONFOLD_MAX_ARRAY_ITEMS,
+    .fold_obj_items   = JSONFOLD_MAX_OBJ_ITEMS,
+    .fold_nesting     = JSONFOLD_MAX_NESTING,
+    .join_array_items = JSONFOLD_MAX_ARRAY_ITEMS,
+    .join_obj_items   = JSONFOLD_MAX_OBJ_ITEMS,
+    .join_nesting     = JSONFOLD_MAX_NESTING,
+};
+
+static const struct jsonfold_config CFG_PACK = {
+    .width            = 80,
+    .pack_array_items = JSONFOLD_MAX_ARRAY_ITEMS,
+    .pack_obj_items   = JSONFOLD_MAX_OBJ_ITEMS,
+    .pack_nesting     = JSONFOLD_MAX_NESTING,
+};
+
+static const struct jsonfold_config CFG_FOLD = {
+    .width            = 80,
+    .fold_array_items = JSONFOLD_MAX_ARRAY_ITEMS,
+    .fold_obj_items   = JSONFOLD_MAX_OBJ_ITEMS,
+    .fold_nesting     = JSONFOLD_MAX_NESTING,
+};
+
+static const struct jsonfold_config CFG_JOIN = {
+    .width            = 80,
+    .fold_array_items = JSONFOLD_MAX_ARRAY_ITEMS,
+    .fold_obj_items   = JSONFOLD_MAX_OBJ_ITEMS,
+    .fold_nesting     = JSONFOLD_MAX_NESTING,
+    .join_array_items = JSONFOLD_MAX_ARRAY_ITEMS,
+    .join_obj_items   = JSONFOLD_MAX_OBJ_ITEMS,
+    .join_nesting     = JSONFOLD_MAX_NESTING,
+};
+
+static struct { const char *name; JFConfig config ; } presets [] = {
+    { "default", &CFG_DEFAULT },
+    { "", &CFG_DEFAULT },
+    { "off", NULL },
+    { "none", &CFG_NONE },
+    { "low", &CFG_LOW },
+    { "med", &CFG_MED },
+    { "high", &CFG_HIGH },
+    { "max", &CFG_MAX },
+    { "pack", &CFG_PACK },
+    { "fold", &CFG_FOLD },
+    { "join", &CFG_JOIN },
+    { NULL, NULL },
+} ;
+
+JFConfig JSONFOLD_CONFIG_NONE = &CFG_NONE ;
+JFConfig JSONFOLD_CONFIG_DEFAULT = &CFG_DEFAULT ;
+
+JFConfig jsonfold_config_preset(const char *preset)
+{
+    for (int i=0 ; presets[i].name ; i++) {
+        if ( streq(preset, presets[i].name)) return presets[i].config ;
+    }
+}
+
+struct jsonfold_config *jsonfold_config_create(JFConfig config)
+{
+    struct jsonfold_config *new_cfg = malloc(sizeof(*new_cfg)) ;
+    memcpy(new_cfg, config) ;
+    return new_cfg ;
+}
+
+void jsonfold_config_destroy( JFConfig config)
+{
+    free((void *) config) ;
+}
+
+
+////////// JSONFOLD_WRITER
+
+
+jsonfold_writer *jsonfold_writer_new(jsonfold_write_fn write_fn,
+                                      void *write_ctx,
+                                      const jsonfold_config *cfg);
+void jsonfold_writer_free(jsonfold_writer *w);
+
+ptrdiff_t jsonfold_write(jsonfold_writer *w, const char *buf, size_t len);
+int jsonfold_finish(jsonfold_writer *w);
+int jsonfold_flush(jsonfold_writer *w);
+
+const jsonfold_stats *jsonfold_get_stats(const jsonfold_writer *w);
+
+/* Convenience adapter for FILE*. Does not close fp. */
+jsonfold_writer *jsonfold_file_writer_new(FILE *fp, const jsonfold_config *cfg);
+
+
+const jsonfold_config JSONFOLD_CONFIG_NONE = &CONFIG_NONE ;
+const 
     80, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
@@ -27,57 +254,6 @@ static const jsonfold_config CFG_JOIN = {80, 0, 0, 0,
                                          JSONFOLD_MAX_ARRAY_ITEMS, JSONFOLD_MAX_OBJ_ITEMS, JSONFOLD_MAX_NESTING,
                                          JSONFOLD_MAX_ARRAY_ITEMS, JSONFOLD_MAX_OBJ_ITEMS, JSONFOLD_MAX_NESTING};
 
-typedef struct line {
-    int indent;
-    char *text;
-    size_t len;
-    jsonfold_kind parent_kind;
-    int items;
-    int leafs;
-    int child_nesting;
-    jsonfold_kind opener;
-    jsonfold_kind closer;
-    unsigned can_join:1;
-    unsigned can_pack:1;
-} line;
-
-typedef struct line_vec {
-    line *v;
-    size_t n;
-    size_t cap;
-} line_vec;
-
-typedef struct frame {
-    jsonfold_kind kind;
-    int depth;
-    line_vec lines;
-    int pack_limit;
-    int fold_limit;
-    int join_limit;
-    int content_lines;
-    int items;
-    int leafs;
-    int fold_ok;
-    int child_nesting;
-} frame;
-
-typedef struct frame_vec {
-    frame *v;
-    size_t n;
-    size_t cap;
-} frame_vec;
-
-struct jsonfold_writer {
-    jsonfold_write_fn write_fn;
-    void *write_ctx;
-    const jsonfold_config *cfg;
-    jsonfold_stats stats;
-    char *pending;
-    size_t pending_len;
-    size_t pending_cap;
-    frame_vec stack;
-    int error;
-};
 
 static int streq(const char *a, const char *b) { return strcmp(a, b) == 0; }
 
