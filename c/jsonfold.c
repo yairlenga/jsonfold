@@ -382,7 +382,11 @@ static int try_pack(jsonfold_writer *w, frame *f, line *ln) {
     line *prev = &f->lines.v[f->lines.n - 1];
     if (!prev->can_pack || prev->child_nesting >= cfg->pack_nesting || !can_merge(cfg, prev, ln, f->pack_limit)) return 0;
     if (line_join(prev, ln) != 0) return -1;
-    return update_after_merge(w, f, prev, ln) == 0 ? 1 : -1;
+    int rc = update_after_merge(w, f, prev, ln) == 0 ? 1 : -1;
+    if (!prev->can_pack) {
+        prev->can_join = 0 ;
+    }
+    return rc ;
 }
 
 static int try_join(jsonfold_writer *w, frame *f, line *ln) {
@@ -625,7 +629,7 @@ JFStats jsonfold_get_stats(JFWriter w) {
     return stats ;
 }
 
-void jsonfold_stats_free(JFStats stats) {
+void jsonfold_stats_destroy(JFStats stats) {
     free((void *) stats) ;
 }
 

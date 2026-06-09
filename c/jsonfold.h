@@ -75,7 +75,7 @@ int jsonfold_finish(JFWriter w);
 int jsonfold_flush(JFWriter w);
 
 JFStats jsonfold_get_stats(JFWriter w);
-void jsonfold_stats_free(JFStats stats) ;
+void jsonfold_stats_destroy(JFStats stats) ;
 
 /* Convenience adapter for FILE*. Does not close fp. */
 JFWriter jsonfold_file_writer_create(FILE *fp, JFConfig cfg);
