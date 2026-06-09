@@ -1,12 +1,14 @@
-#!/bin/sh
-set -eu
+#!/bin/sh -ue
+
+root=../..
 
 case "${@-}" in
-	java) JSONFOLD='java -jar ../../java/jsonfold-cli/target/jsonfold.jar' ;;
-	javagold) JSONFOLD='java -jar ../../java/jsonfold-cli/target/jsonfold.jar --gold' ;;
-	python) JSONFOLD='python3 ../../python/jsonfold_cli.py' ;;
-	javascript) JSONFOLD='node --expose-gc ../../javascript/cli.js' ;;
-	perl) JSONFOLD='perl ../../perl/script/jsonfold.pl' ;;
+	java) JSONFOLD="java -jar $root/java/jsonfold-cli/target/jsonfold.jar" ;;
+	javagold) JSONFOLD="java -jar $root/java/jsonfold-cli/target/jsonfold.jar --gold" ;;
+	python) JSONFOLD="python3 $root/python/jsonfold_cli.py" ;;
+	javascript) JSONFOLD="node --expose-gc $root/javascript/cli.js" ;;
+	perl) JSONFOLD="perl $root/perl/script/jsonfold.pl" ;;
+	c) JSONFOLD="$root/c/jsonfold.exe" ;;
 	?*) JSONFOLD="$@"
 esac
 
