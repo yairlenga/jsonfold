@@ -249,9 +249,10 @@ static int line_vec_push_take(line_vec *lv, line *l) {
 }
 
 static line line_vec_pop(line_vec *lv) {
-    line out = lv->v[--lv->n];
-    memset(&lv->v[lv->n], 0, sizeof(lv->v[lv->n]));
-    return out;
+    line *p_last = &lv->v[--lv->n] ;
+    line ln = *p_last ;
+    *p_last = (struct line) {0} ;
+    return ln;
 }
 
 ////////// JSONFOLD frame Methods
@@ -283,13 +284,13 @@ static jsonfold_kind closing_kind(const char *s, count_t len) {
     return JSONFOLD_KIND_NONE;
 }
 
-static int parse_line(line *out, const char *s, count_t len, jsonfold_kind parent_kind) {
+static bool parse_line(line *out, const char *s, count_t len, jsonfold_kind parent_kind) {
     count_t start = 0, end = len;
     while (start < len && (s[start] == ' ' || s[start] == '\t')) start++;
     while (end > start && (s[end-1] == ' ' || s[end-1] == '\t' || s[end-1] == '\r')) end--;
     count_t body_len = end - start;
+
     char *body = (char *)malloc(body_len + 1);
-    if (!body) return -1;
     memcpy(body, s + start, body_len);
     body[body_len] = 0;
 
@@ -304,14 +305,13 @@ static int parse_line(line *out, const char *s, count_t len, jsonfold_kind paren
         .items = 1, .leafs = 1, .child_nesting = -1, .opener = opener, .closer = closer,
         .can_join = (unsigned)is_body, .can_pack = (unsigned)is_body
     };
-    return 0;
+    return true;
 }
 
 static count_t line_width(const line *l) { return (count_t)l->indent + l->len; }
 
-static int line_join(line *dst, const line *src) {
+static void line_join(line *dst, const line *src) {
     char *p = (char *)realloc(dst->text, dst->len + 1 + src->len + 1);
-    if (!p) return -1;
     dst->text = p;
     dst->text[dst->len++] = ' ';
     memcpy(dst->text + dst->len, src->text, src->len + 1);
@@ -322,7 +322,7 @@ static int line_join(line *dst, const line *src) {
         dst->child_nesting = src->child_nesting;
         dst->can_pack = 0;
     }
-    return 0;
+    return ;
 }
 
 static jsonfold_kind parent_kind(const jsonfold_writer *w) {
@@ -333,22 +333,25 @@ static int choose_limit(jsonfold_kind kind, int list_limit, int dict_limit) {
     return kind == JSONFOLD_KIND_LIST ? list_limit : kind == JSONFOLD_KIND_DICT ? dict_limit : 0;
 }
 
-static int write_string(jsonfold_writer *w, const char *s, count_t len) {
+static bool write_string(jsonfold_writer *w, const char *s, count_t len) {
     ptrdiff_t n = w->write_fn(w->write_ctx, s, len);
-    if (n < 0) { w->error = 1; return -1; }
+    if (n != len) return false ;
     w->stats.bytes_out += n;
     w->stats.lines_out += count_newlines(s, len);
-    return 0;
+    return true ;
 }
 
-static int write_line(jsonfold_writer *w, const line *l) {
-    for (int i=0;i<l->indent;i++) if (write_string(w, " ", 1) != 0) return -1;
-    if (write_string(w, l->text, l->len) != 0) return -1;
-    return write_string(w, "\n", 1);
+static bool write_line(jsonfold_writer *w, const line *l) {
+    for (int i=0;i<l->indent;i++) {
+        if (!write_string(w, " ", 1) ) return false ;
+    }
+    if ( !write_string(w, l->text, l->len)) return false ;
+    if ( !write_string(w, "\n", 1)) return false ;
+    return true ;
 }
 
 static void emit_lines(jsonfold_writer *w, line_vec *lines, int depth);
-static int stream_frame(jsonfold_writer *w, frame *f);
+static bool stream_frame(jsonfold_writer *w, frame *f);
 
 static void mark_no_fold(jsonfold_writer *w) {
     for (count_t i=0;i<w->stack.n;i++)
@@ -448,9 +451,13 @@ static int add_to_frame(jsonfold_writer *w, frame *f, line *ln) {
     return 0;
 }
 
-static int emit_line(jsonfold_writer *w, line *ln) {
-    if (!w->stack.n) { int rc = write_line(w, ln); line_free(ln); return rc; }
-    return add_to_frame(w, &w->stack.v[w->stack.n - 1], ln);
+static void emit_line(jsonfold_writer *w, line *ln) {
+    if (!w->stack.n) {
+        write_line(w, ln);
+        line_free(ln);
+        return;
+    }
+    add_to_frame(w, &w->stack.v[w->stack.n - 1], ln);
 }
 
 static void emit_lines(jsonfold_writer *w, line_vec *lines, int depth) {
@@ -468,14 +475,14 @@ static void emit_lines(jsonfold_writer *w, line_vec *lines, int depth) {
     lines->n = 0;
 }
 
-static int stream_frame(jsonfold_writer *w, frame *f) {
-    if (!f->lines.n) return 0;
+static bool stream_frame(jsonfold_writer *w, frame *f) {
+    if (!f->lines.n) return false;
     line keep = {0}; int has_keep = 0;
     line *last = &f->lines.v[f->lines.n - 1];
     if (last->can_pack || last->can_join) { keep = line_vec_pop(&f->lines); has_keep = 1; }
     emit_lines(w, &f->lines, f->depth - 1) ;
-    if (has_keep && line_vec_push_take(&f->lines, &keep) != 0) { line_free(&keep); return -1; }
-    return 0;
+    if (has_keep) line_vec_push_take(&f->lines, &keep) ;
+    return true ;
 }
 
 static int make_folded_line(line *out, frame *f, jsonfold_kind pk) {
@@ -496,19 +503,19 @@ static int make_folded_line(line *out, frame *f, jsonfold_kind pk) {
     return 0;
 }
 
-static int try_fold(jsonfold_writer *w, frame *f, line *out, int *did_fold) {
+static bool try_fold(jsonfold_writer *w, frame *f, line *out, int *did_fold) {
 
     JFConfig cfg = writer_config(w);
 
     *did_fold = 0;
-    if (!f->fold_ok || f->content_lines != 1 || f->lines.n != 3) return 0;
+    if (!f->fold_ok || f->content_lines != 1 || f->lines.n != 3) return false;
     count_t folded_len = 0;
     for (count_t i=0;i<f->lines.n;i++) folded_len += 1 + f->lines.v[i].len;
     folded_len--;
-    if (f->lines.v[0].indent + folded_len > cfg->width) return 0;
-    if (make_folded_line(out, f, parent_kind(w)) != 0) return -1;
+    if (f->lines.v[0].indent + folded_len > cfg->width) return false;
+    make_folded_line(out, f, parent_kind(w)) ;
     *did_fold = 1;
-    return 0;
+    return true;
 }
 
 static void close_frame(jsonfold_writer *w, line *closer, jsonfold_kind closing_kind) {
@@ -616,7 +623,7 @@ ptrdiff_t jsonfold_write(jsonfold_writer *w, const char *buf, size_t len) {
         if (!p) break;
         count_t nl = (char *)p - w->pending;
         line ln = {0};
-        if (parse_line(&ln, w->pending + start, nl - start, parent_kind(w)) != 0) return -1;
+        parse_line(&ln, w->pending + start, nl - start, parent_kind(w)) ;
         feed(w, &ln) ;
         start = nl + 1;
     }
