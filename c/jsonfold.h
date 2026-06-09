@@ -72,7 +72,7 @@ int jsonfold_flush(jsonfold_writer *w);
 
 const jsonfold_stats *jsonfold_get_stats(const jsonfold_writer *w);
 
-/* Convenience adapter for FILE*. Does not close fp. */
+// Convenience adapter for FILE*. Does not close fp
 jsonfold_writer *jsonfold_file_writer_new(FILE *fp, const jsonfold_config *cfg);
 
 #ifdef __cplusplus

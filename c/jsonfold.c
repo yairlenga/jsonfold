@@ -1,4 +1,4 @@
-#include "jsonfold.h"
+#include "generated.h"
 
 #include <errno.h>
 #include <stdlib.h>
