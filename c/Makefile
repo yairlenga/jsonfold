@@ -5,10 +5,32 @@ CFLAGS = -Wall -W
 CFLAGS = -g -D_DEFAULT_SOURCE -Og -march=native -std=c11 -Wall -Wextra -Werror
 LDFLAGS =-lm
 
-all: generated.exe jsonfold.exe
+PROGS = generated.exe jsonfold.exe benchmark.exe
+
+.PHONY: all clean benchmark test realclean config setup run-test
+
+config:
+
+setup:
+
+all: generated.exe jsonfold.exe benchmark.exe
 
 clean:
 	rm -f *.o *.exe
+
+benchmark: benchmark.exe
+	./benchmark.exe > bench.out
+	
+run-test:
+	./jsonfold.exe --demo
+	./benchmark.exe
+	cd ../tests/unit && ./run_tests.sh python
+	cd ../tests/samples && ./run_tests.sh python
+
+
+test: jsonfold.exe
+	$(MAKE) run-test > test.log
+
 
 jsonfold.o: jsonfold.h
 cli.o: jsonfold.h

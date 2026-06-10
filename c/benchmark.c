@@ -392,7 +392,7 @@ static NullWriter run_case_once(const char *name, int rows, double t0) {
         }
 
         if (strcmp(func, "dump") == 0) {
-            JFWriter jf = jsonfold_create(null_write_cb, &nw, cfg);
+            JFWriter jf = jsonfold_create(null_write_cb, &nw, -1, cfg);
             Out out = { jf_write_cb, jf };
             emit_pretty(&out, rows);
             jsonfold_write(jf, "\n", 1);
@@ -408,7 +408,7 @@ static NullWriter run_case_once(const char *name, int rows, double t0) {
             sb_write_cb(&pretty, "\n", 1);
 
             StrBuf folded; sb_init(&folded);
-            JFWriter jf = jsonfold_create(sb_write_cb, &folded, cfg);
+            JFWriter jf = jsonfold_create(sb_write_cb, &folded, -1, cfg);
             jsonfold_write(jf, pretty.v ? pretty.v : "", pretty.n);
             jsonfold_finish(jf);
             jsonfold_destroy(jf);

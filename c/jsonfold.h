@@ -73,7 +73,7 @@ JFWriter jsonfold_create(jsonfold_write_fn write_fn,
 
 void jsonfold_destroy(JFWriter w);
 
-ptrdiff_t jsonfold_write(JFWriter w, const char *buf, size_t len);
+bool jsonfold_write(JFWriter w, const char *buf, size_t len);
 bool jsonfold_flush(JFWriter w);
 bool jsonfold_finish(JFWriter w);
 

@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
 
 #include "jsonfold.h"
 
@@ -317,27 +319,43 @@ static void apply_options(struct jsonfold_config *cfg, const Options *opts)
         cfg->join_nesting = opts->join_nesting;
 }
 
-static int feed_text(JFWriter w, const char *s)
+static int terminal_width(void)
 {
-    return jsonfold_write(w, s, strlen(s)) < 0 ? -1 : 0;
+    struct winsize ws;
+
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0 && ws.ws_col > 0)
+        return ws.ws_col;
+
+    const char *cols = getenv("COLUMNS");
+    if (cols && *cols) {
+        int n = atoi(cols);
+        if (n > 0)
+            return n;
+    }
+
+    return 0;
 }
 
-static int feed_file(JFWriter w, FILE *fp)
+static bool feed_text(JFWriter w, const char *s)
+{
+    return jsonfold_write(w, s, strlen(s)) ;
+}
+
+static bool feed_file(JFWriter w, FILE *fp)
 {
     char buf[16 * 1024];
 
-    for (;;) {
-        size_t n = fread(buf, 1, sizeof buf, fp);
+    for ( ;; ) {
+        ssize_t n = fread(buf, 1, sizeof buf, fp);
+        if ( !n ) break ;   
+    
+        if ( n<0 || ferror(fp) ) return false ;
 
-        if (n > 0 && jsonfold_write(w, buf, n) < 0)
-            return -1;
+        if (!jsonfold_write(w, buf, n)) return false ;
+            return false;
 
-        if (n < sizeof buf) {
-            if (ferror(fp))
-                return -1;
-            return 0;
-        }
     }
+    return true ;
 }
 
 void jsonfold_show_config(FILE *fp, JFConfig cfg)
@@ -404,6 +422,10 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
+    if ( opts.width <= 0 && isatty(STDOUT_FILENO)) {
+        opts.width = terminal_width() ;
+    }
+
     apply_options(cfg, &opts);
 
     if (opts.verbose) {
@@ -420,7 +442,7 @@ int main(int argc, char **argv)
     int ok = 1;
 
     if (opts.demo) {
-        if (feed_text(w, DEMO_JSON) != 0)
+        if ( !feed_text(w, DEMO_JSON) )
             ok = 0;
     } else {
         FILE *fp = stdin;

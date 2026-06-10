@@ -94,7 +94,7 @@ static count_t count_newlines(const char *s, int len) {
 }
 
 // Same as BSD recallocarray
-void *resize_vec(void *vec, count_t old_count, count_t new_count, count_t sz)
+void *vec_resize(void *vec, count_t old_count, count_t new_count, count_t sz)
 {
     vec = realloc(vec, new_count*sz) ;
     int change = new_count - old_count ;
@@ -338,18 +338,14 @@ static void line_vec_free(JFLineVec lv) {
 }
 
 static JFLine line_vec_reserve(JFLineVec vec) {
-    // Check if memory already available
+    // Extend if needed:
     int pos = vec->n++ ;
-    if ( pos < vec->cap ) {
-        return &vec->v[pos] ;
+    if ( pos >= vec->cap ) {
+        int new_cap = vec->cap ? vec->cap*2 : 8 ;
+        vec->v = vec_resize(vec->v, vec->cap, new_cap, sizeof((*vec->v)));
+        vec->cap = new_cap ;
     }
-
-    // Need to extend
-    int new_cap = vec->cap ? vec->cap*2 : 8 ;
-    vec->v = resize_vec(vec->v, vec->cap, new_cap, sizeof((*vec->v)));
     JFLine entry = &vec->v[pos] ;
-    memset(entry, 0, (new_cap-vec->cap)*sizeof(*vec->v)) ;
-    vec->cap = new_cap ;
     return entry ;
 }
 
@@ -422,18 +418,12 @@ static JFFrame  frame_vec_reserve(JFFrameVec vec) {
 
     // Check if memory already available
     int pos = vec->n++ ;
-    if ( pos < vec->cap ) {
-        return &vec->v[pos] ;
+    if ( pos >= vec->cap ) {
+        int new_cap = vec->cap ? vec->cap*2 : 8 ;
+        vec->v = vec_resize(vec->v, vec->cap, new_cap, sizeof(*vec->v));
+        vec->cap = new_cap ;
     }
-
-    // Need to extend
-    int new_cap = vec->cap ? vec->cap*2 : 8 ;
-    vec->v = resize_vec(vec->v, vec->cap, new_cap, sizeof(*vec->v));
-    vec->cap = new_cap ;
-    JFFrame entry = &vec->v[pos] ;
-    memset(entry, 0, (new_cap-vec->cap)*sizeof(*vec->v)) ;
-    vec->cap = new_cap ;
-    return entry ;
+    return &vec->v[pos] ;
 }
 
 
@@ -743,7 +733,7 @@ JFWriter jsonfold_create(jsonfold_write_fn write_fn, void *write_ctx, int width,
 }
 
 
-ptrdiff_t jsonfold_write(JFWriter w, const char *buf, size_t len) {
+bool jsonfold_write(JFWriter w, const char *buf, size_t len) {
     JFConfig cfg = writer_config(w);
 
     w->stats.bytes_in += len;
@@ -751,7 +741,7 @@ ptrdiff_t jsonfold_write(JFWriter w, const char *buf, size_t len) {
 
     // If no config, just pass thru
     if ( !cfg ) {
-        return write_string(w, buf, len) == 0 ? (ptrdiff_t)len : -1;
+        return write_string(w, buf, len) ;
     }
     append_to_pending(w, buf, len) ;
 
