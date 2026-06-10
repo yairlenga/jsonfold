@@ -16,11 +16,7 @@
 
     <header class="hero">
         <div class="brand">
-            <img
-                src="images/jsonfold-logo.svg"
-                alt="jsonfold"
-                width="128"
-                height="128">
+            <img src="images/jsonfold-logo.svg" alt="jsonfold" width="128" height="128">
         </div>
 
         <div class="hero-text">
@@ -32,7 +28,9 @@
     <main class="page">
 
         <div class="controls">
-            <label>Preset
+
+            <label>
+                Preset
                 <select id="compact">
                     <option>default</option>
                     <option>none</option>
@@ -46,37 +44,82 @@
                 </select>
             </label>
 
-            <label>Width
+            <label>
+                Width
                 <input id="width" type="number" value="80" min="20" max="255">
             </label>
 
-            <label>Indent
+            <label>
+                Indent
                 <input id="indent" type="number" value="2" min="0" max="8">
             </label>
 
-            <button id="run">Format</button><label></label>
+            <button id="run">Format</button>
+
+            <label>
                 <input id="live" type="checkbox">
                 Live
             </label>
+
         </div>
+
 
         <div class="grid">
 
             <div>
                 <h3>Input</h3>
-
-                <textarea id="input"> JSON </textarea>
+                <textarea id="input"></textarea>
             </div>
 
             <div>
                 <h3>Output</h3>
-
                 <textarea id="output" readonly></textarea>
             </div>
 
         </div>
 
-        <div class="stats" id="stats"> STATS </dev>
+        <div class="stats" id="stats">
+            Ready
+        </div>
+
+
+        <footer class="footer">
+
+            <div class="footer-links">
+
+                <a href="https://github.com/yairlenga/jsonfold">
+                    <img src="https://cdn.simpleicons.org/github" alt="">
+                    GitHub
+                </a>
+
+                <a href="https://pypi.org/project/jsonfold/">
+                    <img src="https://cdn.simpleicons.org/python" alt="">
+                    PyPI
+                </a>
+
+                <a href="https://www.npmjs.com/package/@jsonfold/core">
+                    <img src="https://cdn.simpleicons.org/npm" alt="">
+                    npm
+                </a>
+
+                <a href="https://search.maven.org/search?q=g:dev.jsonfold">
+                    <img src="https://cdn.simpleicons.org/apachemaven" alt="">
+                    Maven
+                </a>
+
+                <a href="https://medium.com/@yairlenga/jsonfold-making-pretty-printed-json-compact-and-readable-again-in-python">
+                    <img src="https://cdn.simpleicons.org/medium" alt="">
+                    Medium
+                </a>
+
+                <a href="https://dev.to/yairlenga/jsonfold-making-pretty-printed-json-compact-and-readable-again-in-python-58ol">
+                    <img src="https://cdn.simpleicons.org/devdotto" alt="">
+                    Article
+                </a>
+
+            </div>
+
+        </footer>
 
     </main>
 

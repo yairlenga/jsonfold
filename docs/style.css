@@ -139,4 +139,34 @@ textarea {
         grid-template-columns: 1fr;
     }
 }
+.footer {
+    margin-top: 24px;
+    padding-top: 18px;
+    border-top: 1px solid #d8dee9;
+}
 
+.footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    align-items: center;
+}
+
+.footer-links a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    color: #0B3158;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.footer-links a:hover {
+    text-decoration: underline;
+}
+
+.footer-links img {
+    width: 20px;
+    height: 20px;
+}
