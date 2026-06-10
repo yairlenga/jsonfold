@@ -1,69 +1,4 @@
-import { dumps } from "./jsonfold.js";
-
-function run() {
-  const input = document.getElementById("input").value;
-  const compact = document.getElementById("compact").value;
-  const width = Number(document.getElementById("width").value);
-  const indent = Number(document.getElementById("indent").value);
-
-  try {
-    const obj = JSON.parse(input);
-
-    document.getElementById("output").value = dumps(obj, {
-      compact,
-      width,
-      indent,
-    });
-    updateStats();
-  } catch (e) {
-    document.getElementById("output").value = "ERROR: " + e.message;
-  }
-}
-
-function lineCount(s) {
-    if (!s) return 0;
-    return s.endsWith("\n")
-        ? s.split("\n").length - 1
-        : s.split("\n").length;
-}
-
-function maxWidth(s) {
-    if (!s) return 0;
-
-    let max = 0;
-    for (const line of s.split("\n")) {
-        max = Math.max(max, line.length);
-    }
-    return max;
-}
-
-function updateStats() {
-    const input = document.getElementById("input").value;
-    const output = document.getElementById("output").value;
-
-    const inLines = lineCount(input);
-    const outLines = lineCount(output);
-
-    const inBytes = input.length;
-    const outBytes = output.length;
-
-    const inWidth = maxWidth(input);
-    const outWidth = maxWidth(output);
-
-    const inArea = inLines * inWidth;
-    const outArea = outLines * outWidth;
-
-    const reduction =
-        inArea > 0
-            ? Math.round((1 - outArea / inArea) * 100)
-            : 0;
-
-    document.getElementById("stats").textContent =
-        `Reduction: ${reduction}% | ` +
-        `Lines: ${inLines}→${outLines} | ` +
-        `Width: ${inWidth}→${outWidth} | ` +
-        `Bytes: ${inBytes}→${outBytes}`;
-}
+import { JSONFold, stringify } from "./jsonfold.js";
 
 const SAMPLE_JSON = `{
   "name": "jsonfold",
@@ -86,8 +21,132 @@ const SAMPLE_JSON = `{
   }
 }`;
 
-document.getElementById("run").addEventListener("click", run);
 const input = document.getElementById("input");
+const output = document.getElementById("output");
+const stats = document.getElementById("stats");
+
+const compactEl = document.getElementById("compact");
+const widthEl = document.getElementById("width");
+const indentEl = document.getElementById("indent");
+const liveEl = document.getElementById("live");
+const runEl = document.getElementById("run");
 
 input.value = SAMPLE_JSON;
-run();
+
+function textStats(s) {
+    const bytes = s.length;
+
+    if (!bytes) {
+        return {
+            lines: 0,
+            width: 0,
+            bytes: 0,
+        };
+    }
+
+    let lines = 1;
+    let width = 0;
+    let curWidth = 0;
+
+    for (let i = 0; i < bytes; i++) {
+        if (s[i] === "\n") {
+            lines++;
+            if (curWidth > width) {
+                width = curWidth;
+            }
+            curWidth = 0;
+        } else {
+            curWidth++;
+        }
+    }
+
+    if (curWidth > width) {
+        width = curWidth;
+    }
+
+    if (s.endsWith("\n")) {
+        lines--;
+    }
+
+    return {
+        lines,
+        width,
+        bytes,
+    };
+}
+
+function updateStats(rawText, prettyText, foldedText) {
+    const raw = textStats(rawText);
+    const pretty = textStats(prettyText);
+    const folded = textStats(foldedText);
+
+    const prettyArea = pretty.lines * pretty.width;
+    const foldedArea = folded.lines * folded.width;
+
+    const reduction =
+        prettyArea > 0
+            ? Math.round((1 - foldedArea / prettyArea) * 100)
+            : 0;
+
+    stats.textContent =
+        `Reduction: ${reduction}% | ` +
+        `Raw: ${raw.lines}L/${raw.width}W/${raw.bytes}B | ` +
+        `Pretty: ${pretty.lines}L/${pretty.width}W/${pretty.bytes}B | ` +
+        `Folded: ${folded.lines}L/${folded.width}W/${folded.bytes}B`;
+}
+
+function format() {
+    const rawText = input.value;
+    const compactName = compactEl.value;
+    const width = Number(widthEl.value) || 80;
+    const indent = Number(indentEl.value) || 2;
+
+    try {
+        const obj = JSON.parse(rawText);
+
+        const prettyText = JSON.stringify(obj, null, indent);
+
+        let compact = JSONFold.preset(compactName);
+
+        if (compact) {
+            compact = compact.replace({ width });
+        }
+
+        const foldedText = stringify(obj, {
+            compact,
+            indent,
+        });
+
+        output.value = foldedText;
+
+        updateStats(
+            rawText,
+            prettyText,
+            foldedText
+        );
+    } catch (err) {
+        output.value = String(err);
+        stats.textContent = "Invalid JSON";
+    }
+}
+
+function formatIfLive() {
+    if (liveEl.checked) {
+        format();
+    }
+}
+
+runEl.addEventListener("click", format);
+
+input.addEventListener("input", formatIfLive);
+compactEl.addEventListener("change", formatIfLive);
+widthEl.addEventListener("input", formatIfLive);
+indentEl.addEventListener("input", formatIfLive);
+
+liveEl.addEventListener("change", () => {
+    if (liveEl.checked) {
+        format();
+    }
+});
+
+format();
