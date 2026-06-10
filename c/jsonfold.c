@@ -94,11 +94,9 @@ static count_t count_newlines(const char *s, int len) {
 }
 
 // Same as BSD recallocarray
-void *resize_vec(void *vec, count_t *p_count, count_t new_count, count_t sz)
+void *resize_vec(void *vec, count_t old_count, count_t new_count, count_t sz)
 {
-    count_t old_count = *p_count ;
     vec = realloc(vec, new_count*sz) ;
-    *p_count = new_count ;
     int change = new_count - old_count ;
     if ( change > 0 ) {
         memset( ((char *) vec) + (old_count * sz), 0, change * sz) ;
@@ -268,7 +266,7 @@ static count_t line_width(const JFLine l) {
     return l->indent + l->len;
 }
 
-static bool line_parse(JFLine out, const char *s, count_t len, jsonfold_kind parent_kind) {
+static struct line line_parse(const char *s, count_t len, jsonfold_kind parent_kind) {
     count_t start = 0, end = len;
     while (start < len && (s[start] == ' ' || s[start] == '\t')) start++;
     while (end > start && (s[end-1] == ' ' || s[end-1] == '\t' || s[end-1] == '\r')) end--;
@@ -284,7 +282,7 @@ static bool line_parse(JFLine out, const char *s, count_t len, jsonfold_kind par
     jsonfold_kind closer = closing_kind(body, body_len);
     int is_body = parent_kind != JSONFOLD_KIND_NONE && opener == JSONFOLD_KIND_NONE && closer == JSONFOLD_KIND_NONE;
 
-    *out = (struct line){
+    struct line out = (struct line){
         .indent = (int)start,
         .text = body,
         .len = body_len,
@@ -297,7 +295,7 @@ static bool line_parse(JFLine out, const char *s, count_t len, jsonfold_kind par
         .can_join = is_body,
         .can_pack = is_body,
     };
-    return true;
+    return out ;
 }
 
 static void line_free(JFLine l) {
@@ -348,7 +346,7 @@ static JFLine line_vec_reserve(JFLineVec vec) {
 
     // Need to extend
     int new_cap = vec->cap ? vec->cap*2 : 8 ;
-    vec->v = resize_vec(vec->v, &vec->cap, new_cap, sizeof((*vec->v)));
+    vec->v = resize_vec(vec->v, vec->cap, new_cap, sizeof((*vec->v)));
     JFLine entry = &vec->v[pos] ;
     memset(entry, 0, (new_cap-vec->cap)*sizeof(*vec->v)) ;
     vec->cap = new_cap ;
@@ -383,6 +381,41 @@ static void frame_free(JFFrame f) {
     *f = (struct frame) { 0 } ;
 }
 
+static struct line make_folded_line(JFFrame f) {
+    count_t total = folded_frame_len(f) ;
+    char *text = (char *)malloc(total + 1);
+    count_t pos = 0;
+    for (count_t i=0;i<f->lines.n;i++) {
+        if (i) text[pos++] = ' ';
+        memcpy(text + pos, f->lines.v[i].text, f->lines.v[i].len);
+        pos += f->lines.v[i].len;
+    }
+    text[pos] = 0;
+    JFLine first = &f->lines.v[0] ;
+    struct line ln = (struct line){
+        .indent=f->lines.v[0].indent,
+        .text=text,
+        .len=pos,
+        .parent_kind=first->parent_kind,
+        .items=1,
+        .leafs=f->leafs,
+        .child_nesting=f->child_nesting,
+        .opener=JSONFOLD_KIND_NONE,
+        .closer=JSONFOLD_KIND_NONE,
+        .can_join=1,
+        .can_pack=0};
+    return ln ;
+}
+
+static void frame_fold(JFFrame f)
+{
+    if ( !f->lines.n) return ;
+
+    struct line folded = make_folded_line(f) ;
+    line_vec_clear(&f->lines);
+    line_vec_append(&f->lines, &folded); 
+} ;
+
 ////////// JSONFOLD frame vector
 
 static JFFrame  frame_vec_reserve(JFFrameVec vec) {
@@ -395,7 +428,8 @@ static JFFrame  frame_vec_reserve(JFFrameVec vec) {
 
     // Need to extend
     int new_cap = vec->cap ? vec->cap*2 : 8 ;
-    vec->v = realloc(vec->v, new_cap * sizeof(*vec->v));
+    vec->v = resize_vec(vec->v, vec->cap, new_cap, sizeof(*vec->v));
+    vec->cap = new_cap ;
     JFFrame entry = &vec->v[pos] ;
     memset(entry, 0, (new_cap-vec->cap)*sizeof(*vec->v)) ;
     vec->cap = new_cap ;
@@ -510,38 +544,39 @@ static bool try_join(JFWriter w, JFFrame f, JFLine ln) {
     return true ;
 }
 
-static void add_to_frame(JFWriter w, JFFrame f, JFLine ln) {
+static void add_to_frame(JFWriter w, JFFrame f, JFLine line) {
 
     JFConfig cfg = writer_config(w);
 
     if (f->lines.n) {
 //        line *prev = &f->lines.v[f->lines.n-1] ;
-        if ( ln->can_pack &&
+        if ( line->can_pack &&
             // prev->can_pack &&
-            try_pack(w, f, ln) )
+            try_pack(w, f, line) )
             return ;
     
-        if ( ln->can_join &&
+        if ( line->can_join &&
             // prev->can_join &&
-            try_join(w, f, ln) )
+            try_join(w, f, line) )
             return ;
 
-    } else if (!f->fold_ok && !ln->can_pack && !ln->can_join) {
-        write_line(w, ln);
-        line_free(ln);
+    } else if (!f->fold_ok && !line->can_pack && !line->can_join) {
+        write_line(w, line);
+        line_free(line);
         return ;
     }
 
-    JFLine stored = line_vec_append(&f->lines, ln) ;
+    // Transfer 'ln' content to 'stored', do not use it at this time.
+    line = line_vec_append(&f->lines, line) ;
 
-    if (f->fold_ok && line_width(stored) > cfg->width) {
+    if (f->fold_ok && line_width(line) > cfg->width) {
         mark_no_fold(w) ;
     }
-    if (stored->closer == JSONFOLD_KIND_NONE) {
+    if (line->closer == JSONFOLD_KIND_NONE) {
         f->content_lines++;
-        f->leafs += stored->leafs;
-        f->items += stored->items;
-        if (stored->child_nesting >= f->child_nesting) f->child_nesting = stored->child_nesting + 1;
+        f->leafs += line->leafs;
+        f->items += line->items;
+        if (line->child_nesting >= f->child_nesting) f->child_nesting = line->child_nesting + 1;
         if (f->fold_ok && !frame_can_fold(f, cfg)) {
             mark_no_fold(w) ;
         }
@@ -591,30 +626,7 @@ static bool stream_frame(JFWriter w, JFFrame f) {
     return true ;
 }
 
-static struct line make_folded_line(JFFrame f, jsonfold_kind pk) {
-    count_t total = folded_frame_len(f) ;
-    char *text = (char *)malloc(total + 1);
-    count_t pos = 0;
-    for (count_t i=0;i<f->lines.n;i++) {
-        if (i) text[pos++] = ' ';
-        memcpy(text + pos, f->lines.v[i].text, f->lines.v[i].len);
-        pos += f->lines.v[i].len;
-    }
-    text[pos] = 0;
-    struct line ln = (struct line){
-        .indent=f->lines.v[0].indent,
-        .text=text,
-        .len=pos,
-        .parent_kind=pk,
-        .items=1,
-        .leafs=f->leafs,
-        .child_nesting=f->child_nesting,
-        .opener=JSONFOLD_KIND_NONE,
-        .closer=JSONFOLD_KIND_NONE,
-        .can_join=1,
-        .can_pack=0};
-    return ln ;
-}
+
 
 static bool try_fold(JFWriter w, JFFrame f) {
 
@@ -627,9 +639,7 @@ static bool try_fold(JFWriter w, JFFrame f) {
     if (f->lines.v[0].indent + folded_len > cfg->width)
         return false;
 
-    struct line folded = make_folded_line(f, parent_kind(w)) ;
-    line_vec_clear(&f->lines);
-    line_vec_append(&f->lines, &folded); 
+    frame_fold(f) ;
     return true;
 }
 
@@ -686,7 +696,7 @@ static void feed(JFWriter w, JFLine ln) {
     emit_line(w, ln);
 }
 
-static void pending_append(JFWriter w, const char *buf, count_t len) {
+static void append_to_pending(JFWriter w, const char *buf, count_t len) {
     if (w->pending_len + len + 1 > w->pending_cap) {
         count_t nc = w->pending_cap ? w->pending_cap * 2 : 256;
         while (nc < w->pending_len + len + 1) nc *= 2;
@@ -698,21 +708,21 @@ static void pending_append(JFWriter w, const char *buf, count_t len) {
     w->pending[w->pending_len] = 0;
 }
 
-static JFWriter create_writer(jsonfold_write_fn write_fn, void *write_ctx, const JFConfig cfg) {
+static JFWriter create_writer(jsonfold_write_fn write_fn, void *write_ctx, const JFConfig cfg, int width) {
     JFWriter w = calloc(1, sizeof(*w));
     w->write_fn = write_fn;
     w->write_ctx = write_ctx;
     w->cfg = *cfg;
+    if ( width > 0) w->cfg.width = width ;
     return w;
 }
 
-static void flush_writer(JFWriter w)
+static void finish_writer(JFWriter w)
 {
     JFConfig cfg = writer_config(w);
     if ( w->pending_len ) {
         if ( cfg ) {
-            struct line ln = EMPTY_LINE ;
-            line_parse(&ln, w->pending, w->pending_len, parent_kind(w)) ;
+            struct line ln = line_parse(w->pending, w->pending_len, parent_kind(w)) ;
             w->pending_len = 0;
             feed(w, &ln) ;
         } else {
@@ -728,8 +738,8 @@ static void flush_writer(JFWriter w)
     w->stack.n = 0;
 }
 
-JFWriter jsonfold_create(jsonfold_write_fn write_fn, void *write_ctx, const JFConfig cfg) {
-    return create_writer(write_fn, write_ctx, cfg) ;
+JFWriter jsonfold_create(jsonfold_write_fn write_fn, void *write_ctx, int width, const JFConfig cfg) {
+    return create_writer(write_fn, write_ctx, cfg, width) ;
 }
 
 
@@ -743,15 +753,14 @@ ptrdiff_t jsonfold_write(JFWriter w, const char *buf, size_t len) {
     if ( !cfg ) {
         return write_string(w, buf, len) == 0 ? (ptrdiff_t)len : -1;
     }
-    pending_append(w, buf, len) ;
+    append_to_pending(w, buf, len) ;
 
     count_t start = 0;
     for (;;) {
         void *p = memchr(w->pending + start, '\n', w->pending_len - start);
         if (!p) break;
         count_t nl = (char *)p - w->pending;
-        struct line ln = EMPTY_LINE ;
-        line_parse(&ln, w->pending + start, nl - start, parent_kind(w)) ;
+        struct line ln = line_parse(w->pending + start, nl - start, parent_kind(w)) ;
         feed(w, &ln) ;
         start = nl + 1;
     }
@@ -764,8 +773,14 @@ ptrdiff_t jsonfold_write(JFWriter w, const char *buf, size_t len) {
     return (ptrdiff_t)len;
 }
 
+bool jsonfold_flush(JFWriter w)
+{
+    return write_string(w, NULL, 0) ;
+}
+
+
 bool jsonfold_finish(JFWriter w) {
-    flush_writer(w) ;
+    finish_writer(w) ;
     return w->error == 0 ;
 }
 
@@ -788,9 +803,13 @@ void jsonfold_destroy(JFWriter w) {
 }
 
 static ptrdiff_t file_write(void *ctx, const char *buf, size_t len) {
-    return fwrite(buf, 1, len, (FILE *)ctx) == len ? (ptrdiff_t)len : -1;
+    FILE *out = ctx ;
+    if ( !buf && !len ) {
+        fflush(out) ;
+    }
+    return fwrite(buf, 1, len, out) == len ? (ptrdiff_t)len : -1;
 }
 
-JFWriter jsonfold_file_writer_create(FILE *fp, JFConfig cfg) {
-    return create_writer(file_write, fp, cfg);
+JFWriter jsonfold_file_writer_create(FILE *fp, int width, JFConfig cfg) {
+    return create_writer(file_write, fp, cfg, width);
 }

@@ -410,7 +410,7 @@ int main(int argc, char **argv)
         jsonfold_show_config(stderr, cfg);
     } 
 
-    JFWriter w = jsonfold_file_writer_create(stdout, cfg);
+    JFWriter w = jsonfold_file_writer_create(stdout, -1, cfg);
     if (!w) {
         fprintf(stderr, "jsonfold: failed to create writer\n");
         jsonfold_config_destroy(cfg);

@@ -68,19 +68,20 @@ void jsonfold_config_destroy(JFConfig config) ;
 
 JFWriter jsonfold_create(jsonfold_write_fn write_fn,
                                       void *write_ctx,
+                                      int width,
                                       const JFConfig cfg);
 
 void jsonfold_destroy(JFWriter w);
 
 ptrdiff_t jsonfold_write(JFWriter w, const char *buf, size_t len);
-bool jsonfold_finish(JFWriter w);
 bool jsonfold_flush(JFWriter w);
+bool jsonfold_finish(JFWriter w);
 
 JFStats jsonfold_get_stats(JFWriter w);
 void jsonfold_stats_destroy(JFStats stats) ;
 
 /* Convenience adapter for FILE*. Does not close fp. */
-JFWriter jsonfold_file_writer_create(FILE *fp, JFConfig cfg);
+JFWriter jsonfold_file_writer_create(FILE *fp, int width, JFConfig cfg);
 
 #ifdef __cplusplus
 }
