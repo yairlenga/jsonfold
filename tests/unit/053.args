@@ -1,0 +1,3 @@
+# Nested scalar array, max preset, pack_nesting below boundary
+# category: boundary
+--compact=pack --pack-nesting=4

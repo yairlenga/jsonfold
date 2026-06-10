@@ -1,0 +1,3 @@
+# Nested scalar array, max preset, fold_nesting at boundary
+# category: boundary
+--compact=max --fold-nesting=5

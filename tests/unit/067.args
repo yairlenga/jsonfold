@@ -1,0 +1,3 @@
+# Array of small arrays, max preset, join_array_items at boundary
+# category: boundary
+--compact=max --join-array-items=5

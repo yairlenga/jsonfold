@@ -1,0 +1,3 @@
+# Small scalar object, max preset, fold_obj_items at boundary
+# category: boundary
+--compact=max --fold-obj-items=5

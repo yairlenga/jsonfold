@@ -1,0 +1,3 @@
+# Folded object width exactly at limit, max preset
+# category: boundary
+--compact=max --width=40

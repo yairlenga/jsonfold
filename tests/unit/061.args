@@ -1,0 +1,3 @@
+# Small scalar array, max preset, pack_array_items at boundary
+# category: boundary
+--compact=max --pack-array-items=5

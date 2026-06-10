@@ -1,0 +1,3 @@
+# Small scalar array, max preset, fold_array_items below boundary
+# category: boundary
+--compact=max --fold-array-items=4

@@ -1,0 +1,3 @@
+# Small scalar object, max preset, pack_obj_items at boundary
+# category: boundary
+--compact=max --pack-obj-items=5
