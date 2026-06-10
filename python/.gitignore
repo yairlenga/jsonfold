@@ -1,0 +1,5 @@
+jsonfold.egg-info
+.venv
+*.cover
+*.lprof
+dist

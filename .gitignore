@@ -5,19 +5,14 @@ __pycache__
 *.cover
 *.prof
 *.lprof
-*.class
 .venv
-python/dist
-javascript/node_modules
 articles/01-python/out
-python/jsonfold.egg-info
 perf.data*
-target
-*/target
 prof
 nytprof
 *.tgz
 tmp
 *.log
 .*.xml
+?
 
