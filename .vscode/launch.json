@@ -75,9 +75,9 @@
             "name": "Python Debugger: Unit Test",
             "type": "debugpy",
             "request": "launch",
-            "program": "python/jsonfold.py",
+            "program": "python/jsonfold_cli.py",
             "args": [
-                "--demo"
+                "--input=tests/new/053.json", "--compact=pack", "-v", "--pack-nesting=0"
             ]
         },
         {
