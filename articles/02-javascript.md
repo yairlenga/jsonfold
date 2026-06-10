@@ -36,10 +36,10 @@ data = {
     "items": [{"id": 1, "name": "alpha"}, {"id": 2, "name": "beta"}],
 }
 
-# Use default setting
+// Use default setting
 console.log(jsonfold.stringify(data)) ;
 
-# Use custom setting
+// Use custom setting
 console.log(jsonfold.stringify(data, null, { compact: "high", indent: 4 }))
 ```
 
@@ -47,7 +47,10 @@ console.log(jsonfold.stringify(data, null, { compact: "high", indent: 4 }))
 
 Repository: https://github.com/yairlenga/jsonfold
 
-Javascript implementation is under `javascript` directory.
+Javascript implementation is under `javascript` directory: (jsonfold.js)
+
+NPM: `npm install @jsonfold/core`
+
 
 ## Different levels of compaction
 
@@ -273,59 +276,65 @@ JSON documents can be very large and deeply nested. It's easier to implement the
 * Operations on large strings: Concatenation and iteration over large strings are more costly than operations on smaller chunks.
 * Time to first byte ("TTFB"): delaying processing until the full documents is generated means that TTFB increases significantly. This can have noticeable negative impact on the service responsiveness to end users.
   
-The `jsonfold` processes the document in small bites - leveraging the incremental generation provided by the python `json.dump()` call - arrays are processed one item at a time, and objects are processed one key/value pair at a time. The extra memory that is needed for processing is approximately 4X the maximum width (actual or set).
+The `jsonfold` processes the document in small bites. While the default JSON serializer `JSON.stringify(...)` generates (potentially) large string before returning - sending the "compacted" JSON to a stream (file, socket, ...) does not have to wait until the complete response is formatted. In additional, the extra memory that is needed for processing is approximately 4X the maximum width (actual or set).
 
-If the string generation call `json.dumps()` is being used - there is no choice but to build and return the (potentially huge) final string. In this case, the incremental processing will cap the amount of extra memory as described above, and `io.StringIO()` to build the final string reduces the cost.
+Compare:
+```javascript
 
-One important advantage of the streaming approach is that it should work with any other encoders (parameter `cls` in `json.dump`) and pretty-printers that can send output directly to a file-like object, by wrapping the existing file-like output stream with the jsonfold `JSONFoldWriter` class. (disclaimer: I do not use any third-party libraries, did not test any specific package).
+// Generate large string - write
+process.stdout.write(jsonfold.stringify(data))
 
-Example: using custom encoder
-```python
+// Streaming mode
+jsonfold.dump(data, process.stdout)
 
-import json
-import jsonfold
-# Custom object
-class Foo:
-    def __init__(self, name):
-        self.name = name
-
-# Custom encoder for Person objects
-class CustomEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, Foo):
-            return {"ID": obj.name}
-        return super().default(obj)
-
-# Sample custom object
-foo_obj = Foo("Bar")
-# Encoding custom object using the custom encoder
-jsonfold.dump(foo_obj, cls=CustomEncoder)
 ```
 
-Or using different serializer like `rapidjson`
-```python
-import rapidjson
-import jsonfold
-import sys
+The first version will need more 2X memory, and will send the first byte after compacting the full pretty-print JSON text. The second version will need 1X memory, and will send the first byte as soon as the generation of the pretty-print version is completed.
 
+If the string generation call `stringify` or `dumps()` are being used - there is no choice but to build and return the (potentially huge) final string. In this case, the incremental processing will cap the amount of extra memory as described above, and `io.StringIO()` to build the final string reduces the cost.
 
-def pp(obj, fp, *,
-         compact =  "",
-         indent: int = 2, **kwargs) -> None:
+One important advantage of the filtering/streaming approach is that it should work with any other custom application logic - the `replacer`, application defined `toJSON` methods and `rawJSON` segments. It also can be used when the json text is coming from files, SQL database, document database, etc.
 
-    with jsonfold.JSONFoldWriter(fp, compact=compact) as out:
-        rapidjson.dump(obj, out, indent=indent, **kwargs)
+Example: using custom encoder
+```javascript
+import * as jsonfold from "./jsonfold.js"
+
+let replacer = [ "name", "address"]
+let data = [
+  {
+    "name": "Alice",
+    "address": "New York",
+    "age": 28
+  },
+  { "name": "Dan", "address": "Texas", "age": 35 },
+  {
+    "name": "John", "address": "California", "age": 42
+  }
+]
+
+console.log(jsonfold.stringify(data, replacer)) ;
+
+```
+Will output, after being formatted by `jsonfold` - notice only "name" and "address" are show - "age" was filtered out by the replacer attribute.
+
+```json
+[
+  { "name": "Alice", "address": "New York" },
+  { "name": "Dan", "address": "Texas" },
+  { "name": "John", "address": "California" }
+]
 ```
 
 # Cross-language portability
 
-This article covers the `jsonfold` implementation in python - the same approach can be used in other languages to format JSON according to the same rules - leveraging existing JSON serializers, and various stream filtering in other languages.
+This article covers the `jsonfold` implementation in Javascript - the same approach can be used in other languages to format JSON according to the same rules - leveraging existing JSON serializers, and various stream filtering in other languages.
 
 * Javascript: In Node, the `Writable` stream can be wrapped to apply the `jsonfold` logic on the output from any JSON serializer.
+* In Python, any output stream (`textIOWrapper`) can be wrapped with the `jsonfold` filter
 * In Java, the `java.io.FilterWriter` can be used to add `jsonfold` formatting to any character stream.
 * In C, the `FILE *` object can be customized using the GLIBC extension `fopencookie` or BSD `funopen`
 
-Future articles will describe implementations in JavaScript, Java, C and other languages/platforms. Each implementation will be:
+Other articles will describe implementations in Python, Java, C and other languages/platforms. Each interpreted implementation will be:
 * Single file that can be dropped into the code base (Note: certain languages need separate header file).
 * Filter that will attach the `jsonfold` behavior to existing output stream.
 * Efficient implementation that minimizes memory usage, and overhead.
@@ -358,6 +367,6 @@ As always, evaluate and test the code carefully before adopting it in production
 
 # Usage and License
 
-The supporting file (`jsonfold.py`, and json examples) are provided under the MIT license and are intended to be copied and used as-is in your own projects.
+The supporting file (`jsonfold.js`, and json examples) are provided under the MIT license and are intended to be copied and used as-is in your own projects.
 
 You can simply copy and/or modify them into your project and integrate those files into your build process — no special packaging or setup is required

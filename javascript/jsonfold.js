@@ -692,11 +692,6 @@ export function dump(obj, fp, {
   replacer = undefined,
   sortKeys = false,
 } = {}) {
-  const out =
-    fp instanceof JSONFoldFilter
-      ? fp
-      : new JSONFoldFilter(fp, { compact });
-
   // const jsonReplacer = sortKeys
   //   ? sortedReplacer(replacer)
   //   : replacer;
@@ -710,11 +705,34 @@ export function dump(obj, fp, {
   const text = JSON.stringify(value, replacer, indent);
 
   if (text !== undefined) {
+    const out =
+      fp instanceof JSONFoldFilter
+        ? fp
+        : new JSONFoldFilter(fp, { compact });
+
     out.write(text);
     out.write("\n");
+    out.finish();
   }
 
-  out.finish();
+}
+
+export function dumps(obj, {
+  compact = "",
+  indent = 2,
+  replacer = undefined,
+  sortKeys = false,
+} = {}) {
+
+  let text = ""
+  const out = new JSONFoldFilter( s => {text += s; } , { compact });
+
+  return dump(obj, s => {text += s}, {
+    compact: compact,
+    indent: indent,
+    replacer: replacer,
+    sortKeys: sortKeys,
+  })
 }
 
 
@@ -747,8 +765,6 @@ export function stringify(obj, replacer = null, space = null) {
 
   return text;
 }
-
-export const dumps = stringify;
 
 export default {
   JSONFold,
