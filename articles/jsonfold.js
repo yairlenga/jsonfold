@@ -730,17 +730,9 @@ export function dumpi(obj, fp, options = {}) {
   return out.stats;
 }
 
-export function stringify(obj, replacer = null, space = null) {
+export function stringify(obj, options = {}) {
   let text = "";
 
-  let options = {}
-  if ( space && typeof space === "object" && !Array.isArray(space)) {
-    options = space
-  } else {
-    options.indent = space ?? 2 ;
-  }
-
-  if ( replacer != null ) options.replacer = replacer
   dump(obj, s => {
     text += s;
   }, options);
@@ -759,5 +751,3 @@ export default {
   stringify,
   dumps,
 };
-
-
