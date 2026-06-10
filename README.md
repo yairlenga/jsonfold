@@ -1,6 +1,6 @@
 # jsonfold
 
-`jsonfold` makes pretty-printed JSON more compact without turning it back into unreadable one-line JSON.
+> `jsonfold` makes pretty-printed JSON more compact without turning it back into unreadable one-line JSON.
 
 Most JSON serializers offer two extremes:
 
@@ -195,12 +195,15 @@ It is useful when ordinary pretty-printing is too verbose, but compact JSON is t
 
 This repository contains language-specific implementations in subdirectories:
 
-| Language | Package | Status | Notes |
-|---|---|---|---|
-| Python | [python/](./python/) | Beta | Streaming filter implementation with CLI and configurable folding/packing. Following the `json.dump()` API |
-| JavaScript | [javascript/](./javascript/) | Alpha | Wrapper around `JSON.stringify()` with an incremental encoder following Python `json.dump()` style |
-| Java | — | TODO | — |
-| C | — | TODO | — |
+
+| Language | Package | Status | CLI | Filter | Stream | Notes |
+|---|---|---|---|---|---|---|
+| Python | [python/](./python/) | Ready | YES | YES | YES | wrapper for json.dump(s) API |
+| JavaScript | [javascript/](./javascript/) | Beta | YES | YES | - | wrapper for JSON.stringify |
+| Java | [java/](./java/) | Beta | YES | YES | YES | Wrapper for Jackson ObjectMapper |
+| Perl | [perl/](./perl/ ) | Alpha | YES | YES | - | Streaming and wrapper around JSON::encode |
+| C | [c/](./c/) | Alpha | YES | YES | - | Process pretty-printed JSON text |
+
 
 ## Configuration
 
@@ -239,6 +242,10 @@ JSONFold works by applying three optional formatting phases:
 - Join – combine folded containers when they still fit within the configured width.
 
 Each phase behavior is controlled by parameters. The output of the 1st phase is fed into the 2nd phase, which is then fed into the 3rd phase.
+
+## Website
+
+Browser based application, using the Javascript version is available on [jsonfold.dev](https://www.jsonfold.dev)
 
 ## Articles
 
