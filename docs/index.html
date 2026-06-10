@@ -1,169 +1,84 @@
 <!doctype html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>jsonfold</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>jsonfold</title>
 
-<style>
-body {
-    font-family: system-ui, sans-serif;
-    margin: 2rem;
-    max-width: 1400px;
-}
+    <link rel="stylesheet" href="style.css">
 
-h1 {
-    margin-top: 0;
-}
-
-.controls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    margin-bottom: 1rem;
-    align-items: center;
-}
-
-.grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-}
-
-textarea {
-    width: 100%;
-    height: 32rem;
-    font-family: monospace;
-    box-sizing: border-box;
-}
-
-label {
-    display: flex;
-    gap: .5rem;
-    align-items: center;
-}
-
-button {
-    padding: .4rem .8rem;
-}
-
-@media (max-width: 900px) {
-    .grid {
-        grid-template-columns: 1fr;
-    }
-}
-</style>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="favicon.png" sizes="32x32">
 </head>
 
 <body>
 
-<h1>jsonfold</h1>
+    <header class="hero">
+        <div class="brand">
+            <img
+                src="images/jsonfold-logo.svg"
+                alt="jsonfold"
+                width="128"
+                height="128">
+        </div>
 
-<p>
-Compact pretty-printed JSON while keeping it readable.
-</p>
+        <div class="hero-text">
+            <h2>Making JSON readable and compact.</h2>
+            <p>Compact pretty-printed JSON while preserving structure and readability.</p>
+        </div>
+    </header>
 
-<div class="controls">
+    <main class="page">
 
-<label>
-Preset
-<select id="compact">
-    <option>default</option>
-    <option>none</option>
-    <option>low</option>
-    <option>med</option>
-    <option>high</option>
-    <option>max</option>
-    <option>pack</option>
-    <option>fold</option>
-    <option>join</option>
-</select>
-</label>
+        <div class="controls">
+            <label>Preset
+                <select id="compact">
+                    <option>default</option>
+                    <option>none</option>
+                    <option>low</option>
+                    <option>med</option>
+                    <option>high</option>
+                    <option>max</option>
+                    <option>pack</option>
+                    <option>fold</option>
+                    <option>join</option>
+                </select>
+            </label>
 
-<label>
-Width
-<input id="width" type="number" value="80" min="20" max="255">
-</label>
+            <label>Width
+                <input id="width" type="number" value="80" min="20" max="255">
+            </label>
 
-<label>
-Indent
-<input id="indent" type="number" value="2" min="0" max="8">
-</label>
+            <label>Indent
+                <input id="indent" type="number" value="2" min="0" max="8">
+            </label>
 
-<button id="run">Format</button>
+            <button id="run">Format</button>
+        </div>
 
-</div>
+        <div class="grid">
 
-<div class="grid">
+            <div>
+                <h3>Input</h3>
 
-<div>
-<h3>Input</h3>
+                <textarea id="input"> JSON </textarea>
+            </div>
 
-<textarea id="input">{
-  "name": "jsonfold",
-  "items": [
-    1,
-    2,
-    3,
-    4,
-    5
-  ],
-  "nested": {
-    "a": [
-      {
-        "x": 1
-      },
-      {
-        "x": 2
-      }
-    ]
-  }
-}</textarea>
+            <div>
+                <h3>Output</h3>
 
-</div>
+                <textarea id="output" readonly></textarea>
+            </div>
 
-<div>
-<h3>Output</h3>
+        </div>
 
-<textarea id="output" readonly></textarea>
+        <div class="stats" id="stats"> STATS </dev>
 
-</div>
+    </main>
 
-</div>
-
-<script type="module">
-
-import { dumps } from "./jsonfold.js";
-
-function run() {
-
-    const input = document.getElementById("input").value;
-    const compact = document.getElementById("compact").value;
-    const width = Number(document.getElementById("width").value);
-    const indent = Number(document.getElementById("indent").value);
-
-    try {
-        const obj = JSON.parse(input);
-
-        const result = dumps(obj, {
-            compact,
-            width,
-            indent
-        });
-
-        document.getElementById("output").value = result;
-    }
-    catch (e) {
-        document.getElementById("output").value =
-            "ERROR: " + e.message;
-    }
-}
-
-document.getElementById("run").addEventListener("click", run);
-
-run();
-
-</script>
+    <script type="module" src="app.js"></script>
 
 </body>
+
 </html>
