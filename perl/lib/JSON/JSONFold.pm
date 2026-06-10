@@ -128,8 +128,10 @@ use constant {
 };
 
 BEGIN {
+
+
+
     our @EXPORT = qw(
-        C_UNUSED_FIRST
         C_WIDTH
         C_PACK_ARRAY_ITEMS
         C_PACK_OBJ_ITEMS
@@ -140,8 +142,25 @@ BEGIN {
         C_JOIN_ARRAY_ITEMS
         C_JOIN_OBJ_ITEMS
         C_JOIN_NESTING
-        C_UNUSED_LAST
     );
+}
+
+our @FIELDS = (
+    [ 'width',            C_WIDTH ],
+    [ 'pack_array_items', C_PACK_ARRAY_ITEMS ],
+    [ 'pack_obj_items',   C_PACK_OBJ_ITEMS ],
+    [ 'pack_nesting',     C_PACK_NESTING ],
+    [ 'fold_array_items', C_FOLD_ARRAY_ITEMS ],
+    [ 'fold_obj_items',   C_FOLD_OBJ_ITEMS ],
+    [ 'fold_nesting',     C_FOLD_NESTING ],
+    [ 'join_array_items', C_JOIN_ARRAY_ITEMS ],
+    [ 'join_obj_items',   C_JOIN_OBJ_ITEMS ],
+    [ 'join_nesting',     C_JOIN_NESTING ],
+);
+
+sub as_hash {
+    my ($self) = @_ ;
+    map { my ($name, $idx) = @$_ ; ($name => $self->[$idx]) ; } @FIELDS ;
 }
 
 sub _make {

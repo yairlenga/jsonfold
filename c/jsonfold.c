@@ -483,10 +483,10 @@ static bool frame_can_fold(JFFrame f, JFConfig cfg) {
 
 static void merge_into_frame(JFWriter w, JFFrame f, JFLine prev, const JFLine ln) {
     line_merge(prev, ln) ;
-    line_free(ln) ;
-
     f->items += ln->items;
     f->leafs += ln->leafs;
+    line_free(ln) ;
+
     if (prev->items >= f->pack_limit ) {
         prev->can_pack = 0;
     }

@@ -155,7 +155,7 @@ sub show_verbose {
 }
 
 sub stdout_width {
-    return 80 unless -t STDOUT;
+    return unless -t STDOUT;
 
     eval {
         require Term::ReadKey;
@@ -163,7 +163,7 @@ sub stdout_width {
         return $cols if $cols;
     };
 
-    return $ENV{COLUMNS} || 80;
+    return $ENV{COLUMNS} ;
 }
 
 
@@ -178,12 +178,12 @@ sub main {
     my $verose = $opt->{verbose} ;
 
     my $data = $opt->{demo} ? demo_data() : read_input($opt->{input});
-    $opt->{cfg}{width} //= stdout_width() ;
+    $opt->{cfg}{width} //= stdout_width() if -t STDOUT ;
 
     my $cfg = get_config($opt);
     my $verbose = $opt->{verbose} ;
 
-    show_verbose("config", { % $cfg }) if $verbose ;
+    show_verbose("config", { $cfg->as_hash }) if $verbose ;
  
     my $info = dumpi($data, \*STDOUT, compact => $cfg, sort_keys => $opt->{sort_keys});
 

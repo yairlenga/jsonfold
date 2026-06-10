@@ -33,8 +33,8 @@ export async function main(argv = process.argv.slice(2)) {
   let cfg = jsonfold.JSONFold.preset(args.compact);
   const overrides = {};
 
-  if (args.width === undefined) {
-    overrides.width = process.stdout.isTTY ? process.stdout.columns : 80;
+  if (args.width === undefined && process.stdout.isTTY) {
+    overrides.width = process.stdout.columns
   }
 
   // Convenience shorthands
