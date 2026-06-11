@@ -21,6 +21,17 @@ const SAMPLE_JSON = `{
   }
 }`;
 
+const examples = [
+  {
+    label: "Basic demo",
+    url: "examples/sample.json"
+  },
+  {
+    label: "GeoJSON states/provinces",
+    url: "https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-python/geojson-none.json"
+  }
+];
+
 const input = document.getElementById("input");
 const output = document.getElementById("output");
 const stats = document.getElementById("stats");
@@ -75,6 +86,46 @@ function textStats(s) {
     };
 }
 
+function complexity(lines, width) {
+    return lines * width * Math.max(lines, width);
+}
+
+function readabilityIndex(stats, pretty) {
+    const prettyComplexity =
+        complexity(pretty.lines, pretty.width);
+
+    const currentComplexity =
+        complexity(stats.lines, stats.width);
+
+    return currentComplexity > 0 ? prettyComplexity / currentComplexity : null
+}
+
+function fmtNumber(n) {
+    return Number(n).toLocaleString();
+}
+
+function fmtBytes(bytes) {
+
+    if ( bytes == undefined ) return "?"
+    const units = ["B", "KB", "MB", "GB", "TB"];
+
+    let value = bytes;
+    let unit = 0;
+
+    while (value >= 1024 && unit < units.length - 1) {
+        value /= 1024;
+        unit++;
+    }
+
+    return value >= 10
+        ? `${value.toFixed(0)} ${units[unit]}`
+        : `${value.toFixed(1)} ${units[unit]}`;
+}
+
+function fmtStats(s) {
+    return `${fmtBytes(s.bytes)} (${fmtNumber(s.lines)}L X ${fmtNumber(s.width)}C)`;
+}
+
 function updateStats(rawText, prettyText, foldedText) {
     const raw = textStats(rawText);
     const pretty = textStats(prettyText);
@@ -88,11 +139,13 @@ function updateStats(rawText, prettyText, foldedText) {
             ? Math.round((1 - foldedArea / prettyArea) * 100)
             : 0;
 
+    const ri = readabilityIndex(folded, pretty)
+    console.log(ri)
+
     stats.textContent =
-        `Reduction: ${reduction}% | ` +
-        `Raw: ${raw.lines}L/${raw.width}W/${raw.bytes}B | ` +
-        `Pretty: ${pretty.lines}L/${pretty.width}W/${pretty.bytes}B | ` +
-        `Folded: ${folded.lines}L/${folded.width}W/${folded.bytes}B`;
+        `Reduction: ${reduction}% | ` + 
+        `Raw: ${fmtStats(raw)} | Pretty: ${fmtStats(pretty)} | Folded: ${fmtStats(folded)} | ` +
+        `Readability Index: ${ri ? ri.toFixed(1) : "NA"}`
 }
 
 function format() {
@@ -100,6 +153,8 @@ function format() {
     const compactName = compactEl.value;
     const width = Number(widthEl.value) || 80;
     const indent = Number(indentEl.value) || 2;
+    output.value = "Processing ..."
+    stats.textContent = "Processing ..."
 
     try {
         const obj = JSON.parse(rawText);
@@ -136,12 +191,45 @@ function formatIfLive() {
     }
 }
 
+async function loadExample(url) {
+  const res = await fetch(url);
+
+  if (!res.ok) {
+    throw new Error(`Failed to load example: ${res.status}`);
+  }
+
+  const text = await res.text();
+
+  // Optional validation / pretty input
+  const data = JSON.parse(text);
+
+  input.value = JSON.stringify(data, null, 2);
+  format()
+}
+
+for (const ex of examples) {
+  const opt = document.createElement("option");
+  opt.value = ex.url;
+  opt.textContent = ex.label;
+  exampleSelect.appendChild(opt);
+}
+
+
 runEl.addEventListener("click", format);
 
 input.addEventListener("input", formatIfLive);
 compactEl.addEventListener("change", formatIfLive);
 widthEl.addEventListener("input", formatIfLive);
 indentEl.addEventListener("input", formatIfLive);
+
+exampleSelect.addEventListener("change", async (e) => {
+    const url = e.target.value;
+    if (!url) return;
+
+    await loadExample(url);
+
+    e.target.selectedIndex = 0;   // No change event generated
+});
 
 liveEl.addEventListener("change", () => {
     if (liveEl.checked) {

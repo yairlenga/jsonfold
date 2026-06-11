@@ -22,15 +22,29 @@ This article describes `jsonfold`, a process for "compacting" pretty-print JSON 
 # `jsonfold` in 2 minutes
 
 > Get fine control over the pretty-print JSON output. Keep it machine-readable and human-friendly.
+> 
+> jsonfold works with existing serializers rather than replacing them.
+
+Project Website: https://jsonfold.dev
+
+Repository: https://github.com/yairlenga/jsonfold
+
+JavaScript implementation is under `javascript` directory: (jsonfold.js)
+
+Install from NPM:
+```shell
+npm install @jsonfold/core
+```
+or copy jsonfold.js directly from the [GitHub project](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/02-javascript/jsonfold.js) 
 
 ## Minimal Usage
 
-Pull `jsonfold.js` from [GitHub project](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/02-javascript/jsonfold.js)
+
 
 ```javascript
 import * as jsonfold from "./jsonfold.js";
 
-data = {
+const data = {
     "meta": {"version": 1, "ok": true},
     "ids": [1, 2, 3, 4, 5],
     "items": [{"id": 1, "name": "alpha"}, {"id": 2, "name": "beta"}],
@@ -42,14 +56,6 @@ console.log(jsonfold.stringify(data)) ;
 // Use custom setting
 console.log(jsonfold.stringify(data, null, { compact: "high", indent: 4 }))
 ```
-
-## GitHub Project
-
-Repository: https://github.com/yairlenga/jsonfold
-
-Javascript implementation is under `javascript` directory: (jsonfold.js)
-
-NPM: `npm install @jsonfold/core`
 
 
 ## Different levels of compaction
@@ -64,17 +70,13 @@ NPM: `npm install @jsonfold/core`
     "y": { "z": "xyz" }
   }
 }
-```
 
-```json
 // Compact=default
 {
   "a": { "b": { "c": "abc" } },
   "x": { "y": { "z": "xyz" } }
 }
-```
 
-```json
 // Compact=max
 { "a": { "b": { "c": "abc" } }, "x": { "y": { "z": "xyz" } } }
 ```
@@ -83,19 +85,33 @@ NPM: `npm install @jsonfold/core`
 
 Using the geojson file [geojson.xyz: admin 1 states provinces](https://geojson.xyz/). You can view the actual output:
 
-* [Baseline - no formatting](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-python/geojson.json)
-  130K, 1 line, 130,429 columns, 0% overhead
-* [Pretty-Printed, indent=2](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-python/geojson-none.json):
-  285K, 11731 lines, 79 columns, 120% overhead
+* [Minified](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-python/geojson.json)
+  130K, 1 line, 130,429 columns, Readability: 0.64
+* [Baseline, Pretty-Printed, indent=2](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-python/geojson-none.json):
+  285K, 11731 lines, 79 columns, Readability: 1.00
 * [jsonfold compact=low](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-python/geojson-low.json):
-  167K, 2344 lines, 120 columns, 28% overhead
+  167K, 2344 lines, 120 columns, Readability: 16
 * [jsonfold compact=default](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-python/geojson-default.json):
-  167K, 2344 lines, 120 columns, 28% overhead
+  167K, 2344 lines, 120 columns, Readability: 16
 * [jsonfold compact=high](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-python/geojson-high.json):
-  166K, 2239 lines, 120 columns, 27% overhead
+  166K, 2239 lines, 120 columns, Readability: 18
 * [jsonfold compact=max](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-python/geojson-max.json):
-  156K, 1321 lines, 255 columns, 20% overhead
+  156K, 1321 lines, 255 columns, Readability: 24
 
+The "Readability" value is **non-scientific** measure to estimate how suitable the output is for human inspection. It is calculated by assigning visual complexity to the output.
+> **Visual complexity** =  
+> &nbsp;&nbsp;&nbsp;&nbsp;lines X max_width X max (lines, max_width)
+>
+> **Readability Index** =  
+> &nbsp;&nbsp;&nbsp;&nbsp;Complexity(pretty_printed) / Complexity(document)
+>
+
+Higher visual complexity values are assigned to outputs that are either very wide or require excessive  scrolling. The Readability Index is the inverse of visual complexity, normalized so that conventional pretty-printed JSON has a score of 1.0.
+
+The data tells us:
+- The **minified** is space efficient, but essentially unreadable (without tools).
+- The **Pretty version** generates a readable document, but increases the output size by 2.2X.
+- **`jsonfold`**: improves the Readability Index by 16-24X, while retaining most of the space benefits.
 
 # Key ideas
 
@@ -108,6 +124,15 @@ For my implementation, I chose NOT to build another serializer. There are alread
 - The Python [json module - JSON encoder and decoder](https://docs.python.org/3/library/json.html) provides options for custom data types, `NaN` handling, custom encoders, and more.
 
 - [Java Jackson ](https://github.com/fasterxml/jackson) `ObjectMapper` can perform complex transformation of POJOs based on annotations, introspection and templates.
+
+## Why not build a complete JSON serializer?
+
+We already have good JavaScript serializers that handle:
+- Filtering and transformation (via replacer)
+- Application specific transformation with toJSON methods
+- Serialization for built-in and special values.
+
+`jsonfold` focuses only on formatting the generated JSON data.
 
 ## Wrap the output stream
 
@@ -289,13 +314,13 @@ jsonfold.dump(data, process.stdout)
 
 ```
 
-The first version will need more 2X memory, and will send the first byte after compacting the full pretty-print JSON text. The second version will need 1X memory, and will send the first byte as soon as the generation of the pretty-print version is completed.
+The first version will need more 2X memory, and will send the first byte after compacting the full pretty-print JSON text. The second version avoids building the compacted output as a second large string. When used with serializers that support incremental output, jsonfold can begin sending data before the entire document has been processed or generated.
 
 If the string generation call `stringify` or `dumps()` are being used - there is no choice but to build and return the (potentially huge) final string. In this case, the incremental processing will cap the amount of extra memory as described above, and `io.StringIO()` to build the final string reduces the cost.
 
 One important advantage of the filtering/streaming approach is that it should work with any other custom application logic - the `replacer`, application defined `toJSON` methods and `rawJSON` segments. It also can be used when the json text is coming from files, SQL database, document database, etc.
 
-Example: using custom encoder
+Example: using custom replacer
 ```javascript
 import * as jsonfold from "./jsonfold.js"
 
@@ -327,9 +352,9 @@ Will output, after being formatted by `jsonfold` - notice only "name" and "addre
 
 # Cross-language portability
 
-This article covers the `jsonfold` implementation in Javascript - the same approach can be used in other languages to format JSON according to the same rules - leveraging existing JSON serializers, and various stream filtering in other languages.
+This article covers the `jsonfold` implementation in JavaScript - the same approach can be used in other languages to format JSON according to the same rules - leveraging existing JSON serializers, and various stream filtering in other languages.
 
-* Javascript: In Node, the `Writable` stream can be wrapped to apply the `jsonfold` logic on the output from any JSON serializer.
+* JavaScript: In Node, the `Writable` stream can be wrapped to apply the `jsonfold` logic on the output from any JSON serializer.
 * In Python, any output stream (`textIOWrapper`) can be wrapped with the `jsonfold` filter
 * In Java, the `java.io.FilterWriter` can be used to add `jsonfold` formatting to any character stream.
 * In C, the `FILE *` object can be customized using the GLIBC extension `fopencookie` or BSD `funopen`
