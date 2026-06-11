@@ -82,11 +82,11 @@ console.log(jsonfold.stringify(data, null, { compact: "high", indent: 4 }))
 
 ### `jsonfold` on real data.
 
-Using the geojson file [geojson.xyz: admin 1 states provinces](https://geojson.xyz/). You can view the actual output. Measurements below were taken with a maximum line width of 120 columns.
+Using the geojson file [geojson.xyz: admin 1 states provinces](https://geojson.xyz/). You can view the actual output. Measurements below were taken with a maximum line width of 120 columns and indent=2.
 
 * [Minified](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-python/geojson.json)
   130K, 1 line, 130,429 columns, Readability Index: 0.64
-* [Baseline, Pretty-Printed, indent=2](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-python/geojson-none.json):
+* [Baseline, Pretty-Printed](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-python/geojson-none.json):
   285K, 11731 lines, 79 columns, Readability Index: 1.00
 * [jsonfold compact=low](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-python/geojson-low.json):
   167K, 2344 lines, 120 columns, Readability Index: 16.0
@@ -317,9 +317,9 @@ jsonfold.dump(data, process.stdout)
 
 The first version may require roughly 2X memory, and will send the first byte after compacting the full pretty-print JSON text. The second version avoids building the compacted output as a second large string. When used with serializers that support incremental output, jsonfold can begin sending data before the entire document has been processed or generated.
 
-If the string generation call `stringify` or `dumps()` are being used - there is no choice but to build and return the (potentially huge) final string. In this case, the incremental processing will cap the amount of extra memory as described above, and `io.StringIO()` to build the final string reduces the cost.
+If the string generation call `JSON.stringify` (or the provided python inspired `jsonfold.dumps`) are being used - there is no choice but to build and return the (potentially huge) final string. In this case, the incremental processing will cap the amount of temporary memory being used.
 
-One important advantage of the filtering/streaming approach is that it should work with any other custom application logic - the `replacer`, application defined `toJSON` methods and `rawJSON` segments. It also can be used when the json text is coming from files, SQL database, document database, etc.
+One important advantage of the filtering/streaming approach is that it should work with any other custom application logic - the `replacer`, application defined `toJSON` methods and `rawJSON` segments. It also can be used when the JSON text is coming from files, SQL database, document database, etc.
 
 Example: using custom replacer
 ```javascript
@@ -341,7 +341,7 @@ let data = [
 console.log(jsonfold.stringify(data, replacer))
 
 ```
-Will output, after being formatted by `jsonfold` - notice only "name" and "address" are show - "age" was filtered out by the replacer attribute.
+Will output, after being formatted by `jsonfold` - notice only "name" and "address" are shown - "age" was filtered out by the replacer attribute.
 
 ```json
 [
@@ -395,6 +395,6 @@ As always, evaluate and test the code carefully before adopting it in production
 
 # Usage and License
 
-The supporting file (`jsonfold.js`, and json examples) are provided under the MIT license and are intended to be copied and used as-is in your own projects.
+The supporting file (`jsonfold.js`, and JSON examples) are provided under the MIT license and are intended to be copied and used as-is in your own projects.
 
-You can simply copy and/or modify them into your project and integrate those files into your build process — no special packaging or setup is required
+If you prefer - You can simply copy and/or modify them into your project and integrate those files into your build process — no special packaging or setup is required
