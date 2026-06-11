@@ -28,42 +28,44 @@
     <main class="page">
 
         <div class="controls">
-            <select id="exampleSelect">
-                <option value="">Select example...</option>
-            </select>
-
-            <label>
-                Preset
-                <select id="compact">
-                    <option>default</option>
-                    <option>none</option>
-                    <option>low</option>
-                    <option>med</option>
-                    <option>high</option>
-                    <option>max</option>
-                    <option>pack</option>
-                    <option>fold</option>
-                    <option>join</option>
+            <form id="controlForm" onsubmit="return false">
+                <select id="exampleSelect">
+                    <option value="">Select example...</option>
                 </select>
-            </label>
 
-            <label>
-                Width
-                <input id="width" type="number" value="80" min="20" max="255">
-            </label>
+                <label>
+                    Preset
+                    <select id="compact">
+                        <option>default</option>
+                        <option>none</option>
+                        <option>low</option>
+                        <option>med</option>
+                        <option>high</option>
+                        <option>max</option>
+                        <option>pack</option>
+                        <option>fold</option>
+                        <option>join</option>
+                    </select>
+                </label>
 
-            <label>
-                Indent
-                <input id="indent" type="number" value="2" min="0" max="8">
-            </label>
+                <label>
+                    Width
+                    <input id="width" type="number" value="100" min="20" max="255">
+                </label>
 
-            <button id="run">Format</button>
+                <label>
+                    Indent
+                    <input id="indent" type="number" value="2" min="0" max="8">
+                </label>
 
-            <label>
-                <input id="live" type="checkbox">
-                Live
-            </label>
+                <button id="run" type="submit">Format</button>
 
+                <label>
+                    <input id="live" type="checkbox">
+                    Live
+                </label>
+
+            </form>
         </div>
 
 
@@ -71,12 +73,12 @@
 
             <div>
                 <h3>Input</h3>
-                <textarea id="input"></textarea>
+                <textarea id="input" wrap="off"></textarea>
             </div>
 
             <div>
                 <h3>Output</h3>
-                <textarea id="output" readonly></textarea>
+                <textarea id="output" wrap="off" readonly></textarea>
             </div>
 
         </div>
@@ -110,7 +112,8 @@
                     Maven (Java)
                 </a>
 
-                <a href="https://medium.com/@yair.lenga/a-streaming-json-formatter-that-works-with-existing-serializers-eced220da37d">
+                <a
+                    href="https://medium.com/@yair.lenga/a-streaming-json-formatter-that-works-with-existing-serializers-eced220da37d">
                     <img src="https://cdn.simpleicons.org/medium" alt="">
                     Medium (Python Article)
                 </a>

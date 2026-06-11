@@ -11,6 +11,7 @@
 #define JSONFOLD_MAX_ARRAY_ITEMS 1000
 #define JSONFOLD_MAX_OBJ_ITEMS   1000
 #define JSONFOLD_MAX_NESTING     10
+#define JSONFOLD_DEFAULT_WIDTH   100
 
 // count_t is integer which will never be negative. index, sizes, byte counts.
 typedef int count_t ;
@@ -113,11 +114,11 @@ static const struct jsonfold_config CFG_OFF = {
 
 
 static const struct jsonfold_config CFG_NONE = {
-    .width            = 80,
+    .width            = JSONFOLD_DEFAULT_WIDTH,
 } ;
 
 static const struct jsonfold_config CFG_DEFAULT = {
-    .width            = 80,
+    .width            = JSONFOLD_DEFAULT_WIDTH,
     .pack_array_items = 8,
     .pack_obj_items   = 4,
     .pack_nesting     = 1,
@@ -130,7 +131,7 @@ static const struct jsonfold_config CFG_DEFAULT = {
 };
 
 static const struct jsonfold_config CFG_LOW = {
-    .width            = 80,
+    .width            = JSONFOLD_DEFAULT_WIDTH,
     .pack_array_items = 8,
     .pack_obj_items   = 4,
     .pack_nesting     = 1,
@@ -143,7 +144,7 @@ static const struct jsonfold_config CFG_LOW = {
 };
 
 static const struct jsonfold_config CFG_MED = {
-    .width            = 80,
+    .width            = JSONFOLD_DEFAULT_WIDTH,
     .pack_array_items = 8,
     .pack_obj_items   = 4,
     .pack_nesting     = 1,
@@ -156,7 +157,7 @@ static const struct jsonfold_config CFG_MED = {
 };
 
 static const struct jsonfold_config CFG_HIGH = {
-    .width            = 80,
+    .width            = JSONFOLD_DEFAULT_WIDTH,
     .pack_array_items = 16,
     .pack_obj_items   = 8,
     .pack_nesting     = 4,
@@ -182,21 +183,21 @@ static const struct jsonfold_config CFG_MAX = {
 };
 
 static const struct jsonfold_config CFG_PACK = {
-    .width            = 80,
+    .width            = JSONFOLD_DEFAULT_WIDTH,
     .pack_array_items = JSONFOLD_MAX_ARRAY_ITEMS,
     .pack_obj_items   = JSONFOLD_MAX_OBJ_ITEMS,
     .pack_nesting     = JSONFOLD_MAX_NESTING,
 };
 
 static const struct jsonfold_config CFG_FOLD = {
-    .width            = 80,
+    .width            = JSONFOLD_DEFAULT_WIDTH,
     .fold_array_items = JSONFOLD_MAX_ARRAY_ITEMS,
     .fold_obj_items   = JSONFOLD_MAX_OBJ_ITEMS,
     .fold_nesting     = JSONFOLD_MAX_NESTING,
 };
 
 static const struct jsonfold_config CFG_JOIN = {
-    .width            = 80,
+    .width            = JSONFOLD_DEFAULT_WIDTH,
     .fold_array_items = JSONFOLD_MAX_ARRAY_ITEMS,
     .fold_obj_items   = JSONFOLD_MAX_OBJ_ITEMS,
     .fold_nesting     = JSONFOLD_MAX_NESTING,

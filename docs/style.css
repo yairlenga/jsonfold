@@ -54,11 +54,21 @@ body {
 
 .controls {
     display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
     align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
 
-    margin: 0 0 16px;
+#controlForm {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.controls label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
 label {
@@ -78,7 +88,7 @@ button {
 
 .grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 40% 60%;
     gap: 1rem;
 }
 
