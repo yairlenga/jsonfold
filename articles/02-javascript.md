@@ -1,7 +1,7 @@
 <!-- cSpell:words jsonfold isinstance rapidjson TTFB kwargs fopencookie funopen  -->
 <!-- LTeX: dictionary+=jsonfold dictionary+=serializer dictionary+=serializers dictionary+=Serializers -->
 
-# A Streaming JSON Formatter That Works With Existing Serializers
+# A Streaming JSON Formatter for JavaScript that Works with JSON.stringify
 
 Built-in JSON serializers give us two choices:
 
@@ -23,9 +23,9 @@ This article describes `jsonfold`, a process for "compacting" pretty-print JSON 
 
 > Get fine control over the pretty-print JSON output. Keep it machine-readable and human-friendly.
 > 
-> jsonfold works with existing serializers rather than replacing them.
+> jsonfold works with existing serializers rather than replacing them. 
 
-Project Website: https://jsonfold.dev
+Project Website: https://jsonfold.dev. The website includes an interactive formatter and the GeoJSON example used throughout this article.
 
 Repository: https://github.com/yairlenga/jsonfold
 
@@ -40,9 +40,8 @@ or copy jsonfold.js directly from the [GitHub project](https://raw.githubusercon
 ## Minimal Usage
 
 
-
 ```javascript
-import * as jsonfold from "./jsonfold.js";
+import * as jsonfold from "@jsonfold/core"
 
 const data = {
     "meta": {"version": 1, "ok": true},
@@ -51,7 +50,7 @@ const data = {
 }
 
 // Use default setting
-console.log(jsonfold.stringify(data)) ;
+console.log(jsonfold.stringify(data))
 
 // Use custom setting
 console.log(jsonfold.stringify(data, null, { compact: "high", indent: 4 }))
@@ -83,22 +82,22 @@ console.log(jsonfold.stringify(data, null, { compact: "high", indent: 4 }))
 
 ### `jsonfold` on real data.
 
-Using the geojson file [geojson.xyz: admin 1 states provinces](https://geojson.xyz/). You can view the actual output:
+Using the geojson file [geojson.xyz: admin 1 states provinces](https://geojson.xyz/). You can view the actual output. Measurements below were taken with a maximum line width of 120 columns.
 
 * [Minified](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-python/geojson.json)
-  130K, 1 line, 130,429 columns, Readability: 0.64
+  130K, 1 line, 130,429 columns, Readability Index: 0.64
 * [Baseline, Pretty-Printed, indent=2](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-python/geojson-none.json):
-  285K, 11731 lines, 79 columns, Readability: 1.00
+  285K, 11731 lines, 79 columns, Readability Index: 1.00
 * [jsonfold compact=low](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-python/geojson-low.json):
-  167K, 2344 lines, 120 columns, Readability: 16
+  167K, 2344 lines, 120 columns, Readability Index: 16.0
 * [jsonfold compact=default](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-python/geojson-default.json):
-  167K, 2344 lines, 120 columns, Readability: 16
+  167K, 2344 lines, 120 columns, Readability Index: 16.0
 * [jsonfold compact=high](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-python/geojson-high.json):
-  166K, 2239 lines, 120 columns, Readability: 18
+  166K, 2239 lines, 120 columns, Readability Index: 18.0
 * [jsonfold compact=max](https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-python/geojson-max.json):
-  156K, 1321 lines, 255 columns, Readability: 24
+  156K, 1321 lines, 255 columns, Readability Index: 24.0
 
-The "Readability" value is **non-scientific** measure to estimate how suitable the output is for human inspection. It is calculated by assigning visual complexity to the output.
+The "Readability Index" value is a **non-scientific** measure to estimate how suitable the output is for human inspection. It is calculated by assigning visual complexity to the output.
 > **Visual complexity** =  
 > &nbsp;&nbsp;&nbsp;&nbsp;lines X max_width X max (lines, max_width)
 >
@@ -110,8 +109,10 @@ Higher visual complexity values are assigned to outputs that are either very wid
 
 The data tells us:
 - The **minified** is space efficient, but essentially unreadable (without tools).
-- The **Pretty version** generates a readable document, but increases the output size by 2.2X.
+- The **Pretty-printed version** generates a readable document, but increases the output size by 2.2X.
 - **`jsonfold`**: improves the Readability Index by 16-24X, while retaining most of the space benefits.
+
+You can try the same example interactively at https://jsonfold.dev. The site uses the same JavaScript `jsonfold` library and includes a GeoJSON sample.
 
 # Key ideas
 
@@ -197,7 +198,7 @@ Example:
         // 16 Additional entries
         "DEU",
         "TZA"
-    ]
+    ],
     "name": {
         "RUS": "Russia",
         "CAN": "Canada",
@@ -297,11 +298,11 @@ Continuing with the above example, the attributes 'summary' and 'meta' are now m
 
 JSON documents can be very large and deeply nested. It's easier to implement the compaction by operating on a complete pretty-printed JSON document - but this has a price:
 
-* Additional memory - having to hold both the original document and the compacted document can increase temporary memory usage to 2-4 times the size of the original document.
+* Additional memory - having to hold both the original document and the compacted document can increase temporary memory usage to 2-4X the size of the original document.
 * Operations on large strings: Concatenation and iteration over large strings are more costly than operations on smaller chunks.
-* Time to first byte ("TTFB"): delaying processing until the full documents is generated means that TTFB increases significantly. This can have noticeable negative impact on the service responsiveness to end users.
+* Time to first byte ("TTFB"): delaying processing until the full document is generated means that TTFB increases significantly. This can have noticeable negative impact on the service responsiveness to end users.
   
-The `jsonfold` processes the document in small bites. While the default JSON serializer `JSON.stringify(...)` generates (potentially) large string before returning - sending the "compacted" JSON to a stream (file, socket, ...) does not have to wait until the complete response is formatted. In additional, the extra memory that is needed for processing is approximately 4X the maximum width (actual or set).
+The `jsonfold` processes the document in small bites. While the default JSON serializer `JSON.stringify(...)` generates (potentially) large string before returning - sending the "compacted" JSON to a stream (file, socket, ...) does not have to wait until the complete response is formatted. In addition, the extra memory that is needed for processing is approximately 4X the maximum width (actual or set).
 
 Compare:
 ```javascript
@@ -314,7 +315,7 @@ jsonfold.dump(data, process.stdout)
 
 ```
 
-The first version will need more 2X memory, and will send the first byte after compacting the full pretty-print JSON text. The second version avoids building the compacted output as a second large string. When used with serializers that support incremental output, jsonfold can begin sending data before the entire document has been processed or generated.
+The first version may require roughly 2X memory, and will send the first byte after compacting the full pretty-print JSON text. The second version avoids building the compacted output as a second large string. When used with serializers that support incremental output, jsonfold can begin sending data before the entire document has been processed or generated.
 
 If the string generation call `stringify` or `dumps()` are being used - there is no choice but to build and return the (potentially huge) final string. In this case, the incremental processing will cap the amount of extra memory as described above, and `io.StringIO()` to build the final string reduces the cost.
 
@@ -337,7 +338,7 @@ let data = [
   }
 ]
 
-console.log(jsonfold.stringify(data, replacer)) ;
+console.log(jsonfold.stringify(data, replacer))
 
 ```
 Will output, after being formatted by `jsonfold` - notice only "name" and "address" are show - "age" was filtered out by the replacer attribute.
@@ -349,6 +350,8 @@ Will output, after being formatted by `jsonfold` - notice only "name" and "addre
   { "name": "John", "address": "California" }
 ]
 ```
+
+In the current JavaScript implementation, JSON.stringify() still creates the pretty-printed string first. The folding stage is incremental. In Python, Java, C, or any serializer that writes incrementally, the same filter design can stream earlier.
 
 # Cross-language portability
 
