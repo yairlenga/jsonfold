@@ -107,6 +107,7 @@ use Exporter 'import';
 use constant MAX_ARRAY_ITEMS => 1000;
 use constant MAX_OBJ_ITEMS   => 1000;
 use constant MAX_NESTING     => 10;
+use constant DEFAULT_WIDTH   => 100;
 
 our $SEQ;
 use constant {
@@ -184,7 +185,7 @@ sub _make {
 }
 
 our $NONE = __PACKAGE__->_make(
-    width            => 80,
+    width            => DEFAULT_WIDTH,
 
     pack_array_items => 0,
     pack_obj_items   => 0,
@@ -200,7 +201,7 @@ our $NONE = __PACKAGE__->_make(
 );
 
 our $DEFAULT = __PACKAGE__->_make(
-    width            => 80,
+    width            => DEFAULT_WIDTH,
 
     pack_array_items => 8,
     pack_obj_items   => 4,

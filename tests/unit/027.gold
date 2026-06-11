@@ -1,5 +1,1 @@
-{
-  "items": [
-    { "id": 1, "ok": true }, { "id": 2, "ok": false }, { "id": 3, "ok": true }
-  ]
-}
+{ "items": [ { "id": 1, "ok": true }, { "id": 2, "ok": false }, { "id": 3, "ok": true } ] }

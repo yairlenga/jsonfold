@@ -16,7 +16,7 @@ Example
         "meta": {"version": 1, "ok": True},
     }
 
-    # write Compacted JSON stdout, 80 columns
+    # write Compacted JSON stdout, uses default width (100)
     dump(data, fp=sys.stdout)
 
     # Getting JSON String, use "high" compact level, width=120
@@ -48,10 +48,10 @@ Compatibility API
 JSONFold also provides drop-in replacements for Python's standard
 json.dump() and json.dumps() functions.
 
-    dump(..., compact="default", width=80)
+    dump(..., compact="default", width=N)
         Compatible with json.dump(), with additional JSONFold options:
 
-    dumps(..., compact="default", width=80)
+    dumps(..., compact="default", width=N)
         Compatible with json.dumps(), with additional JSONFold options:
 
 The compatibility API defaults to indent=2 and supports the
@@ -215,6 +215,7 @@ from enum import IntEnum, auto
 MAX_ARRAY_ITEMS = 1000
 MAX_OBJ_ITEMS = 1000
 MAX_NESTING = 10
+DEFAULT_WIDTH = 100
 
 @dataclass(frozen=True, slots=True)
 class JSONFold:
@@ -224,7 +225,7 @@ class JSONFold:
     Larger values allow more aggressive compaction, but all output remains
     subject to the configured width limit.
     """
-    width: int = 80
+    width: int = DEFAULT_WIDTH
 # Commented out next line - trouble with kernprof
 #    _: KW_ONLY
     # Phase 1 – pack scalars N-per-line
@@ -975,7 +976,7 @@ def main(argv: list[str] | None = None) -> int:
         description="Read JSON from stdin; write folded JSON to stdout.")
     p.add_argument("--demo",   action="store_true")
     p.add_argument("--compact", choices=JSONFold.PRESETS.keys(), default="default")
-    p.add_argument("--width",  type=int, default=None, help="line width limit (default: terminal width/80)")
+    p.add_argument("--width",  type=int, default=None, help=f"line width limit (default: terminal width/{DEFAULT_WIDTH})")
     p.add_argument("--verbose", "-v", action="store_true", help="Enable verbose/debug output")
     p.add_argument("--input", "-i", metavar="FILE", help="Read JSON input from file instead of stdin")
 
@@ -988,7 +989,7 @@ def main(argv: list[str] | None = None) -> int:
     if width is None:
         if sys.stdout.isatty():
             import shutil
-            #width = shutil.get_terminal_size(fallback=(24,80)).columns
+            width = shutil.get_terminal_size(fallback=(24,DEFAULT_WIDTH)).columns
 
     cfg = config(args.compact)
 

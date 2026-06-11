@@ -40,7 +40,7 @@ do
             passed=$((passed+1))
         else
             failed=$((failed+1))
-            echo "FAIL $base"
+            echo "FAIL $base" >&2
         fi
     else
         echo "SKIP $base: no $base.gold"

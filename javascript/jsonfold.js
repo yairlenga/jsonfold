@@ -17,10 +17,11 @@ const CLOSING_KIND = Object.freeze({
 export const MAX_ARRAY_ITEMS = 1000;
 export const MAX_OBJ_ITEMS = 1000;
 export const MAX_NESTING = 10;
+export const DEFAULT_WIDTH = 100;
 
 export class JSONFold {
   constructor({
-    width = 80,
+    width = DEFAULT_WIDTH,
     packArrayItems = 8,
     packObjItems = 4,
     packNesting = 1,

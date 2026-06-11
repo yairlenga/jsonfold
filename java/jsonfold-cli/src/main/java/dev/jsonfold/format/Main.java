@@ -332,7 +332,7 @@ public final class Main {
             Options use --name=value form only:
                   --input=file.json
                   --compact=default|none|low|med|high|max|pack|fold|join
-                  --width=80
+                  --width=N
                   --indent=2
 
                   --pack-items=N

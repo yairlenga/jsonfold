@@ -14,8 +14,9 @@ public class JSONFold implements Cloneable {
     public static final int MAX_ARRAY_ITEMS = 1000;
     public static final int MAX_OBJ_ITEMS = 1000;
     public static final int MAX_NESTING = 10;
+    public static final int DEFAULT_WIDTH = 100;
 
-    int width = 80;
+    int width = DEFAULT_WIDTH;
 
     int packArrayItems = 8;
     int packObjItems = 4;
