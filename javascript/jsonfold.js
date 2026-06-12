@@ -763,15 +763,15 @@ export function format_json(obj, width, config, {
   sortKeys = false,
   replacer = undefined,
 } = {} ) {
-  cfg = _config(config, width)
+  const cfg = _config(config, width)
   if ( sortKeys ) replacer = sortedReplacer(replacer)
 
-  const text = JSON.stringify(value, replacer, indent)
+  const text = JSON.stringify(obj, replacer, indent)
   if ( typeof text != "string" ) return text
 
-  buff = ""
-  fp = s => { buff += s ; }
-  stats = _stream_text(text, fp, width, cfg)
+  let buff = ""
+  const fp = s => { buff += s ; }
+  let stats = _stream_text(text, fp, width, cfg)
   return buff
 }
 
@@ -787,7 +787,7 @@ export function dump(obj, fp, {
   replacer = undefined,
   sortKeys = false,
 } = {}) {
-  cfg = _config(compact, width)
+  const cfg = _config(compact, width)
   if ( sortKeys ) replacer = sortedReplacer(replacer)
 
   const text = JSON.stringify(obj, replacer, indent);
@@ -799,20 +799,21 @@ export function dump(obj, fp, {
 
 export function dumps(obj, {
   compact = "",
+  width = undefined,
   indent = 2,
   replacer = undefined,
   sortKeys = false,
 } = {}) {
-  cfg = _config(compact, width)
+  const cfg = _config(compact, width)
   if ( sortKeys ) replacer = sortedReplacer(replacer)
 
 
-  const text = JSON.stringify(value, replacer, indent)
+  const text = JSON.stringify(obj, replacer, indent)
   if ( typeof text != "string" ) return text
 
-  buff = ""
-  fp = s => { buff += s ; }
-  stats = _stream_text(text, fp, width, cfg)
+  let buff = ""
+  const fp = s => { buff += s ; }
+  let stats = _stream_text(text, fp, width, cfg)
   return buff
 }
 
