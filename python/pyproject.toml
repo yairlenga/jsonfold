@@ -15,7 +15,7 @@ authors = [
 ]
 
 [project.scripts]
-jsonfold = "jsonfold_cli:main"
+jsonfold = "cli:main"
 
 [tool.setuptools]
 py-modules = ["jsonfold", "jsonfold_cli"]
