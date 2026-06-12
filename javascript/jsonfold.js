@@ -19,7 +19,15 @@ export const MAX_OBJ_ITEMS = 1000;
 export const MAX_NESTING = 10;
 export const DEFAULT_WIDTH = 100;
 
-export class JSONFold {
+
+/**
+ * Configuration for JSON folding.
+ *
+ * Packing, folding and joining are controlled by
+ * item-count, nesting and width limits.
+ */
+
+export class JSONFoldConfig {
   constructor({
     width = DEFAULT_WIDTH,
     packArrayItems = 8,
@@ -50,18 +58,18 @@ export class JSONFold {
   }
 
   replace(overrides = {}) {
-    return new JSONFold({ ...this, ...overrides });
+    return new JSONFoldConfig({ ...this, ...overrides });
   }
 
   static preset(name = "") {
-    if (!Object.prototype.hasOwnProperty.call(JSONFold.PRESETS, name)) {
+    if (!Object.prototype.hasOwnProperty.call(JSONFoldConfig.PRESETS, name)) {
       throw new Error(`unknown JSONFold preset: ${name}`);
     }
-    return JSONFold.PRESETS[name];
+    return JSONFoldConfig.PRESETS[name];
   }
 }
 
-JSONFold.NONE = new JSONFold({
+JSONFoldConfig.NONE = new JSONFoldConfig({
   packArrayItems: 0,
   packObjItems: 0,
   packNesting: 0,
@@ -73,24 +81,24 @@ JSONFold.NONE = new JSONFold({
   joinNesting: 0,
 });
 
-JSONFold.DEFAULT = new JSONFold();
+JSONFoldConfig.DEFAULT = new JSONFoldConfig();
 
-JSONFold.PRESETS = Object.freeze({
+JSONFoldConfig.PRESETS = Object.freeze({
   off: null,
-  "": JSONFold.DEFAULT,
-  default: JSONFold.DEFAULT,
-  none: JSONFold.NONE,
+  "": JSONFoldConfig.DEFAULT,
+  default: JSONFoldConfig.DEFAULT,
+  none: JSONFoldConfig.NONE,
 
-  low: JSONFold.DEFAULT.replace({
+  low: JSONFoldConfig.DEFAULT.replace({
     foldNesting: 0,
     joinNesting: 0,
   }),
 
-  med: JSONFold.DEFAULT.replace({
+  med: JSONFoldConfig.DEFAULT.replace({
     joinNesting: 0,
   }),
 
-  high: JSONFold.DEFAULT.replace({
+  high: JSONFoldConfig.DEFAULT.replace({
     packArrayItems: 16,
     packObjItems: 8,
     packNesting: 4,
@@ -102,7 +110,7 @@ JSONFold.PRESETS = Object.freeze({
     joinNesting: 2,
   }),
 
-  max: JSONFold.NONE.replace({
+  max: JSONFoldConfig.NONE.replace({
     width: 255,
     packArrayItems: MAX_ARRAY_ITEMS,
     packObjItems: MAX_OBJ_ITEMS,
@@ -115,19 +123,19 @@ JSONFold.PRESETS = Object.freeze({
     joinNesting: MAX_NESTING,
   }),
 
-  pack: JSONFold.NONE.replace({
+  pack: JSONFoldConfig.NONE.replace({
     packArrayItems: MAX_ARRAY_ITEMS,
     packObjItems: MAX_OBJ_ITEMS,
     packNesting: MAX_NESTING,
   }),
 
-  fold: JSONFold.NONE.replace({
+  fold: JSONFoldConfig.NONE.replace({
     foldArrayItems: MAX_ARRAY_ITEMS,
     foldObjItems: MAX_OBJ_ITEMS,
     foldNesting: MAX_NESTING,
   }),
 
-  join: JSONFold.NONE.replace({
+  join: JSONFoldConfig.NONE.replace({
     foldArrayItems: MAX_ARRAY_ITEMS,
     foldObjItems: MAX_OBJ_ITEMS,
     foldNesting: MAX_NESTING,
@@ -233,21 +241,40 @@ export class Frame {
   }
 }
 
+
+
+/**
+ * Runtime statistics collected by a JSONFoldFilter.
+ *
+ * Values are accumulated as data flows through the formatter.
+ *
+ * @property {number} bytesIn   Number of input characters received.
+ * @property {number} bytesOut  Number of output characters written.
+ * @property {number} linesIn   Number of input lines processed.
+ * @property {number} linesOut  Number of output lines written.
+ */
 export class JSONFoldStats {
   constructor() {
+    /** @type {number} Input character count. */
     this.bytesIn = 0;
+
+    /** @type {number} Output character count. */
     this.bytesOut = 0;
+
+    /** @type {number} Input line count. */
     this.linesIn = 0;
+
+    /** @type {number} Output line count. */
     this.linesOut = 0;
   }
 }
 
 function asConfig(compact = "") {
   if (compact === null || compact === false) return null;
-  if (compact instanceof JSONFold) return compact;
-  if (typeof compact === "string") return JSONFold.preset(compact);
-  if (compact && typeof compact === "object") return new JSONFold(compact);
-  return JSONFold.DEFAULT;
+  if (compact instanceof JSONFoldConfig) return compact;
+  if (typeof compact === "string") return JSONFoldConfig.preset(compact);
+  if (compact && typeof compact === "object") return new JSONFoldConfig(compact);
+  return JSONFoldConfig.DEFAULT;
 }
 
 function writeAny(writer, s) {
@@ -320,10 +347,10 @@ function sortedReplacer(userReplacer) {
 }
 
 export class JSONFoldFilter {
-  constructor(fp, { compact = "" } = {}) {
+  constructor(fp, { config = "" } = {}) {
     this.fp = fp;
     this.stats = new JSONFoldStats();
-    this.cfg = asConfig(compact);
+    this.cfg = asConfig(config);
     this.pending = "";
     this.stack = [];
   }
@@ -388,6 +415,8 @@ export class JSONFoldFilter {
 
   close() {
     this.finish();
+    if ( this.fp && typeof this.fp.flush === "function") this.fp.flush();
+    if ( this.close_fp ) this.fp.close()
   }
 
   finish() {
@@ -687,35 +716,85 @@ export class JSONFoldFilter {
   }
 }
 
+function _config(base_config, width, overrides) {
+  let cfg = asConfig(base_config)
+  if ( overrides || width != null) {
+    if (! overrides ) overrides = {}
+    if ( width != null ) overrides.width = width
+    if ( Object.keys(overrides).length ) {
+      cfg = cfg.replace(overrides)
+    }
+  }
+  return cfg
+}
+
+function _stream_text(text, fp, cfg)
+{
+  const out = new JSONFoldFilter(fp, { config: cfg })
+
+  out.write(text);
+  if ( ! text.endsWith("\n")) out.write("\n")
+  out.finish();
+  return out.stats
+}
+
+export function filter_stream(fp, { config= "", close_fp= false})
+{
+  return new JSONFoldFilter( fp , { config: config, close_fp: close_fp})
+}
+
+export function write_json(obj, fp, width, config, {
+  indent = 2,
+  sortKeys = false,
+  replacer = undefined,
+} = {} ) {
+  const cfg = _config(config, width)
+  if ( sortKeys ) replacer = sortedReplacer(replacer)
+
+  const text = JSON.stringify(obj, replacer, indent);
+  if ( typeof text != "string" ) return false
+
+  let stats = _stream_text(text, fp, cfg)
+  return stats
+}
+
+export function format_json(obj, width, config, {
+  indent = 2,
+  sortKeys = false,
+  replacer = undefined,
+} = {} ) {
+  cfg = _config(config, width)
+  if ( sortKeys ) replacer = sortedReplacer(replacer)
+
+  const text = JSON.stringify(value, replacer, indent)
+  if ( typeof text != "string" ) return text
+
+  buff = ""
+  fp = s => { buff += s ; }
+  stats = _stream_text(text, fp, width, cfg)
+  return buff
+}
+
+export function config(config, width, overrides)
+{
+  return _config(config, width, overrides)
+}
+
 export function dump(obj, fp, {
   compact = "",
+  width = undefined,
   indent = 2,
   replacer = undefined,
   sortKeys = false,
 } = {}) {
-  // const jsonReplacer = sortKeys
-  //   ? sortedReplacer(replacer)
-  //   : replacer;
-  // const text = JSON.stringify(value, jsonReplacer, indent);
+  cfg = _config(compact, width)
+  if ( sortKeys ) replacer = sortedReplacer(replacer)
 
-  const value =
-    sortKeys
-      ? sortObjectKeys(obj)
-      : obj;
+  const text = JSON.stringify(obj, replacer, indent);
 
-  const text = JSON.stringify(value, replacer, indent);
+  if ( typeof text != "string" ) return
 
-  if (text !== undefined) {
-    const out =
-      fp instanceof JSONFoldFilter
-        ? fp
-        : new JSONFoldFilter(fp, { compact });
-
-    out.write(text);
-    out.write("\n");
-    out.finish();
-  }
-
+  _stream_text(text, fp, cfg)
 }
 
 export function dumps(obj, {
@@ -724,29 +803,17 @@ export function dumps(obj, {
   replacer = undefined,
   sortKeys = false,
 } = {}) {
-
-  let text = ""
-  const out = new JSONFoldFilter( s => {text += s; } , { compact });
-
-  return dump(obj, s => {text += s}, {
-    compact: compact,
-    indent: indent,
-    replacer: replacer,
-    sortKeys: sortKeys,
-  })
-}
+  cfg = _config(compact, width)
+  if ( sortKeys ) replacer = sortedReplacer(replacer)
 
 
-export function dumpi(obj, fp, options = {}) {
-  const out =
-    fp instanceof JSONFoldFilter
-      ? fp
-      : new JSONFoldFilter(fp, {
-          compact: options.compact ?? "",
-        });
+  const text = JSON.stringify(value, replacer, indent)
+  if ( typeof text != "string" ) return text
 
-  dump(obj, out, options);
-  return out.stats;
+  buff = ""
+  fp = s => { buff += s ; }
+  stats = _stream_text(text, fp, width, cfg)
+  return buff
 }
 
 export function stringify(obj, replacer = null, space = null) {
@@ -768,13 +835,14 @@ export function stringify(obj, replacer = null, space = null) {
 }
 
 export default {
-  JSONFold,
+  JSONFoldConfig,
   JSONFoldFilter,
   JSONFoldStats,
-  dump,
-  dumpi,
+  format_json,
+  write_json,
+  filter_stream,
+  config,
   stringify,
+  dump,
   dumps,
 };
-
-

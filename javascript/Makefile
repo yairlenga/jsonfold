@@ -8,6 +8,7 @@ setup:
 	npm install
 
 build:
+	npm build --if-present
 
 test:
 	cd ../tests/unit && ./run_tests.sh javascript

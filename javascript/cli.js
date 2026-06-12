@@ -1,6 +1,7 @@
 #! /usr/bin/env node
 
 import * as jsonfold from "./jsonfold.js";
+import fs from "node:fs";
 
 
 function demoData() {
@@ -30,7 +31,7 @@ export async function main(argv = process.argv.slice(2)) {
     return 0;
   }
 
-  let cfg = jsonfold.JSONFold.preset(args.compact);
+  let cfg = jsonfold.JSONFoldConfig.preset(args.compact);
   const overrides = {};
 
   if (args.width === undefined && process.stdout.isTTY) {
@@ -85,12 +86,12 @@ export async function main(argv = process.argv.slice(2)) {
 //    backend = await import ("./jsonfoldstream.js")
 //  }
 
-  const data = args.demo
-    ? demoData()
-    : JSON.parse(await readStdin());
+  const data =
+    args.demo ? demoData() :
+    args.input ? JSON.parse(fs.readFileSync(args.input)) :
+    JSON.parse(await readStdin());
 
-  const stats = backend.dumpi(data, process.stdout, {
-    compact: cfg,
+  const stats = backend.write_json(data, process.stdout, args.width, cfg, {
     indent: args.indent,
     sortKeys: args.sortKeys,
   });
@@ -156,16 +157,15 @@ function parseArgs(argv) {
         out.sortKeys = true;
         continue;
 
+      case "--input":
+        out.input = requireValue(argv, ++i, arg);
+        validateCompact(out.compact);
+        continue;
+
       case "--help":
       case "-h":
         out.help = true;
         continue;
-    }
-
-    if (arg === "--compact") {
-      out.compact = requireValue(argv, ++i, arg);
-      validateCompact(out.compact);
-      continue;
     }
 
     if (arg.startsWith("--compact=")) {
@@ -173,6 +173,12 @@ function parseArgs(argv) {
       validateCompact(out.compact);
       continue;
     }
+
+    if (arg.startsWith("--input=")) {
+      out.input = arg.slice("--input=".length);
+      continue;
+    }
+
 
     const eq = arg.indexOf("=");
 
@@ -221,7 +227,7 @@ function parseInteger(s, name) {
 }
 
 function validateCompact(name) {
-  if (!Object.hasOwn(jsonfold.JSONFold.PRESETS, name)) {
+  if (!Object.hasOwn(jsonfold.JSONFoldConfig.PRESETS, name)) {
     throw new Error(`unknown compact preset: ${name}`);
   }
 }

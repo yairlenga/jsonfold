@@ -5,6 +5,16 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Launch Program",
+            "program": "${workspaceFolder}/javascript/cli.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "node",
+            "args": [ "--input=tests/unit/009.json", "--sort-keys"]
+        },
+        {
             "type": "perl",
             "request": "launch",
             "name": "Perl-Debug",
@@ -77,7 +87,7 @@
             "request": "launch",
             "program": "python/jsonfold_cli.py",
             "args": [
-                "--input=tests/new/053.json", "--compact=pack", "-v", "--pack-nesting=0"
+                "--input=geo.json", "-v", "--join-nesting=1"
             ]
         },
         {

@@ -93,7 +93,7 @@ from typing import Any
 from dataclasses import replace
 import json
 
-from jsonfold import config, write_json, JSONFold
+from jsonfold import config, write_json, JSONFoldConfig
 
 # ---------------------------------------------------------------------------
 # Demo data
@@ -124,7 +124,7 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
         description="Read JSON from stdin; write folded JSON to stdout.")
     p.add_argument("--demo",   action="store_true")
-    p.add_argument("--compact", choices=JSONFold.PRESETS.keys(), default="default")
+    p.add_argument("--compact", choices=JSONFoldConfig.PRESETS.keys(), default="default")
     p.add_argument("--width",  type=int, default=None, help="line width limit (default: terminal width/80)")
     p.add_argument("--verbose", "-v", action="store_true", help="Enable verbose/debug output")
     p.add_argument("--input", "-i", metavar="FILE", help="Read JSON input from file instead of stdin")

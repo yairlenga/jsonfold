@@ -218,7 +218,7 @@ MAX_NESTING = 10
 DEFAULT_WIDTH = 100
 
 @dataclass(frozen=True, slots=True)
-class JSONFold:
+class JSONFoldConfig:
     """Configuration for hybrid pretty/compact JSON formatting.
 
     A value of 0 disables the corresponding packing or folding rule.
@@ -241,7 +241,7 @@ class JSONFold:
     join_obj_items:   int = 4
     join_nesting:     int = 1
 
-JSONFold.NONE = JSONFold(
+JSONFoldConfig.NONE = JSONFoldConfig(
     pack_array_items = 0,
     pack_obj_items   = 0,
     pack_nesting     = 0,
@@ -253,24 +253,24 @@ JSONFold.NONE = JSONFold(
     join_nesting = 0,
 )
 
-JSONFold.DEFAULT = JSONFold()
+JSONFoldConfig.DEFAULT = JSONFoldConfig()
 
-JSONFold.PRESETS = {
+JSONFoldConfig.PRESETS = {
     "off": None,
-    "default": JSONFold.DEFAULT,
-    "": JSONFold.DEFAULT,
-    "none":    JSONFold.NONE,
+    "default": JSONFoldConfig.DEFAULT,
+    "": JSONFoldConfig.DEFAULT,
+    "none":    JSONFoldConfig.NONE,
 
-    "low": replace(JSONFold.DEFAULT, 
+    "low": replace(JSONFoldConfig.DEFAULT, 
         fold_nesting = 0,
         join_nesting = 0,
     ),
 
-    "med": replace(JSONFold.DEFAULT,
+    "med": replace(JSONFoldConfig.DEFAULT,
         join_nesting = 0,
     ),
 
-    "high": replace(JSONFold.DEFAULT,
+    "high": replace(JSONFoldConfig.DEFAULT,
         pack_array_items = 16,
         pack_obj_items   = 8,
         pack_nesting     = 4,
@@ -283,7 +283,7 @@ JSONFold.PRESETS = {
     ),
 
 
-    "max": replace(JSONFold.NONE,
+    "max": replace(JSONFoldConfig.NONE,
         width = 255,
         pack_array_items = MAX_ARRAY_ITEMS,
         pack_obj_items   = MAX_OBJ_ITEMS,
@@ -296,18 +296,18 @@ JSONFold.PRESETS = {
         join_nesting    = MAX_NESTING,
     ),
     # pack only – no folding
-    "pack": replace(JSONFold.NONE,
+    "pack": replace(JSONFoldConfig.NONE,
         pack_array_items = MAX_ARRAY_ITEMS,
         pack_obj_items   = MAX_OBJ_ITEMS,
         pack_nesting     = MAX_NESTING,
     ),
     # fold only – no packing
-    "fold": replace(JSONFold.NONE,
+    "fold": replace(JSONFoldConfig.NONE,
         fold_array_items = MAX_ARRAY_ITEMS,
         fold_obj_items   = MAX_OBJ_ITEMS,
         fold_nesting     = MAX_NESTING,
     ),
-    "join": replace(JSONFold.NONE,
+    "join": replace(JSONFoldConfig.NONE,
         fold_array_items = MAX_ARRAY_ITEMS,
         fold_obj_items   = MAX_OBJ_ITEMS,
         fold_nesting     = MAX_NESTING,
@@ -429,13 +429,13 @@ class JSONFoldWriter:
     """
 
     def __init__(self, fp: TextIO, *,
-                 config: JSONFold | str | None = "",
+                 config: JSONFoldConfig | str | None = "",
                  close_fp: bool= False,
     ) -> None:           
         self.fp = fp
         self.stats = JSONFoldStats()
         if isinstance(config, str):
-            config = JSONFold.PRESETS[config]
+            config = JSONFoldConfig.PRESETS[config]
         self.cfg = config
         self.pending = ""
         self.stack: list[Frame] = []
@@ -497,7 +497,7 @@ class JSONFoldWriter:
 
     def close(self) -> None:
         if self.close_fp:
-            self.finish()
+            self.fp.close()
 
     def finish(self) -> None:
         if self.pending:
@@ -806,12 +806,12 @@ class JSONFoldWriter:
 # Public helpers
 # ---------------------------------------------------------------------------
 
-def _stream(fp: TextIO, config: JSONFold | str = ""):
-    return JSONFoldWriter(fp, config=config)
+def _stream(fp: TextIO, config: JSONFoldConfig | str = "", *, close_fp: bool= False):
+    return JSONFoldWriter(fp, config=config, close_fp=close_fp)
 
-def _config(config: JSONFold | str, width: int | None = None, **overrides) -> JSONFold:
+def _config(config: JSONFoldConfig | str, width: int | None = None, **overrides) -> JSONFoldConfig:
     if isinstance(config, str):
-        config = JSONFold.PRESETS[config]
+        config = JSONFoldConfig.PRESETS[config]
     if width is not None:
         overrides["width"] = width
     if overrides:
@@ -820,7 +820,7 @@ def _config(config: JSONFold | str, width: int | None = None, **overrides) -> JS
 
 # Generic API
 
-def config(base_config: JSONFold | str = "", **overrides):
+def config(base_config: JSONFoldConfig | str = "", width: int = None, **overrides):
     """Create a JSONFold configuration.
 
     Starts from a preset name or existing JSONFold object and applies
@@ -830,9 +830,9 @@ def config(base_config: JSONFold | str = "", **overrides):
         config("high", width=120)
         config(JSONFold.DEFAULT, fold_nesting=2)
     """
-    return _config(base_config, **overrides)
+    return _config(base_config, width, **overrides)
 
-def format_json(obj: Any, width: int, config: JSONFold | str = "", indent = 2, **kwargs: Any) -> str:
+def format_json(obj: Any, width: int, config: JSONFoldConfig | str = "", indent = 2, **kwargs: Any) -> str:
     """Format an object as JSON and return the resulting string.
 
     The output is first pretty-printed using ``json.dump()`` and then
@@ -854,7 +854,7 @@ def format_json(obj: Any, width: int, config: JSONFold | str = "", indent = 2, *
             json.dump(obj, out, indent=indent, **kwargs)
         return str_io.getvalue()
 
-def write_json(obj: Any, fp : TextIO, width: int, config: JSONFold | str = "", indent=2, **kwargs: Any) -> JSONFoldStats:
+def write_json(obj: Any, fp : TextIO, width: int, config: JSONFoldConfig | str = "", indent=2, **kwargs: Any) -> JSONFoldStats:
     """Write compacted formatted JSON to a stream.
 
     The output is pretty-printed using ``json.dump()`` and then compacted
@@ -875,7 +875,7 @@ def write_json(obj: Any, fp : TextIO, width: int, config: JSONFold | str = "", i
         json.dump(obj, out, indent=indent, **kwargs)
     return out.stats
 
-def filter_stream(fp: TextIO, width: int, config: JSONFold | str = "") -> JSONFoldWriter:
+def filter_stream(fp: TextIO, width: int, config: JSONFoldConfig | str = "", *, close_fp: bool = False) -> JSONFoldWriter:
     """Create a JSONFold filtering stream.
 
     Returns a writable stream wrapper that accepts pretty-printed JSON
@@ -889,13 +889,13 @@ def filter_stream(fp: TextIO, width: int, config: JSONFold | str = "") -> JSONFo
     Returns:
         A JSONFoldWriter instance.
     """
-    return _stream(fp, _config(config, width=width))
+    return _stream(fp, _config(config, width=width), close_fp=close_fp)
 
 # Python json compatible API
 
 def dump(
         obj: Any, fp: TextIO, *,
-        compact: JSONFold | str = "",
+        compact: JSONFoldConfig | str = "",
         width: int | None = None,
         indent: int = 2,
         **kwargs: Any,
@@ -920,7 +920,7 @@ def dump(
 
 def dumps(
         obj: Any, *,
-        compact: JSONFold | str = "",
+        compact: JSONFoldConfig | str = "",
         width: int | None = None,
         indent: int = 2,
         **kwargs: Any) -> str:
@@ -975,7 +975,7 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
         description="Read JSON from stdin; write folded JSON to stdout.")
     p.add_argument("--demo",   action="store_true")
-    p.add_argument("--compact", choices=JSONFold.PRESETS.keys(), default="default")
+    p.add_argument("--compact", choices=JSONFoldConfig.PRESETS.keys(), default="default")
     p.add_argument("--width",  type=int, default=None, help=f"line width limit (default: terminal width/{DEFAULT_WIDTH})")
     p.add_argument("--verbose", "-v", action="store_true", help="Enable verbose/debug output")
     p.add_argument("--input", "-i", metavar="FILE", help="Read JSON input from file instead of stdin")

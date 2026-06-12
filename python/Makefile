@@ -19,7 +19,7 @@ build:
 run-test:
 	./api_test.py
 	./jsonfold.py --demo
-	./jsonfold_cli.py --demo
+	./cli.py --demo
 	./benchmark.py 10
 	cd ../tests/unit && ./run_tests.sh python
 	cd ../tests/samples && ./run_tests.sh python
