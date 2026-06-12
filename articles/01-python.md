@@ -125,7 +125,7 @@ If the above assumptions are violated, the `jsonfold` falls back into "raw" mode
 
 The compaction is done in three logical phases, we will name them: **pack**, **fold** and **join**. Each one performs a specific transformation that makes the JSON easier to read (by removing whitespace), while not changing the data itself. Separating the process into phases makes the implementation simpler and more predictable. Each phase operates on progressively more compact structures while preserving the original JSON semantics. All three phases are incremental, and process the stream as data becomes available.
 
-![Three Phases Diagram](01-python/diagram-1.png)
+![Three Phases Diagram](images/diagram-1.png)
 
 ## Pack
 The **pack** phase handles merging of scalar items inside containers (array, object). It will "pack" array items and object properties that belong to the same containers into single line, subject to specific width, and limits. Basically:
