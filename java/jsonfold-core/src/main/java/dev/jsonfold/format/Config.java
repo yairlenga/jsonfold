@@ -3,11 +3,14 @@ package dev.jsonfold.format;
 import java.util.Map;
 
 /**
- * Mutable configuration object for JSONFold formatting.
+ * Configuration controlling JSONFold packing, folding, and joining behavior.
  *
- * <p>Preset instances are kept internally, but {@link #preset(String)}
- * always returns a clone, so callers may safely modify the returned object
- * with setters.</p>
+ * <p>Most applications should use one of the predefined presets such as
+ * {@link #defaultConfig()}, {@link #high()}, or {@link #max()}.
+ *
+ * <p>Preset configurations are stored internally and copied before being
+ * returned, allowing callers to safely customize them through a
+ * {@link Builder}.
  */
 public class Config {
 
@@ -15,6 +18,13 @@ public class Config {
     public static final int MAX_OBJ_ITEMS = 1000;
     public static final int MAX_NESTING = 10;
     public static final int DEFAULT_WIDTH = 100;
+
+    public static final String PRESET_DEFAULT = "default" ;
+    public static final String PRESET_NONE = "none" ;
+    public static final String PRESET_HIGH = "high" ;
+    public static final String PRESET_MED = "med" ;
+    public static final String PRESET_LOW = "low" ;
+    public static final String PRESET_MAX = "max" ;
 
     int width = DEFAULT_WIDTH;
 
@@ -76,6 +86,19 @@ public class Config {
         return new Builder(this) ;
     }
 
+    /**
+     * Fluent builder for {@link Config}.
+     *
+     * <p>
+     * Typically obtained from an existing configuration:
+     *
+     * <pre>
+     * Config cfg = Config.defaultConfig()
+     *         .builder()
+     *         .joinNesting(0)
+     *         .build();
+     * </pre>
+     */
     public static class Builder extends Config {
 
         public Builder() {
@@ -135,6 +158,11 @@ public class Config {
             return this;
         }
 
+    /**
+     * Build a configuration from the current builder settings.
+     *
+     * @return configuration instance
+     */
         public Config build() {
             return new Config(this);
         }
@@ -142,17 +170,37 @@ public class Config {
 
     private static final Map<String, Config> PRESETS = Map.ofEntries(
         Map.entry("", createDefault()),
-        Map.entry("default", createDefault()),
-        Map.entry("none", createNone()),
-        Map.entry("low", createLow()),
-        Map.entry("med", createMed()),
-        Map.entry("high", createHigh()),
-        Map.entry("max", createMax()),
+        Map.entry(PRESET_DEFAULT, createDefault()),
+        Map.entry(PRESET_NONE, createNone()),
+        Map.entry(PRESET_LOW, createLow()),
+        Map.entry(PRESET_MED, createMed()),
+        Map.entry(PRESET_HIGH, createHigh()),
+        Map.entry(PRESET_MAX, createMax()),
         Map.entry("pack", createPack()),
         Map.entry("fold", createFold()),
         Map.entry("join", createJoin())
     );
 
+/**
+ * Return a copy of a named preset configuration.
+ *
+ * <p>Supported presets:
+ * <ul>
+ *   <li>{@code default} - recommended balance of readability and compactness</li>
+ *   <li>{@code none} - disable all JSONFold transformations</li>
+ *   <li>{@code low} - conservative folding</li>
+ *   <li>{@code med} - moderate folding</li>
+ *   <li>{@code high} - aggressive folding and joining</li>
+ *   <li>{@code max} - maximum compaction</li>
+ * </ul>
+ *
+ * <p>The special preset name {@code off} returns {@code null}, indicating
+ * that JSONFold processing should be disabled entirely.
+ *
+ * @param name preset name
+ * @return configuration copy, or {@code null} for {@code off}
+ * @throws IllegalArgumentException if the preset name is unknown
+ */
     public static Config preset(String name) {
         if ( "off".equals(name)) return null ;
 
@@ -295,11 +343,21 @@ public class Config {
         return cfg;
     }
 
+/**
+ * Disable all JSONFold packing, folding, and joining.
+ *
+ * @return configuration copy
+ */
     public static Config none()
     {
         return createNone() ;
     }
 
+/**
+ * Conservative formatting preset with limited folding.
+ *
+ * @return configuration copy
+ */
     public static Config low()
     {
         return createLow() ;
@@ -310,16 +368,35 @@ public class Config {
         return createMed() ;
     }
 
+/**
+ * Aggressive formatting preset with increased packing, folding,
+ * and joining limits.
+ *
+ * @return configuration copy
+ */
     public static Config high()
     {
         return createHigh();
     }
 
+ /**
+ * Maximum compaction preset.
+ *
+ * <p>Uses large limits and a wider default width to allow the
+ * formatter to compact JSON as much as possible.
+ *
+ * @return configuration copy
+ */
     public static Config max()
     {
         return createMax() ;
     }
 
+/**
+ * Return the recommended default JSONFold configuration.
+ *
+ * @return configuration copy
+ */
     public static Config defaultConfig()
     {
         return createDefault() ;

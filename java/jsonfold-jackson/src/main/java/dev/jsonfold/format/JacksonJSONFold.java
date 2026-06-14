@@ -12,34 +12,77 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
 /**
- * Jackson integration helpers for JSONFold.
+ * Jackson-based JSONFold formatter.
+ *
+ * <p>This class serializes Java objects with Jackson, expands the generated
+ * pretty-printed JSON, and then passes that text through {@link JSONFoldWriter}
+ * to produce JSONFold's hybrid pretty/compact output.</p>
+ *
+ * <p>Use this class as the main Java object-formatting API when working with
+ * Jackson-backed JSON serialization.</p>
  */
-public final class JacksonJSONFold extends JSONFold {
+public final class JacksonJSONFold extends JSONFold implements JFFormatter {
 
+    /**
+     * Whether to use the gold/test pretty-printer variant.
+     *
+     * <p>This is mainly useful for matching cross-language golden test output.</p>
+     */
     protected boolean gold = false ;
 
+    /**
+     * Create a Jackson-backed formatter.
+     *
+     * @param width target maximum line width
+     * @param config folding configuration
+     */
     public JacksonJSONFold(int width, Config config)
     {
         super(width, config) ;
     }
 
+    /**
+     * Return whether gold/test formatting mode is enabled.
+     *
+     * @return {@code true} if gold mode is enabled
+     */
     public boolean isGold() {
         return gold;
     }
 
+    /**
+     * Builder for {@link JacksonJSONFold}.
+     */
     public static class Builder extends JSONFold.Builder<Builder> {
         private final JacksonJSONFold target;
 
+        /**
+         * Create a builder with the supplied width and config.
+         *
+         * @param width target maximum line width
+         * @param config folding configuration
+         */
         private Builder(int width, Config config) {
             super(new JacksonJSONFold(width, config));
             this.target = (JacksonJSONFold) super.target;
         }
 
+        /**
+         * Enable or disable gold/test formatting mode.
+         *
+         * @param gold {@code true} to enable gold mode
+         * @return this builder
+         */
         public Builder gold(boolean gold) {
             target.gold = gold;
             return this;
         }
 
+        /**
+         * Build the configured formatter.
+         *
+         * @return configured Jackson formatter
+         */
         @Override
         public JacksonJSONFold build() {
             super.build();
@@ -49,9 +92,13 @@ public final class JacksonJSONFold extends JSONFold {
 
     
     /**
-     * Configure an existing ObjectMapper for use with JSONFold.
+     * Configure an existing {@link ObjectMapper} for use with JSONFold.
      *
-     * This method mutates the supplied mapper and returns it.
+     * <p>This method mutates the supplied mapper by setting a JSONFold-friendly
+     * default pretty-printer, then returns the same mapper.</p>
+     *
+     * @param mapper mapper to configure
+     * @return the same mapper instance
      */
     public static ObjectMapper configure(ObjectMapper mapper) {
         mapper.setDefaultPrettyPrinter(prettyPrinter());
@@ -60,9 +107,10 @@ public final class JacksonJSONFold extends JSONFold {
     }
 
     /**
-     * Configure an existing ObjectMapper for use with JSONFold.
+     * Pretty-printer variant used by golden tests.
      *
-     * This method mutates the supplied mapper and returns it.
+     * <p>This printer keeps formatting behavior stable for expected-output
+     * comparisons, especially around separators and empty containers.</p>
      */
     private static class GoldPrettyPrinter extends DefaultPrettyPrinter {
         GoldPrettyPrinter() {
@@ -73,12 +121,25 @@ public final class JacksonJSONFold extends JSONFold {
             super(base);
         }
 
+        /**
+         * Write object field/value separator.
+         *
+         * @param g JSON generator
+         * @throws IOException if writing fails
+         */
         @Override
         public void writeObjectFieldValueSeparator(JsonGenerator g)
                 throws IOException {
             g.writeRaw(": ");
         }
 
+        /**
+         * Write object end marker.
+         *
+         * @param g JSON generator
+         * @param nrOfEntries number of object entries
+         * @throws IOException if writing fails
+         */
         @Override
         public void writeEndObject(JsonGenerator g, int nrOfEntries)
                 throws IOException {
@@ -91,6 +152,13 @@ public final class JacksonJSONFold extends JSONFold {
             super.writeEndObject(g, nrOfEntries);
         }
 
+        /**
+         * Write array end marker.
+         *
+         * @param g JSON generator
+         * @param nrOfValues number of array values
+         * @throws IOException if writing fails
+         */
         @Override
         public void writeEndArray(JsonGenerator g, int nrOfValues)
                 throws IOException {
@@ -103,6 +171,11 @@ public final class JacksonJSONFold extends JSONFold {
             super.writeEndArray(g, nrOfValues);
         }
 
+        /**
+         * Create a reusable pretty-printer instance.
+         *
+         * @return copied pretty-printer instance
+         */
         @Override
         public DefaultPrettyPrinter createInstance() {
             return new GoldPrettyPrinter(this);
@@ -110,13 +183,19 @@ public final class JacksonJSONFold extends JSONFold {
     }
 
     /**
-     * Return a Jackson pretty printer suitable as input to JSONFold.
+     * Return a Jackson pretty-printer suitable as input to JSONFold.
+     *
+     * <p>Jackson's default pretty printer keeps arrays inline. JSONFold works
+     * best when arrays and objects are first expanded into normal multi-line
+     * pretty JSON, then folded back according to JSONFold rules.</p>
+     *
+     * @param indent indentation string, or {@code null} for Jackson's default
+     * @return configured pretty-printer
      */
     public static DefaultPrettyPrinter prettyPrinter(String indent) {
         DefaultPrettyPrinter pp = new DefaultPrettyPrinter();
 
-        // Jackson's default keeps arrays inline. JSONFold works better when
-        // arrays are first expanded, then folded back by JSONFold's rules.
+        // Expand arrays and objects before JSONFold processes the stream.
         DefaultIndenter indenter = DefaultIndenter.SYSTEM_LINEFEED_INSTANCE;
         if (indent != null)
             indenter.withIndent(indent);
@@ -126,19 +205,35 @@ public final class JacksonJSONFold extends JSONFold {
         return pp;
     }
 
+    /**
+     * Return a JSONFold-friendly Jackson pretty-printer using default indentation.
+     *
+     * @return configured pretty-printer
+     */
     public static DefaultPrettyPrinter prettyPrinter() {
         return prettyPrinter(null);
     }
 
+    /**
+     * Return a JSONFold-friendly Jackson pretty-printer using N-space indentation.
+     *
+     * @param indent number of spaces to use for indentation
+     * @return configured pretty-printer
+     */
     public static DefaultPrettyPrinter prettyPrinter(int indent) {
         return prettyPrinter(" ".repeat(indent));
     }
 
-    public static DefaultPrettyPrinter goldPettyPrinter(String indent) {
+    /**
+     * Return the gold/test pretty-printer using the supplied indentation string.
+     *
+     * @param indent indentation string, or {@code null} for Jackson's default
+     * @return configured gold pretty-printer
+     */
+    public static DefaultPrettyPrinter goldPrettyPrinter(String indent) {
         DefaultPrettyPrinter pp = new GoldPrettyPrinter();
 
-        // Jackson's default keeps arrays inline. JSONFold works better when
-        // arrays are first expanded, then folded back by JSONFold's rules.
+        // Expand arrays and objects before JSONFold processes the stream.
         pp.indentArraysWith(DefaultIndenter.SYSTEM_LINEFEED_INSTANCE);
         DefaultIndenter indenter = new DefaultIndenter();
         if (indent != null)
@@ -149,10 +244,22 @@ public final class JacksonJSONFold extends JSONFold {
         return pp;
     }
 
+    /**
+     * Return the gold/test pretty-printer using N-space indentation.
+     *
+     * @param indent number of spaces to use for indentation
+     * @return configured gold pretty-printer
+     */
     public static DefaultPrettyPrinter goldPettyPrinter(int indent) {
-        return goldPettyPrinter(" ".repeat(indent));
+        return goldPrettyPrinter(" ".repeat(indent));
     }
 
+    /**
+     * Create a shared mapper for normal or sorted-key output.
+     *
+     * @param sortKeys {@code true} to order map entries by key
+     * @return configured mapper
+     */
     private static ObjectMapper createMapper(boolean sortKeys)
     {
      ObjectMapper mapper = new ObjectMapper();
@@ -167,9 +274,20 @@ public final class JacksonJSONFold extends JSONFold {
         return mapper;    
     }
 
+    /** Shared mapper for normal key order. */
     private static ObjectMapper DEFAULT_MAPPER = createMapper(false) ;
+
+    /** Shared mapper for sorted map-entry key order. */
     private static ObjectMapper SORTED_MAPPER = createMapper(true) ;
 
+    /**
+     * Serialize an object as folded JSON and write it to a writer.
+     *
+     * @param obj object to serialize
+     * @param writer destination writer
+     * @return formatting statistics
+     * @throws IOException if Jackson serialization or writing fails
+     */
     public Stats writeJson(Object obj, Writer writer) throws IOException
     {
         ObjectMapper mapper = sortKeys ? SORTED_MAPPER : DEFAULT_MAPPER ;
@@ -180,6 +298,13 @@ public final class JacksonJSONFold extends JSONFold {
         }
     }
 
+    /**
+     * Serialize an object and return folded JSON text.
+     *
+     * @param obj object to serialize
+     * @return folded JSON text
+     * @throws IOException if serialization fails
+     */
     public String formatJson(Object obj) 
     throws IOException
     {
@@ -189,6 +314,16 @@ public final class JacksonJSONFold extends JSONFold {
         return sw.toString();
     }
 
+    /**
+     * Serialize an object as folded JSON using an explicit width and config.
+     *
+     * @param obj object to serialize
+     * @param writer destination writer
+     * @param width target maximum line width
+     * @param config folding configuration
+     * @return formatting statistics
+     * @throws IOException if Jackson serialization or writing fails
+     */
     public static Stats writeJson(Object obj, Writer writer, int width, Config config)
     throws IOException
     {
@@ -196,11 +331,5 @@ public final class JacksonJSONFold extends JSONFold {
         return fmt.writeJson(obj, writer);
     }
 
-    public static String formatJSON(Object obj, int width, Config config)
-    throws IOException
-    {
-        JacksonJSONFold fmt = new JacksonJSONFold(width, config) ;
-        return fmt.formatJson(obj);
-    }
 
 }

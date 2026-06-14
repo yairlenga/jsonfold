@@ -309,7 +309,7 @@ public final class Benchmark {
      * keep the benchmark unchanged and modify only this adapter.
      */
     private static PrettyPrinter prettyPrinter(String compact) {
-        return JacksonJSONFold.goldPettyPrinter(compact);
+        return JacksonJSONFold.goldPrettyPrinter(compact);
     }
 
     private static void writeString(OutputStream out, String s) throws IOException {
