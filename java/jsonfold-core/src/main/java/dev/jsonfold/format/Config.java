@@ -168,17 +168,28 @@ public class Config {
         }
     }
 
+    private static final Config DEFAULT_CONFIG = new Config(true) ;
+    private static final Config CONFIG_NONE = new Config(false) ;
+    private static final Config CONFIG_LOW = createLow() ;
+    private static final Config CONFIG_MED = createMed() ;
+    private static final Config CONFIG_HIGH = createHigh() ;
+    private static final Config CONFIG_MAX = createMax() ;
+
+    private static final Config CONFIG_PACK = createPack() ;
+    private static final Config CONFIG_FOLD = createFold() ;
+    private static final Config CONFIG_JOIN = createJoin() ;
+
     private static final Map<String, Config> PRESETS = Map.ofEntries(
-        Map.entry("", createDefault()),
-        Map.entry(PRESET_DEFAULT, createDefault()),
-        Map.entry(PRESET_NONE, createNone()),
-        Map.entry(PRESET_LOW, createLow()),
-        Map.entry(PRESET_MED, createMed()),
-        Map.entry(PRESET_HIGH, createHigh()),
-        Map.entry(PRESET_MAX, createMax()),
-        Map.entry("pack", createPack()),
-        Map.entry("fold", createFold()),
-        Map.entry("join", createJoin())
+        Map.entry("", DEFAULT_CONFIG),
+        Map.entry(PRESET_DEFAULT, DEFAULT_CONFIG),
+        Map.entry(PRESET_NONE, CONFIG_NONE),
+        Map.entry(PRESET_LOW, CONFIG_LOW),
+        Map.entry(PRESET_MED, CONFIG_MED),
+        Map.entry(PRESET_HIGH, CONFIG_HIGH),
+        Map.entry(PRESET_MAX, CONFIG_MAX),
+        Map.entry("pack", CONFIG_PACK),
+        Map.entry("fold", CONFIG_FOLD),
+        Map.entry("join", CONFIG_JOIN)
     );
 
 /**
@@ -350,7 +361,7 @@ public class Config {
  */
     public static Config none()
     {
-        return createNone() ;
+        return CONFIG_NONE ;
     }
 
 /**
@@ -360,12 +371,12 @@ public class Config {
  */
     public static Config low()
     {
-        return createLow() ;
+        return CONFIG_LOW ;
     }
 
     public static Config med()
     {
-        return createMed() ;
+        return CONFIG_MED ;
     }
 
 /**
@@ -376,7 +387,7 @@ public class Config {
  */
     public static Config high()
     {
-        return createHigh();
+        return CONFIG_HIGH ;
     }
 
  /**
@@ -389,7 +400,7 @@ public class Config {
  */
     public static Config max()
     {
-        return createMax() ;
+        return CONFIG_MAX ;
     }
 
 /**
@@ -399,22 +410,22 @@ public class Config {
  */
     public static Config defaultConfig()
     {
-        return createDefault() ;
+        return DEFAULT_CONFIG ;
     }
 
     static Config pack()
     {
-        return createPack() ;
+        return CONFIG_PACK ;
     }
 
     static Config fold()
     {
-        return createFold() ;
+        return CONFIG_FOLD ;
     }
 
     static Config join()
     {
-        return createJoin() ;
+        return CONFIG_JOIN ;
     }
     
     @Override
