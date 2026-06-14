@@ -37,7 +37,7 @@ class JSONFoldWriterTest {
         }
         """;
 
-    private static String fold(String input, JSONFold cfg) throws Exception {
+    private static String fold(String input, Config cfg) throws Exception {
         StringWriter sw = new StringWriter();
 
         try (var out = new JSONFoldWriter(sw, cfg)) {
@@ -49,7 +49,7 @@ class JSONFoldWriterTest {
 
     @Test
     void nonePresetLeavesInputUnchanged() throws Exception {
-        assertEquals(INPUT, fold(INPUT, JSONFold.none())) ;
+        assertEquals(INPUT, fold(INPUT, Config.none())) ;
     }
 
     @Test
@@ -81,7 +81,7 @@ class JSONFoldWriterTest {
             }
             """;
 
-        assertEquals(expected, fold(INPUT, JSONFold.pack())) ;
+        assertEquals(expected, fold(INPUT, Config.pack())) ;
     }
 
     @Test
@@ -103,7 +103,7 @@ class JSONFoldWriterTest {
             }
             """;
 
-        assertEquals(expected, fold(INPUT, JSONFold.fold()));
+        assertEquals(expected, fold(INPUT, Config.fold()));
     }
 
     @Test
@@ -116,7 +116,7 @@ class JSONFoldWriterTest {
             }
             """;
 
-        assertEquals(expected, fold(INPUT, JSONFold.join()));
+        assertEquals(expected, fold(INPUT, Config.join()));
     }
 
     @Test
@@ -147,7 +147,7 @@ class JSONFoldWriterTest {
             }
             """;
 
-        assertEquals(expected, fold(input, JSONFold.max().withWidth(40)));
+        assertEquals(expected, fold(input, Config.max().builder().width(40).build()));
     }
 
     @Test
@@ -160,13 +160,13 @@ class JSONFoldWriterTest {
             }
             """;
 
-        assertEquals(expected, fold(input, JSONFold.none()));
+        assertEquals(expected, fold(input, Config.none()));
     }
 
     @Test
     void statsAreUpdated() throws Exception {
         StringWriter sw = new StringWriter();
-        JSONFoldWriter out = new JSONFoldWriter(sw, new JSONFold(80));
+        JSONFoldWriter out = new JSONFoldWriter(sw, new Config(Config.defaultConfig(), 80));
 
         try (out) {
             out.write("""

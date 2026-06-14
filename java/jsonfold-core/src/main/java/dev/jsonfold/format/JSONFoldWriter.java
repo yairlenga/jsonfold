@@ -19,8 +19,8 @@ import java.util.List;
 public final class JSONFoldWriter extends Writer {
 
     private final Writer fp;
-    private final JSONFold cfg;
-    boolean noClose = false;
+    private final Config cfg;
+    boolean closeFP = false;
     private final Stats stats = new Stats();
 
     /** Partial line data waiting for a newline. */
@@ -33,23 +33,23 @@ public final class JSONFoldWriter extends Writer {
      * Create a writer using the default configuration.
      */
     public JSONFoldWriter(Writer fp) {
-        this(fp, new JSONFold(), false);
+        this(fp, new Config(), false);
     }
 
     /**
      * Create a writer using a specific configuration.
      */
-    public JSONFoldWriter(Writer fp, JSONFold cfg) {
+    public JSONFoldWriter(Writer fp, Config cfg) {
         this(fp, cfg, false);
     }
 
     /**
      * Create a writer using a specific configuration, allow close to be skipped
      */
-    public JSONFoldWriter(Writer fp, JSONFold cfg, boolean noClose) {
+    public JSONFoldWriter(Writer fp, Config cfg, boolean closeFP) {
         this.fp = fp;
         this.cfg = cfg ;
-        this.noClose = noClose ;
+        this.closeFP = closeFP ;
     }
 
     /**
@@ -146,7 +146,7 @@ public final class JSONFoldWriter extends Writer {
     @Override
     public void close() throws IOException {
         finish();
-        if ( !noClose ) fp.close();
+        if ( closeFP ) fp.close();
     }
 
     /**

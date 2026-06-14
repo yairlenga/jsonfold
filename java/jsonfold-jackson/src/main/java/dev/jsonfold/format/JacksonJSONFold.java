@@ -1,20 +1,53 @@
 package dev.jsonfold.format;
 
 import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer ;
 
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.PrettyPrinter;
 import com.fasterxml.jackson.core.util.DefaultIndenter;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 
 /**
  * Jackson integration helpers for JSONFold.
  */
-public final class JacksonJsonFold {
+public final class JacksonJSONFold extends JSONFold {
 
-    private JacksonJsonFold() {
+    protected boolean gold = false ;
+
+    public JacksonJSONFold(int width, Config config)
+    {
+        super(width, config) ;
     }
 
+    public boolean isGold() {
+        return gold;
+    }
+
+    public static class Builder extends JSONFold.Builder<Builder> {
+        private final JacksonJSONFold target;
+
+        private Builder(int width, Config config) {
+            super(new JacksonJSONFold(width, config));
+            this.target = (JacksonJSONFold) super.target;
+        }
+
+        public Builder gold(boolean gold) {
+            target.gold = gold;
+            return this;
+        }
+
+        @Override
+        public JacksonJSONFold build() {
+            super.build();
+            return target;
+        }
+    }
+
+    
     /**
      * Configure an existing ObjectMapper for use with JSONFold.
      *
@@ -118,6 +151,56 @@ public final class JacksonJsonFold {
 
     public static DefaultPrettyPrinter goldPettyPrinter(int indent) {
         return goldPettyPrinter(" ".repeat(indent));
+    }
+
+    private static ObjectMapper createMapper(boolean sortKeys)
+    {
+     ObjectMapper mapper = new ObjectMapper();
+
+        JacksonJSONFold.configure(mapper);
+
+        if (sortKeys) {
+            mapper.enable(
+                SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS);
+        }
+
+        return mapper;    
+    }
+
+    private static ObjectMapper DEFAULT_MAPPER = createMapper(false) ;
+    private static ObjectMapper SORTED_MAPPER = createMapper(true) ;
+
+    public Stats writeJson(Object obj, Writer writer) throws IOException
+    {
+        ObjectMapper mapper = sortKeys ? SORTED_MAPPER : DEFAULT_MAPPER ;
+        PrettyPrinter pp = gold ? goldPettyPrinter(width) : prettyPrinter(width) ;
+        try (JSONFoldWriter out = new JSONFoldWriter(writer, config, isDoClose())) {
+            mapper.writer(pp).writeValue(out, obj) ;
+            return out.getStats() ;
+        }
+    }
+
+    public String formatJson(Object obj) 
+    throws IOException
+    {
+        Writer sw = new StringWriter() ;
+        Stats stats = writeJson(obj, sw) ;
+        if ( stats == null ) throw new IOException("Failed to generate JSON string") ;
+        return sw.toString();
+    }
+
+    public static Stats writeJson(Object obj, Writer writer, int width, Config config)
+    throws IOException
+    {
+        JacksonJSONFold fmt = new JacksonJSONFold(width, config) ;
+        return fmt.writeJson(obj, writer);
+    }
+
+    public static String formatJSON(Object obj, int width, Config config)
+    throws IOException
+    {
+        JacksonJSONFold fmt = new JacksonJSONFold(width, config) ;
+        return fmt.formatJson(obj);
     }
 
 }

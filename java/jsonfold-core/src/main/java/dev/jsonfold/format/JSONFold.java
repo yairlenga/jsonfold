@@ -1,340 +1,141 @@
 package dev.jsonfold.format;
 
-import java.util.Map;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
 
-/**
- * Mutable configuration object for JSONFold formatting.
- *
- * <p>Preset instances are kept internally, but {@link #preset(String)}
- * always returns a clone, so callers may safely modify the returned object
- * with setters.</p>
- */
-public class JSONFold implements Cloneable {
+public class JSONFold {
 
-    public static final int MAX_ARRAY_ITEMS = 1000;
-    public static final int MAX_OBJ_ITEMS = 1000;
-    public static final int MAX_NESTING = 10;
-    public static final int DEFAULT_WIDTH = 100;
+    protected Integer indent ;
+    protected boolean sortKeys ;
+    protected int width ;
+    protected Config config ;
+    protected boolean doClose ;
 
-    int width = DEFAULT_WIDTH;
-
-    int packArrayItems = 8;
-    int packObjItems = 4;
-    int packNesting = 1;
-
-    int foldArrayItems = 8;
-    int foldObjItems = 4;
-    int foldNesting = 1;
-
-    int joinArrayItems = 8;
-    int joinObjItems = 4;
-    int joinNesting = 1;
-
-    public JSONFold() {
+    public static Builder<?> builder(int width) {
+        return new Builder<>(new JSONFold(width, Config.defaultConfig()));
     }
 
-    public JSONFold(int width)
-    {
-        super();
-        this.width = width ;
-    }
-
-    @Override
-    public JSONFold clone() {
-        try {
-            return (JSONFold) super.clone();
-        } catch (CloneNotSupportedException e) {
-            throw new AssertionError(e);
-        }
-    }
-
-    public JSONFold withWidth(int width) {
+    protected JSONFold(int width, Config config) {
         this.width = width;
-        return this;
+        this.config = config;
     }
 
-    private static final Map<String, JSONFold> PRESETS = Map.ofEntries(
-        Map.entry("", createDefault()),
-        Map.entry("default", createDefault()),
-        Map.entry("none", createNone()),
-        Map.entry("low", createLow()),
-        Map.entry("med", createMed()),
-        Map.entry("high", createHigh()),
-        Map.entry("max", createMax()),
-        Map.entry("pack", createPack()),
-        Map.entry("fold", createFold()),
-        Map.entry("join", createJoin())
-    );
+    public JSONFold(JSONFold other) {
+        this.indent = other.indent;
+        this.sortKeys = other.sortKeys;
+        this.width = other.width;
+        this.config = other.config;
+        this.doClose = other.doClose;        
+    }
 
-    public static JSONFold preset(String name) {
-        if ( name.equals("off")) return null ;
+    public static class Builder<B extends Builder<B>> {
+        protected final JSONFold target;
 
-        JSONFold cfg = PRESETS.get(name == null ? "" : name);
-        if (cfg == null) {
-            throw new IllegalArgumentException("Unknown JSONFold preset: " + name);
+        protected Builder(JSONFold target) {
+            this.target = target;
         }
-        return cfg.clone();
+
+        @SuppressWarnings("unchecked")
+        protected B self() {
+            return (B) this;
+        }
+
+        public B indent(Integer indent) {
+            target.indent = indent;
+            return self();
+        }
+
+        public B sortKeys(boolean sortKeys) {
+            target.sortKeys = sortKeys;
+            return self();
+        }
+
+        public B doClose(boolean doClose) {
+            target.doClose = doClose;
+            return self();
+        }
+
+        public JSONFold build() {
+            int set_width = target.width ;
+            if ( set_width > 0 && set_width != target.config.width )
+                target.config = new Config(target.config, set_width) ;
+            return target;
+        }
+    }
+
+    public boolean isDoClose() {
+        return doClose;
     }
 
     public int getWidth() {
         return width;
     }
 
-    public void setWidth(int width) {
-        this.width = width;
+    public Config getConfig() {
+        return config;
     }
 
-    public int getPackArrayItems() {
-        return packArrayItems;
+
+    public Integer getIndent() {
+        return indent;
     }
 
-    public void setPackArrayItems(int packArrayItems) {
-        this.packArrayItems = packArrayItems;
+    public boolean isSortKeys() {
+        return sortKeys;
     }
 
-    public int getPackObjItems() {
-        return packObjItems;
-    }
-
-    public void setPackObjItems(int packObjItems) {
-        this.packObjItems = packObjItems;
-    }
-
-    public int getPackNesting() {
-        return packNesting;
-    }
-
-    public void setPackNesting(int packNesting) {
-        this.packNesting = packNesting;
-    }
-
-    public int getFoldArrayItems() {
-        return foldArrayItems;
-    }
-
-    public void setFoldArrayItems(int foldArrayItems) {
-        this.foldArrayItems = foldArrayItems;
-    }
-
-    public int getFoldObjItems() {
-        return foldObjItems;
-    }
-
-    public void setFoldObjItems(int foldObjItems) {
-        this.foldObjItems = foldObjItems;
-    }
-
-    public int getFoldNesting() {
-        return foldNesting;
-    }
-
-    public void setFoldNesting(int foldNesting) {
-        this.foldNesting = foldNesting;
-    }
-
-    public int getJoinArrayItems() {
-        return joinArrayItems;
-    }
-
-    public void setJoinArrayItems(int joinArrayItems) {
-        this.joinArrayItems = joinArrayItems;
-    }
-
-    public int getJoinObjItems() {
-        return joinObjItems;
-    }
-
-    public void setJoinObjItems(int joinObjItems) {
-        this.joinObjItems = joinObjItems;
-    }
-
-    public int getJoinNesting() {
-        return joinNesting;
-    }
-
-    public void setJoinNesting(int joinNesting) {
-        this.joinNesting = joinNesting;
-    }
-
-    public void setPackItems(int value) {
-        this.packArrayItems = value;
-        this.packObjItems = value;
-    }
-
-    public void setFoldItems(int value) {
-        this.foldArrayItems = value;
-        this.foldObjItems = value;
-    }
-
-    public void setJoinItems(int value) {
-        this.joinArrayItems = value;
-        this.joinObjItems = value;
-    }
-
-    private static JSONFold createDefault() {
-        return new JSONFold();
-    }
-
-    private static JSONFold createNone() {
-        JSONFold cfg = new JSONFold();
-
-        cfg.packArrayItems = 0;
-        cfg.packObjItems = 0;
-        cfg.packNesting = 0;
-
-        cfg.foldArrayItems = 0;
-        cfg.foldObjItems = 0;
-        cfg.foldNesting = 0;
-
-        cfg.joinArrayItems = 0;
-        cfg.joinObjItems = 0;
-        cfg.joinNesting = 0;
-
-        return cfg;
-    }
-
-    private static JSONFold createLow() {
-        JSONFold cfg = createDefault();
-        cfg.foldNesting = 0;
-        cfg.joinNesting = 0;
-        return cfg;
-    }
-
-    private static JSONFold createMed() {
-        JSONFold cfg = createDefault();
-        cfg.joinNesting = 0;
-        return cfg;
-    }
-
-    private static JSONFold createHigh() {
-        JSONFold cfg = createDefault();
-
-        cfg.packArrayItems = 16;
-        cfg.packObjItems = 8;
-        cfg.packNesting = 4;
-
-        cfg.foldArrayItems = 16;
-        cfg.foldObjItems = 8;
-        cfg.foldNesting = 4;
-
-        cfg.joinArrayItems = 16;
-        cfg.joinObjItems = 8;
-        cfg.joinNesting = 2;
-
-        return cfg;
-    }
-
-    private static JSONFold createMax() {
-        JSONFold cfg = createNone();
-
-        cfg.width = 255 ;
-        cfg.packArrayItems = MAX_ARRAY_ITEMS;
-        cfg.packObjItems = MAX_OBJ_ITEMS;
-        cfg.packNesting = MAX_NESTING;
-
-        cfg.foldArrayItems = MAX_ARRAY_ITEMS;
-        cfg.foldObjItems = MAX_OBJ_ITEMS;
-        cfg.foldNesting = MAX_NESTING;
-
-        cfg.joinArrayItems = MAX_ARRAY_ITEMS;
-        cfg.joinObjItems = MAX_OBJ_ITEMS;
-        cfg.joinNesting = MAX_NESTING;
-
-        return cfg;
-    }
-
-    private static JSONFold createPack() {
-        JSONFold cfg = createNone();
-
-        cfg.packArrayItems = MAX_ARRAY_ITEMS;
-        cfg.packObjItems = MAX_OBJ_ITEMS;
-        cfg.packNesting = MAX_NESTING;
-
-        return cfg;
-    }
-
-    private static JSONFold createFold() {
-        JSONFold cfg = createNone();
-
-        cfg.foldArrayItems = MAX_ARRAY_ITEMS;
-        cfg.foldObjItems = MAX_OBJ_ITEMS;
-        cfg.foldNesting = MAX_NESTING;
-
-        return cfg;
-    }
-
-    private static JSONFold createJoin() {
-        JSONFold cfg = createNone();
-
-        cfg.foldArrayItems = MAX_ARRAY_ITEMS;
-        cfg.foldObjItems = MAX_OBJ_ITEMS;
-        cfg.foldNesting = MAX_NESTING;
-
-        cfg.joinArrayItems = MAX_ARRAY_ITEMS;
-        cfg.joinObjItems = MAX_OBJ_ITEMS;
-        cfg.joinNesting = MAX_NESTING;
-
-        return cfg;
-    }
-
-    public static JSONFold none()
+    static private Config.Builder configBuilder(Config baseConfig, Integer width)
     {
-        return createNone() ;
+        Config.Builder builder = baseConfig.builder() ;
+        if ( width != null ) builder.width(width) ;
+        return builder ;
     }
 
-    public static JSONFold low()
-    {
-        return createLow() ;
+    static public Config.Builder config(Config baseConfig, Integer width) {
+        return configBuilder(baseConfig, width) ;
     }
 
-    public static JSONFold med()
+    static public Config.Builder config(String name, Integer width) {
+        Config config = Config.preset(name) ;
+        if ( config == null ) return null ;
+        return configBuilder(config, width) ;
+    }
+ 
+    static Writer filter_stream(Writer base, int width, Config config, boolean close_fp)
     {
-        return createMed() ;
+        JSONFoldWriter writer = new JSONFoldWriter(base, configBuilder(config, width).build(), close_fp) ;
+        return writer ;
     }
 
-    public static JSONFold high()
+    public String formatJsonText(String jsonText)
+    throws IOException
     {
-        return createHigh();
+        try (StringWriter sw = new StringWriter() ;
+            Writer out = filter_stream(sw, width, config, false) ;
+            ) {
+            out.write(jsonText) ;
+            return sw.toString() ;
+        }
     }
 
-    public static JSONFold max()
+    public static String formatJsonText(String jsonText, int width, Config config)
+    throws IOException
     {
-        return max() ;
+        JSONFold fmt = new JSONFold(width, config) ;
+        return fmt.formatJsonText(jsonText) ;
     }
 
-    public static JSONFold defaults()
-    {
-        return createDefault() ;
-    }
 
-    static JSONFold pack()
-    {
-        return createPack() ;
-    }
+    // Java does not allow abstract static - the following must be implented in sub classes
 
-    static JSONFold fold()
-    {
-        return createFold() ;
-    }
+    // abstract public Stats writeJson(Object obj, Writer writer) throws IOException ;
+    // abstract public String formatJson(Object obj) throws IOException;
 
-    static JSONFold join()
-    {
-        return createJoin() ;
-    }
-    
-    @Override
-    public String toString() {
-        return "JSONFold{" +
-            "width=" + width +
-            ", packArrayItems=" + packArrayItems +
-            ", packObjItems=" + packObjItems +
-            ", packNesting=" + packNesting +
-            ", foldArrayItems=" + foldArrayItems +
-            ", foldObjItems=" + foldObjItems +
-            ", foldNesting=" + foldNesting +
-            ", joinArrayItems=" + joinArrayItems +
-            ", joinObjItems=" + joinObjItems +
-            ", joinNesting=" + joinNesting +
-            '}';
-    }
+    // public static Stats writeJson(Object obj, Writer writer, int width, Config config, JacksonJsonFold options)
+    // throws IOException
+
+    // public static String formatJSON(Object obj, int width, Config config, JacksonJsonFold options)
+    // throws IOException
+
 }

@@ -17,7 +17,7 @@ build:
 
 test:
 	cd ../tests/unit && ./run_tests.sh javagold
-	cd ../tests/sample && ./run_tests.sh javagold
+	cd ../tests/samples && ./run_tests.sh javagold
 
 benchmark:
 	./run.sh dev.jsonfold.format.Benchmark

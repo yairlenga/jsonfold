@@ -30,6 +30,33 @@ public final class Main {
         }
     }
 
+    static private Config buildConfig(Args args)
+    {
+
+        Config.Builder builder = JSONFold.config(args.compact, args.width) ;
+        if ( builder == null ) return null ;
+
+        if (args.width != null) builder.width(args.width);
+        if (args.packItems != null) builder.packArrayItems(args.packItems).packObjItems(args.packItems);
+
+        if (args.foldItems != null) builder.foldArrayItems(args.foldItems).foldObjItems(args.foldItems);
+        if (args.joinItems != null) builder.joinArrayItems(args.joinItems).joinObjItems(args.joinItems);
+
+        if (args.packArrayItems != null) builder.packArrayItems(args.packArrayItems);
+        if (args.packObjItems != null) builder.packObjItems(args.packObjItems);
+        if (args.packNesting != null) builder.packNesting(args.packNesting);
+
+        if (args.foldArrayItems != null) builder.foldArrayItems(args.foldArrayItems);
+        if (args.foldObjItems != null) builder.foldObjItems(args.foldObjItems);
+        if (args.foldNesting != null) builder.foldNesting(args.foldNesting);
+
+        if (args.joinArrayItems != null) builder.joinArrayItems(args.joinArrayItems);
+        if (args.joinObjItems != null) builder.joinObjItems(args.joinObjItems);
+        if (args.joinNesting != null) builder.joinNesting(args.joinNesting);
+
+        return builder.build() ;
+    }
+
     public static int run(String[] argv) throws Exception {
         Args args = parseArgs(argv);
         if (args.help) {
@@ -37,33 +64,15 @@ public final class Main {
             return 0;
         }
 
-        JSONFold cfg = JSONFold.preset(args.compact);
-
-        if (args.width != null) cfg.setWidth(args.width);
-
-        if (args.packItems != null) cfg.setPackItems(args.packItems);
-        if (args.foldItems != null) cfg.setFoldItems(args.foldItems);
-        if (args.joinItems != null) cfg.setJoinItems(args.joinItems);
-
-        if (args.packArrayItems != null) cfg.setPackArrayItems(args.packArrayItems);
-        if (args.packObjItems != null) cfg.setPackObjItems(args.packObjItems);
-        if (args.packNesting != null) cfg.setPackNesting(args.packNesting);
-
-        if (args.foldArrayItems != null) cfg.setFoldArrayItems(args.foldArrayItems);
-        if (args.foldObjItems != null) cfg.setFoldObjItems(args.foldObjItems);
-        if (args.foldNesting != null) cfg.setFoldNesting(args.foldNesting);
-
-        if (args.joinArrayItems != null) cfg.setJoinArrayItems(args.joinArrayItems);
-        if (args.joinObjItems != null) cfg.setJoinObjItems(args.joinObjItems);
-        if (args.joinNesting != null) cfg.setJoinNesting(args.joinNesting);
+        Config cfg = buildConfig(args) ;
 
         if (args.verbose) {
             System.err.println(cfg);
         }
 
         DefaultPrettyPrinter pp = args.gold ?
-            JacksonJsonFold.goldPettyPrinter(args.indent) : 
-            JacksonJsonFold.prettyPrinter(args.indent) ;
+            JacksonJSONFold.goldPettyPrinter(args.indent) : 
+            JacksonJSONFold.prettyPrinter(args.indent) ;
 
         JsonMapper.Builder builder = JsonMapper.builder()
             .defaultPrettyPrinter(pp)
