@@ -41,6 +41,8 @@ public class JSONFold {
         return new Builder<>(new JSONFold(width, Config.defaultConfig()));
     }
 
+
+    
     /**
      * Create a formatter with the supplied width and configuration.
      *

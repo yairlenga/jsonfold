@@ -37,19 +37,23 @@ class JSONFoldWriterTest {
         }
         """;
 
-    private static String fold(String input, Config cfg) throws Exception {
+    private static String fold(String input, Config config) throws Exception {
         StringWriter sw = new StringWriter();
 
-        try (var out = new JSONFoldWriter(sw, cfg)) {
+        try (var out = new JSONFoldWriter(sw, config)) {
             out.write(input);
         }
 
         return sw.toString();
     }
 
+    private static String fold(String input, String name) throws Exception {
+      return fold(input, Config.preset(name)) ;
+    }
+
     @Test
     void nonePresetLeavesInputUnchanged() throws Exception {
-        assertEquals(INPUT, fold(INPUT, Config.none())) ;
+        assertEquals(INPUT, fold(INPUT, Config.PRESET_NONE)) ;
     }
 
     @Test
@@ -81,7 +85,7 @@ class JSONFoldWriterTest {
             }
             """;
 
-        assertEquals(expected, fold(INPUT, Config.pack())) ;
+        assertEquals(expected, fold(INPUT, Config.PRESET_PACK)) ;
     }
 
     @Test
@@ -103,20 +107,19 @@ class JSONFoldWriterTest {
             }
             """;
 
-        assertEquals(expected, fold(INPUT, Config.fold()));
+        assertEquals(expected, fold(INPUT, Config.PRESET_FOLD));
     }
 
     @Test
     void joinPresetFoldsAndJoinsNestedStructures() throws Exception {
         String expected = """
-            {
-              "small_array": [ 1 ], "small_obj": { "a": 1 }, "med_array": [ 1, 2 ],
-              "med_obj": { "a": 1, "b": 2 }, "nested_array": [ [ 1 ] ],
-              "nested_obj": { "child": { "a": 1 } }
-            }
-            """;
+        {
+          "small_array": [ 1 ], "small_obj": { "a": 1 }, "med_array": [ 1, 2 ],
+          "med_obj": { "a": 1, "b": 2 }, "nested_array": [ [ 1 ] ], "nested_obj": { "child": { "a": 1 } }
+        }
+        """;
 
-        assertEquals(expected, fold(INPUT, Config.join()));
+        assertEquals(expected, fold(INPUT, Config.PRESET_JOIN));
     }
 
     @Test
@@ -147,7 +150,7 @@ class JSONFoldWriterTest {
             }
             """;
 
-        assertEquals(expected, fold(input, Config.max().builder().width(40).build()));
+        assertEquals(expected, fold(input, Config.preset(Config.PRESET_MAX).builder().width(40).build()));
     }
 
     @Test
@@ -160,7 +163,7 @@ class JSONFoldWriterTest {
             }
             """;
 
-        assertEquals(expected, fold(input, Config.none()));
+        assertEquals(expected, fold(input, Config.PRESET_NONE));
     }
 
     @Test

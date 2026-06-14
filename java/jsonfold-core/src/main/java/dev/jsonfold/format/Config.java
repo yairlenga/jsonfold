@@ -25,6 +25,9 @@ public class Config {
     public static final String PRESET_MED = "med" ;
     public static final String PRESET_LOW = "low" ;
     public static final String PRESET_MAX = "max" ;
+    static final String PRESET_FOLD = "fold" ;
+    static final String PRESET_PACK = "pack" ;
+    static final String PRESET_JOIN = "join" ;
 
     int width = DEFAULT_WIDTH;
 
@@ -169,27 +172,27 @@ public class Config {
     }
 
     private static final Config DEFAULT_CONFIG = new Config(true) ;
-    private static final Config CONFIG_NONE = new Config(false) ;
-    private static final Config CONFIG_LOW = createLow() ;
-    private static final Config CONFIG_MED = createMed() ;
-    private static final Config CONFIG_HIGH = createHigh() ;
-    private static final Config CONFIG_MAX = createMax() ;
+    private static final Config NONE_CONFIG = new Config(false) ;
+    private static final Config LOW_CONFIG = createLow() ;
+    private static final Config MED_CONFIG = createMed() ;
+    private static final Config HIGH_CONFIG = createHigh() ;
+    private static final Config MAX_CONFIG = createMax() ;
 
-    private static final Config CONFIG_PACK = createPack() ;
-    private static final Config CONFIG_FOLD = createFold() ;
-    private static final Config CONFIG_JOIN = createJoin() ;
+    private static final Config PACK_CONFIG = createPack() ;
+    private static final Config FOLD_CONFIG = createFold() ;
+    private static final Config JOIN_CONFIG = createJoin() ;
 
     private static final Map<String, Config> PRESETS = Map.ofEntries(
         Map.entry("", DEFAULT_CONFIG),
         Map.entry(PRESET_DEFAULT, DEFAULT_CONFIG),
-        Map.entry(PRESET_NONE, CONFIG_NONE),
-        Map.entry(PRESET_LOW, CONFIG_LOW),
-        Map.entry(PRESET_MED, CONFIG_MED),
-        Map.entry(PRESET_HIGH, CONFIG_HIGH),
-        Map.entry(PRESET_MAX, CONFIG_MAX),
-        Map.entry("pack", CONFIG_PACK),
-        Map.entry("fold", CONFIG_FOLD),
-        Map.entry("join", CONFIG_JOIN)
+        Map.entry(PRESET_NONE, NONE_CONFIG),
+        Map.entry(PRESET_LOW, LOW_CONFIG),
+        Map.entry(PRESET_MED, MED_CONFIG),
+        Map.entry(PRESET_HIGH, HIGH_CONFIG),
+        Map.entry(PRESET_MAX, MAX_CONFIG),
+        Map.entry(PRESET_PACK, PACK_CONFIG),
+        Map.entry(PRESET_FOLD, FOLD_CONFIG),
+        Map.entry(PRESET_JOIN, JOIN_CONFIG)
     );
 
 /**
@@ -359,48 +362,9 @@ public class Config {
  *
  * @return configuration copy
  */
-    public static Config none()
+    public static Config noneConfig()
     {
-        return CONFIG_NONE ;
-    }
-
-/**
- * Conservative formatting preset with limited folding.
- *
- * @return configuration copy
- */
-    public static Config low()
-    {
-        return CONFIG_LOW ;
-    }
-
-    public static Config med()
-    {
-        return CONFIG_MED ;
-    }
-
-/**
- * Aggressive formatting preset with increased packing, folding,
- * and joining limits.
- *
- * @return configuration copy
- */
-    public static Config high()
-    {
-        return CONFIG_HIGH ;
-    }
-
- /**
- * Maximum compaction preset.
- *
- * <p>Uses large limits and a wider default width to allow the
- * formatter to compact JSON as much as possible.
- *
- * @return configuration copy
- */
-    public static Config max()
-    {
-        return CONFIG_MAX ;
+        return NONE_CONFIG ;
     }
 
 /**
@@ -411,21 +375,6 @@ public class Config {
     public static Config defaultConfig()
     {
         return DEFAULT_CONFIG ;
-    }
-
-    static Config pack()
-    {
-        return CONFIG_PACK ;
-    }
-
-    static Config fold()
-    {
-        return CONFIG_FOLD ;
-    }
-
-    static Config join()
-    {
-        return CONFIG_JOIN ;
     }
     
     @Override

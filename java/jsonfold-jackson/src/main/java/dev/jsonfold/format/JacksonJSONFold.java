@@ -51,6 +51,27 @@ public final class JacksonJSONFold extends JSONFold implements JFFormatter {
     }
 
     /**
+     * Create a builder using the default configuration and the supplied width.
+     *
+     * @param width target maximum line width
+     * @return a new Jackson formatter builder
+     */
+    public static Builder builder(int width) {
+        return new Builder(width, Config.defaultConfig());
+    }
+
+    /**
+     * Create a builder using the supplied width and configuration.
+     *
+     * @param width target maximum line width
+     * @param config folding configuration
+     * @return a new Jackson formatter builder
+     */
+    public static Builder builder(int width, Config config) {
+        return new Builder(width, config);
+    }
+
+    /**
      * Builder for {@link JacksonJSONFold}.
      */
     public static class Builder extends JSONFold.Builder<Builder> {
@@ -250,7 +271,7 @@ public final class JacksonJSONFold extends JSONFold implements JFFormatter {
      * @param indent number of spaces to use for indentation
      * @return configured gold pretty-printer
      */
-    public static DefaultPrettyPrinter goldPettyPrinter(int indent) {
+    public static DefaultPrettyPrinter goldPrettyPrinter(int indent) {
         return goldPrettyPrinter(" ".repeat(indent));
     }
 
@@ -291,7 +312,7 @@ public final class JacksonJSONFold extends JSONFold implements JFFormatter {
     public Stats writeJson(Object obj, Writer writer) throws IOException
     {
         ObjectMapper mapper = sortKeys ? SORTED_MAPPER : DEFAULT_MAPPER ;
-        PrettyPrinter pp = gold ? goldPettyPrinter(width) : prettyPrinter(width) ;
+        PrettyPrinter pp = gold ? goldPrettyPrinter(width) : prettyPrinter(width) ;
         try (JSONFoldWriter out = new JSONFoldWriter(writer, config, isDoClose())) {
             mapper.writer(pp).writeValue(out, obj) ;
             return out.getStats() ;

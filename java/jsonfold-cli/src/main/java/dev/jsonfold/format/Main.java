@@ -71,7 +71,7 @@ public final class Main {
         }
 
         DefaultPrettyPrinter pp = args.gold ?
-            JacksonJSONFold.goldPettyPrinter(args.indent) : 
+            JacksonJSONFold.goldPrettyPrinter(args.indent) : 
             JacksonJSONFold.prettyPrinter(args.indent) ;
 
         JsonMapper.Builder builder = JsonMapper.builder()
