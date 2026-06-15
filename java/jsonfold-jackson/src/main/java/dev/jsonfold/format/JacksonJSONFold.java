@@ -12,15 +12,68 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
 /**
- * Jackson-based JSONFold formatter.
+ * Jackson integration for JSONFold.
  *
- * <p>This class serializes Java objects with Jackson, expands the generated
- * pretty-printed JSON, and then passes that text through {@link JSONFoldWriter}
- * to produce JSONFold's hybrid pretty/compact output.</p>
+ * <p>This class serializes Java objects with Jackson and applies JSONFold's
+ * hybrid pretty/compact formatting to the generated JSON. It is the recommended
+ * entry point when an application already uses Jackson for JSON serialization.</p>
  *
- * <p>Use this class as the main Java object-formatting API when working with
- * Jackson-backed JSON serialization.</p>
+ * <p>The core {@link JSONFold} class only filters JSON text. This class provides
+ * the full object-to-folded-JSON path by combining Jackson object serialization
+ * with {@link JSONFoldWriter}.</p>
+ *
+ * <h2>Quick Start</h2>
+ *
+ * <pre>{@code
+ * JacksonJSONFold jf = JacksonJSONFold.builder(120).build();
+ *
+ * String json = jf.formatJson(value);
+ * }</pre>
+ *
+ * <h2>Writing to a Writer</h2>
+ *
+ * <pre>{@code
+ * JacksonJSONFold jf = JacksonJSONFold.builder(120)
+ *     .sortKeys(true)
+ *     .build();
+ *
+ * try (Writer out = Files.newBufferedWriter(outputFile)) {
+ *     jf.writeJson(value, out);
+ * }
+ * }</pre>
+ *
+ * <h2>Custom Configuration</h2>
+ *
+ * <pre>{@code
+ * Config config = Config.defaultConfig()
+ *     .toBuilder()
+ *     .foldArrayItems(12)
+ *     .foldObjItems(6)
+ *     .build();
+ *
+ * JacksonJSONFold jf = JacksonJSONFold.builder(120, config)
+ *     .indent(2)
+ *     .build();
+ * }</pre>
+ *
+ * <h2>Configuring an ObjectMapper</h2>
+ *
+ * <p>JSONFold works best when Jackson first expands arrays and objects into
+ * normal multi-line pretty JSON. The {@link #configure(ObjectMapper)} method
+ * installs a JSONFold-friendly pretty printer on an existing mapper.</p>
+ *
+ * <pre>{@code
+ * ObjectMapper mapper = JacksonJSONFold.configure(new ObjectMapper());
+ *
+ * mapper.writerWithDefaultPrettyPrinter()
+ *       .writeValue(output, value);
+ * }</pre>
+ *
+ * <p>Most callers should use {@link #formatJson(Object)} or
+ * {@link #writeJson(Object, Writer)} rather than using {@link JSONFoldWriter}
+ * directly.</p>
  */
+
 public final class JacksonJSONFold extends JSONFold implements JFFormatter {
 
     /**

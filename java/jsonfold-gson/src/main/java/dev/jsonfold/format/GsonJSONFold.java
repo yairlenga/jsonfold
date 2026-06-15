@@ -9,10 +9,53 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonWriter;
 
 /**
- * Gson-based JSONFold formatter.
+ * Gson integration for JSONFold.
  *
- * <p>This class serializes Java objects with Gson using pretty printing,
- * then passes the generated JSON through {@link JSONFoldWriter}.</p>
+ * <p>This class serializes Java objects with Gson and applies JSONFold's
+ * hybrid pretty/compact formatting to the generated JSON. It is the recommended
+ * entry point when an application already uses Gson for JSON serialization.</p>
+ *
+ * <p>The core {@link JSONFold} class only filters JSON text. This class provides
+ * the full object-to-folded-JSON path by combining Gson object serialization
+ * with {@link JSONFoldWriter}.</p>
+ *
+ * <h2>Quick Start</h2>
+ *
+ * <pre>{@code
+ * GsonJSONFold jf = GsonJSONFold.builder(120).build();
+ *
+ * String json = jf.formatJson(value);
+ * }</pre>
+ *
+ * <h2>Writing to a Writer</h2>
+ *
+ * <pre>{@code
+ * GsonJSONFold jf = GsonJSONFold.builder(120)
+ *     .sortKeys(true)
+ *     .build();
+ *
+ * try (Writer out = Files.newBufferedWriter(outputFile)) {
+ *     jf.writeJson(value, out);
+ * }
+ * }</pre>
+ *
+ * <h2>Custom Configuration</h2>
+ *
+ * <pre>{@code
+ * Config config = Config.defaultConfig()
+ *     .toBuilder()
+ *     .foldArrayItems(12)
+ *     .foldObjItems(6)
+ *     .build();
+ *
+ * GsonJSONFold jf = GsonJSONFold.builder(120, config)
+ *     .indent(2)
+ *     .build();
+ * }</pre>
+ *
+ * <p>Most callers should use {@link #formatJson(Object)} or
+ * {@link #writeJson(Object, Writer)} rather than using {@link JSONFoldWriter}
+ * directly.</p>
  */
 public final class GsonJSONFold extends JSONFold implements JFFormatter {
 

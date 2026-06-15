@@ -10,6 +10,18 @@
  * classes include {@link dev.jsonfold.format.Config} for formatter settings and
  * {@link dev.jsonfold.format.Stats} for formatting statistics.
  *
+ * <h2>Choosing an Main Class</h2>
+ *
+ * <ul>
+ *   <li>{@link JSONFold} &mdash; format existing JSON text.</li>
+ *   <li>{@link JacksonJSONFold} &mdash; serialize Java objects using Jackson and
+ *       format the resulting JSON.</li>
+ *   <li>{@link GsonJSONFold} &mdash; serialize Java objects using Gson and
+ *       format the resulting JSON.</li>
+ * </ul>
+ *
+ * <p>{@link JSONFoldWriter} provides the underlying streaming implementation and
+ * is primarily intended for advanced integrations.</p>
  * <h2>Quick Start</h2>
  *
  * <p>Format an existing JSON string:
