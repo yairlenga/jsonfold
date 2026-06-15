@@ -12,11 +12,6 @@ import java.io.File;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 public final class Main {
 
@@ -87,7 +82,7 @@ public final class Main {
 
         Object value;
         if (args.demo) {
-            value = demoData();
+            value = CliUtils.demoData();
         } else if (args.input != null) {
             value = mapper.readValue(new File(args.input), Object.class);
         } else {
@@ -276,55 +271,6 @@ public final class Main {
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException("Invalid integer for " + prefix + value);
         }
-    }
-
-    private static Object demoData() {
-        Map<String, Object> root = new LinkedHashMap<>();
-
-        root.put("meta", Map.of(
-                "version", 1,
-                "ok", true,
-                "name", "jsonfold demo"));
-
-        root.put("ids", List.of(1, 2, 3, 4, 5, 6));
-
-        root.put("matrix", List.of(
-                List.of(1, 2),
-                List.of(3, 4),
-                List.of(5, 6)));
-
-        root.put("items", List.of(
-                Map.of("id", 1, "name", "alpha"),
-                Map.of("id", 2, "name", "beta")));
-
-        root.put("long", List.of(
-                "this is a long message that may force the block to stay expanded",
-                "second",
-                "third",
-                "fourth"));
-
-        root.put("wide_array", IntStream.rangeClosed(1, 50)
-                .mapToObj(i -> "a" + i)
-                .collect(Collectors.toList()));
-
-        root.put("singleArray", List.of(1));
-        root.put("singleObject", Map.of("x", 2));
-
-        root.put("wide_array", IntStream.rangeClosed(1, 9)
-            .mapToObj(i -> "abcdefghijklmnopqrstuvwxyz" + i)
-            .toList());
-
-        root.put("wide_object", IntStream.rangeClosed(1, 9)
-            .boxed()
-            .collect(Collectors.toMap(
-            i -> "abcdefghijk" + i,
-            i -> "lmnopqrstuvwxyz" + i,
-            (a, b) -> a,
-            LinkedHashMap::new
-        )));
-
-
-        return root;
     }
 
     private static void usage() {

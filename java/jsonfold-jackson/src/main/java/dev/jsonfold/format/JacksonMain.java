@@ -1,26 +1,22 @@
 package dev.jsonfold.format;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.InputStreamReader;
+import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.io.Reader;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.ToNumberPolicy;
-import com.google.gson.stream.JsonWriter;
+public final class JacksonMain {
 
-public final class GsonMain {
-
-    private GsonMain() {
+    private JacksonMain() {
     }
 
     public static void main(String[] argv) throws Exception {
@@ -41,45 +37,19 @@ public final class GsonMain {
         return builder.build() ;
     }
 
-    private static Object sortKeys(Object obj) {
-        if (obj instanceof Map<?, ?> map) {
-            TreeMap<String,Object> sorted = new TreeMap<>();
-
-            for (var e : map.entrySet()) {
-                sorted.put(
-                    (String) e.getKey(),
-                    sortKeys(e.getValue()));
-            }
-
-            return sorted;
-        }
-
-        if (obj instanceof List<?> list) {
-            ArrayList<Object> out = new ArrayList<>(list.size());
-
-            for (Object item : list) {
-                out.add(sortKeys(item));
-            }
-
-            return out;
-        }
-
-        return obj;
-    }
-
-
     static private Object getInput(boolean demo, String inputFile)
-    throws FileNotFoundException
+    throws IOException
     {
-        if ( demo ) {
+        ObjectMapper mapper = new ObjectMapper() ;
+        if (demo) {
             return CliUtils.demoData() ;
         }
-        Gson gson = new GsonBuilder()
-            .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
-            .create() ;
-        Reader reader = inputFile != null ? new FileReader(new File(inputFile)) :
-            new InputStreamReader(System.in) ;
-        return gson.fromJson(reader, Object.class) ;
+
+        if ( inputFile != null ) {
+            return mapper.readValue(new File(inputFile), Object.class) ;
+        }
+
+        return mapper.readValue(System.in, Object.class) ;
     }
 
     public static int run(String[] argv) throws Exception {
@@ -95,37 +65,27 @@ public final class GsonMain {
             System.err.println(cfg);
         }
 
+        DefaultPrettyPrinter pp = args.gold ?
+            JacksonJSONFold.goldPrettyPrinter(args.indent) : 
+            JacksonJSONFold.prettyPrinter(args.indent) ;
+
+        JsonMapper.Builder builder = JsonMapper.builder()
+            .defaultPrettyPrinter(pp)
+            .configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false);
+
+        if (args.sortKeys) {
+            builder.enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY);
+            builder.enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS);
+        }
+
+
         Object value = getInput(args.demo, args.input) ;
 
-        // The gold output is using the out of the box formatter.
-        // but it does NOT support custom indentation.
-        Gson prettyWriter = args.gold ? new GsonBuilder().create()
-            : new GsonBuilder().setPrettyPrinting().create() ;
-
-        // DefaultPrettyPrinter pp = args.gold ?
-        //     JacksonJSONFold.goldPrettyPrinter(args.indent) : 
-        //     JacksonJSONFold.prettyPrinter(args.indent) ;
-
-        // JsonMapper.Builder builder = JsonMapper.builder()
-        //     .defaultPrettyPrinter(pp)
-        //     .configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false);
-
-        // if (args.sortKeys) {
-        //     builder.enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY);
-        //     builder.enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS);
-        // }
-
-        // ObjectMapper mapper = builder.build();
-        // ObjectWriter prettyWriter = mapper.writerWithDefaultPrettyPrinter();
-
+        ObjectMapper mapper = builder.build();
+        ObjectWriter prettyWriter = mapper.writerWithDefaultPrettyPrinter();
         Writer stdout = new OutputStreamWriter(System.out, StandardCharsets.UTF_8);
         JSONFoldWriter out = new JSONFoldWriter(stdout, cfg, true); // keep stdout open
-
-        if ( args.sortKeys ) value = sortKeys(value);
-
-        JsonWriter jw = new JsonWriter(out) ;
-        jw.setIndent(" ".repeat(args.indent)) ;
-        prettyWriter.toJson(value, Object.class, jw) ;
+        prettyWriter.writeValue(out, value);
         out.finish();
         stdout.flush();
 
@@ -140,11 +100,7 @@ public final class GsonMain {
         boolean help;
         boolean demo;
         boolean verbose;
-
         boolean sortKeys;
-
-        // Not needed - GSON PP output identical to Python/JavaScript/...
-        @SuppressWarnings("unused")
         boolean gold;    // Match Python/Javascript Style
 
         String input;
@@ -251,6 +207,7 @@ public final class GsonMain {
                   --compact=default|none|low|med|high|max|pack|fold|join
                   --width=N
                   --indent=2
+
 
             """);
     }
