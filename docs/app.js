@@ -28,7 +28,7 @@ const examples = [
   },
   {
     label: "GeoJSON states/provinces",
-    url: "https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/01-python/geojson-none.json"
+    url: "https://raw.githubusercontent.com/yairlenga/jsonfold/refs/heads/main/articles/samples/geojson-none.json"
   }
 ];
 

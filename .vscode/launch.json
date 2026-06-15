@@ -57,6 +57,14 @@
             "projectName": "jsonfold-cli",
             "args": "--demo --compact=off --verbose"
         },
+        {
+            "type": "java",
+            "name": "Java GSON",
+            "request": "launch",
+            "mainClass": "dev.jsonfold.format.GsonMain",
+            "projectName": "jsonfold-gson",
+            "args": [ "--demo", "--verbose", "--sort-keys" ]
+        },
                 {
             "type": "java",
             "name": "Java benchmark",

@@ -16,11 +16,11 @@ def run_api_test() -> int:
 
     # config()
     cfg = jsonfold.config("high", width=120)
-    assert isinstance(cfg, jsonfold.JSONFold)
+    assert isinstance(cfg, jsonfold.JSONFoldConfig)
     assert cfg.width == 120
 
     cfg2 = jsonfold.config(cfg, fold_nesting=1)
-    assert isinstance(cfg2, jsonfold.JSONFold)
+    assert isinstance(cfg2, jsonfold.JSONFoldConfig)
     assert cfg2.width == 120
     assert cfg2.fold_nesting == 1
 
