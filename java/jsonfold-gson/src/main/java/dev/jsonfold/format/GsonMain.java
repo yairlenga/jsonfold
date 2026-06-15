@@ -19,6 +19,9 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.ToNumberPolicy;
 
+/**
+ * @hidden
+ */
 public final class GsonMain {
 
     private GsonMain() {

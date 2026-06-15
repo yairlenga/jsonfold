@@ -14,6 +14,9 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 
+/**
+ * @hidden
+ */
 public final class JacksonMain {
 
     private JacksonMain() {

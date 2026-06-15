@@ -121,6 +121,7 @@
                         <version>3.7.0</version>
                         <configuration>
                             <doclint>none</doclint>
+                            <overview>${project.basedir}/src/main/javadoc/overview.html</overview>
                         </configuration>
                         <executions>
                             <execution>

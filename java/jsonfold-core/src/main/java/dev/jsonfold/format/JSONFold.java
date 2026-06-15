@@ -36,11 +36,11 @@ public class JSONFold {
      *
      * @param width target maximum line width
      * @return a new formatter builder
+     * 
      */
-    public static Builder<?> builder(int width) {
+    protected static Builder<?> builder(int width) {
         return new Builder<>(new JSONFold(width, Config.defaultConfig()));
     }
-
 
     
     /**
@@ -71,8 +71,10 @@ public class JSONFold {
      * Builder for {@link JSONFold} and subclasses.
      *
      * @param <B> concrete builder type, used for fluent subclass builders
+     * 
+     * @hidden
      */
-    public static class Builder<B extends Builder<B>> {
+    protected static class Builder<B extends Builder<B>> {
         /** Formatter instance being configured. */
         protected final JSONFold target;
 

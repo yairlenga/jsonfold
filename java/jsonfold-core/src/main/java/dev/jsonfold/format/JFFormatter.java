@@ -6,7 +6,11 @@ import java.io.Writer;
 /**
  * integration helpers for JSONFold.
  * subclasses of JSONFold (Jackson, GSON, ...) must implement
+ * 
+ * @hidden
  */
+
+
 public interface JFFormatter {
 
     public String formatJsonText(String jsonText) throws IOException;
