@@ -199,7 +199,7 @@ public class JSONFold {
     static private Config.Builder configBuilder(Config baseConfig, Integer width)
     {
         Config.Builder builder = baseConfig.builder() ;
-        if ( width != null ) builder.width(width) ;
+        if ( width != null && width > 0 ) builder.width(width) ;
         return builder ;
     }
 
@@ -236,7 +236,7 @@ public class JSONFold {
      * @param close_fp whether closing the folding writer should close {@code base}
      * @return folding writer
      */
-    static public Writer filter_stream(Writer base, int width, Config config, boolean close_fp)
+    static public JSONFoldWriter filter_stream(Writer base, int width, Config config, boolean close_fp)
     {
         JSONFoldWriter writer = new JSONFoldWriter(base, configBuilder(config, width).build(), close_fp) ;
         return writer ;

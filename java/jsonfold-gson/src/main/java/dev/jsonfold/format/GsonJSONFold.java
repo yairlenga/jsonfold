@@ -6,6 +6,7 @@ import java.io.Writer;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.stream.JsonWriter;
 
 /**
  * Gson-based JSONFold formatter.
@@ -14,10 +15,6 @@ import com.google.gson.GsonBuilder;
  * then passes the generated JSON through {@link JSONFoldWriter}.</p>
  */
 public final class GsonJSONFold extends JSONFold implements JFFormatter {
-
-    private static final Gson GSON = new GsonBuilder()
-            .setPrettyPrinting()
-            .create();
 
     public GsonJSONFold(int width, Config config) {
         super(width, config);
@@ -46,16 +43,24 @@ public final class GsonJSONFold extends JSONFold implements JFFormatter {
         }
     }
 
-    @Override
-    public Stats writeJson(Object obj, Writer writer) throws IOException {
-        String json = GSON.toJson(obj);
+    public Stats writeJson(Object value, Writer out)
+    throws IOException {
 
-        try (JSONFoldWriter out =
-                new JSONFoldWriter(writer, config, isDoClose())) {
-            out.write(json);
-            out.write("\n");
-            return out.getStats();
+        JSONFoldWriter jfw = JSONFold.filter_stream(out, config.getWidth(), config, doClose) ;
+
+        if ( indent != null && indent > 0 ) {
+            Gson prettyWriter = new GsonBuilder().create();
+            JsonWriter jw = new JsonWriter(jfw) ;
+            jw.setIndent(" ".repeat(indent)) ;
+            prettyWriter.toJson(value, Object.class, jw) ;
+        } else {
+            // Use built-in Pretty printer
+            Gson prettyWriter = new GsonBuilder().setPrettyPrinting().create() ;
+            prettyWriter.toJson(value, Object.class, jfw);
         }
+        jfw.flush() ;
+        out.write("\n");
+        return jfw.getStats();
     }
 
     @Override

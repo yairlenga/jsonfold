@@ -1,8 +1,10 @@
 package dev.jsonfold.format;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
@@ -16,11 +18,35 @@ import java.util.TreeMap;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.ToNumberPolicy;
-import com.google.gson.stream.JsonWriter;
 
 public final class GsonMain {
 
     private GsonMain() {
+    }
+
+    public Object getInput(boolean demo, String inputFile)
+    throws FileNotFoundException
+    {
+        if ( demo ) {
+            return CliUtils.demoData() ;
+        }
+        Gson gson = new GsonBuilder()
+            .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
+            .create() ;
+        Reader reader = inputFile != null ? new FileReader(new File(inputFile)) :
+            new InputStreamReader(System.in) ;
+        return gson.fromJson(reader, Object.class) ;
+    }
+
+    public Stats writeTo(Writer out, Object value, Config config, int indent, boolean gold )
+    throws IOException {
+        if ( out == null ) out =  new BufferedWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8)); 
+        JSONFoldWriter jfw = JSONFold.filter_stream(out, config.getWidth(), config, false) ;
+
+        GsonJSONFold.writeJson(value, jfw, config.getWidth(), config) ;
+
+        jfw.flush() ;
+        return jfw.getStats();
     }
 
     public static void main(String[] argv) throws Exception {
@@ -67,21 +93,6 @@ public final class GsonMain {
         return obj;
     }
 
-
-    static private Object getInput(boolean demo, String inputFile)
-    throws FileNotFoundException
-    {
-        if ( demo ) {
-            return CliUtils.demoData() ;
-        }
-        Gson gson = new GsonBuilder()
-            .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
-            .create() ;
-        Reader reader = inputFile != null ? new FileReader(new File(inputFile)) :
-            new InputStreamReader(System.in) ;
-        return gson.fromJson(reader, Object.class) ;
-    }
-
     public static int run(String[] argv) throws Exception {
         Args args = parseArgs(argv);
         if (args.help) {
@@ -95,42 +106,15 @@ public final class GsonMain {
             System.err.println(cfg);
         }
 
-        Object value = getInput(args.demo, args.input) ;
-
-        // The gold output is using the out of the box formatter.
-        // but it does NOT support custom indentation.
-        Gson prettyWriter = args.gold ? new GsonBuilder().create()
-            : new GsonBuilder().setPrettyPrinting().create() ;
-
-        // DefaultPrettyPrinter pp = args.gold ?
-        //     JacksonJSONFold.goldPrettyPrinter(args.indent) : 
-        //     JacksonJSONFold.prettyPrinter(args.indent) ;
-
-        // JsonMapper.Builder builder = JsonMapper.builder()
-        //     .defaultPrettyPrinter(pp)
-        //     .configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false);
-
-        // if (args.sortKeys) {
-        //     builder.enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY);
-        //     builder.enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS);
-        // }
-
-        // ObjectMapper mapper = builder.build();
-        // ObjectWriter prettyWriter = mapper.writerWithDefaultPrettyPrinter();
-
-        Writer stdout = new OutputStreamWriter(System.out, StandardCharsets.UTF_8);
-        JSONFoldWriter out = new JSONFoldWriter(stdout, cfg, true); // keep stdout open
+        GsonMain self = new GsonMain() ;
+        Object value = self.getInput(args.demo, args.input) ;
 
         if ( args.sortKeys ) value = sortKeys(value);
 
-        JsonWriter jw = new JsonWriter(out) ;
-        jw.setIndent(" ".repeat(args.indent)) ;
-        prettyWriter.toJson(value, Object.class, jw) ;
-        out.finish();
-        stdout.flush();
+        Stats stats = self.writeTo(null, value, cfg, args.indent, args.gold) ;
 
         if (args.verbose) {
-            System.err.println(out.getStats());
+            System.err.println(stats);
         }
 
         return 0;
