@@ -31,4 +31,5 @@ verify:
 	mvn verify -P release -Dgpg.skip=true
 
 publish:
-	mvn deploy -P relesae
+	export GPG=$$(tty) mvn deploy -P relesae
+
