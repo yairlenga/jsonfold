@@ -101,15 +101,17 @@ from jsonfold import config, write_json, JSONFoldConfig
 
 def _demo() -> dict[str, Any]:
     return {
-        "meta":   {"version": 1, "ok": True},
+        "meta":   {"version": 1, "ok": True, "name": "jsonfold demo"},
+        "ids": [ 1, 2, 3, 4, 5, 6 ],
+        "matrix": [[1, 2], [3, 4], [ 5, 6 ]],
         "items":  [{"id": 1, "name": "alpha"}, {"id": 2, "name": "beta"}],
-        "matrix": [[1, 2], [3, 4]],
         "long": [
             "this is a long message that may force the block to stay expanded",
             "second", "third", "fourth",
         ],
-        "single-array": [ 1 ],
-        "single-obj": [ 2 ],
+        "single_array": [ 1 ],
+        "single_object": { "x" : 2 },
+        "long_array": [ f"a{i+1}" for i in range(50)],
         "wide_array": [f"abcdefghijklmnopqrstuvwxyz{i+1}" for i in range(9)],
         "wide_object": {f"abcdefghijk{i+1}": f"lmnopqrstuvwxyz{i+1}" for i in range(9)},
     }
