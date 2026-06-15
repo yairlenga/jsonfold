@@ -6,7 +6,8 @@ import java.util.Map;
  * Configuration controlling JSONFold packing, folding, and joining behavior.
  *
  * <p>Most applications should use one of the predefined presets such as
- * {@link #defaultConfig()}, {@link #high()}, or {@link #max()}.
+ * {@link #defaultConfig()}, or via the {@link #preset(String)}, using
+ * named constants like {@link #PRESET_HIGH} or {@link PRESET_MAX}
  *
  * <p>Preset configurations are stored internally and copied before being
  * returned, allowing callers to safely customize them through a

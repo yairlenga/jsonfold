@@ -1,5 +1,7 @@
 default: build
 
+MODULES = core cli jackson gson
+
 clean:
 	mvn clean
 
@@ -8,11 +10,11 @@ realclean:
 config:
 
 setup:
+	mkdir -vp ${MODULES:%=jsonfold-%/src/main/resources}
+	mkdir -vp ${MODULES:%=jsonfold-%/src/test/resources}
 
+	# include validate, compile, test and pacakge
 build:
-	mvn validate
-	mvn compile
-	mvn test
 	mvn package
 
 test:
@@ -23,11 +25,10 @@ benchmark:
 	./run.sh dev.jsonfold.format.Benchmark
 
 package:
-	mvn package -P release
-	mvn install -P release
+	mvn install -P release -Dgpg.skip=true
 
 verify:
-	mvn verify -P release
+	mvn verify -P release -Dgpg.skip=true
 
 publish:
 	mvn deploy -P relesae
