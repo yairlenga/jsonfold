@@ -580,6 +580,7 @@ class JSONFoldWriter:
         frame = self.stack[depth]
         for line in lines:
             self._add_to_frame(frame, line)
+        return
         
     def _choose_limit(self, kind: Kind, *, default: int =0, list_limit: int =0, dict_limit: int):
         return (
@@ -652,8 +653,10 @@ class JSONFoldWriter:
 
         if not frame.fold_ok:
             self._stream_frame(frame)
+        return
 
 
+    @profile
     def _can_merge(self, prev: Line, line: Line, limit: int) -> bool:
         return (
             prev.indent == line.indent
@@ -678,6 +681,7 @@ class JSONFoldWriter:
             if not self._check_fold_limits(frame):
                 self._mark_no_fold()
                 self._stream_frame(frame)
+        return
 
     @profile
     def _try_pack(self, frame: Frame, prev: Line, line: Line) -> bool:
