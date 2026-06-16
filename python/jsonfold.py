@@ -386,7 +386,8 @@ class Line:
         return sum(len(part)+1 for part in parts)-1        
 
     def __post_init__(self):
-        self.length = self._parts_length(self.parts)
+        if self.length == None:
+            self.length = self._parts_length(self.parts) if len(self.parts) != 1 else len(self.parts[0])
 
     @classmethod
     @profile
@@ -405,6 +406,7 @@ class Line:
         return cls(
             indent=len(s) - len(stripped),
             parts = [body],
+            length = len(body),
             parent_kind=parent_kind,
             opener=opener,
             closer=closer,
