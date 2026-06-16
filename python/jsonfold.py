@@ -207,7 +207,7 @@ import sys
 from dataclasses import dataclass, KW_ONLY, replace, field
 from typing import Any, TextIO
 from enum import IntEnum, auto
-
+import re
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
@@ -215,6 +215,7 @@ from enum import IntEnum, auto
 MAX_ARRAY_ITEMS = 1000
 MAX_OBJ_ITEMS = 1000
 MAX_NESTING = 10
+MAX_GRID_LINES = 1000
 DEFAULT_WIDTH = 100
 
 @dataclass(frozen=True, slots=True)
@@ -313,12 +314,19 @@ JSONFoldConfig.PRESETS = {
 
     # Grid is like default + grid
     "grid":  replace(JSONFoldConfig.DEFAULT,
-        grid_array_items = 8,
-        grid_obj_items   = 4,
+        pack_array_items = MAX_ARRAY_ITEMS,
+        pack_obj_items   = MAX_OBJ_ITEMS,
+        pack_nesting     = MAX_NESTING,
+
+        fold_array_items = MAX_ARRAY_ITEMS,
+        fold_obj_items   = MAX_OBJ_ITEMS,
+        fold_nesting     = MAX_NESTING,
+
+        grid_array_items = MAX_ARRAY_ITEMS,
+        grid_obj_items   = MAX_OBJ_ITEMS,
         grid_min_lines   = 3,
-        grid_max_lines   = 10,
+        grid_max_lines   = MAX_GRID_LINES,
     ),
- 
 
     # pack only – no folding
     "pack": replace(JSONFoldConfig.NONE,
@@ -358,11 +366,24 @@ _CLOSING_KIND: dict[str, Kind] = {
     "]":  Kind.LIST, "],": Kind.LIST,
 }
 
+KEY_RE = re.compile(
+    r"""^\s*
+        (?:
+            "[^"\\]*" |
+            '[^'\\]*' |
+            [A-Za-z_$][A-Za-z0-9_$]* |
+        )
+        \s*:
+    """,
+    re.X
+)
+
 @dataclass(slots=True)
 class Line:
     indent: int
     parts: list[str] | None = field(default_factory=list)
     length: int | None  = None      # Current length of text/parts
+    kind: Kind = Kind.NONE          # When this is folded line.
     parent_kind: Kind = Kind.NONE   # "dict", "list", or None
     items:  int        = 1      # packed scalar count (>=1)
     leafs: int         = 1      # Total leaf items
@@ -433,6 +454,16 @@ class Line:
     def set_parts(self, parts: list[str]) -> None:
         self.parts = parts
         self.length = self._parts_length(self.parts)
+
+    def dict_signature(self) -> str:
+        signature = []
+
+        for part in self.parts[1:-1]:
+            if not (m := KEY_RE.match(part)):
+                return None
+            signature.append(m[0])
+            
+        return tuple(signature) 
 
 @dataclass(slots=True)
 class Frame:
@@ -829,8 +860,9 @@ class JSONFoldWriter:
             return False
 
         folded_length = sum(1 + line.length for line in frame.lines) - 1
+        first_line = frame.lines[0]
 
-        if frame.lines[0].indent + folded_length > self.cfg.width:
+        if first_line.indent + folded_length > self.cfg.width:
             return False
 
 #        parts = [part for part in line.parts for line in frame.lines]
@@ -838,8 +870,9 @@ class JSONFoldWriter:
         
 
         line = Line(
-            indent=frame.lines[0].indent,
+            indent=first_line.indent,
             parts = parts,
+            kind = frame.kind,
             parent_kind=self._parent_kind(),
             items=1,
             leafs=frame.leafs,
@@ -864,23 +897,31 @@ class JSONFoldWriter:
         ]
 
     def _try_grid(self, frame: Frame) -> bool:
-        nrows = len(frame.lines)-2
-        if ( nrows < 1 or
-            nrows < self.cfg.grid_min_lines or
-            nrows > self.cfg.grid_max_lines
+        line_count = len(frame.lines)-2
+        if ( line_count < 1 or
+            line_count < self.cfg.grid_min_lines or
+            line_count > self.cfg.grid_max_lines
         ):
             return False
 
         # Check that all rows have identical count
-        rows = frame.lines[1:-1]
-        first_row = rows[0]
-        part_count = len(first_row.parts)
-        if any(len(line.parts) != part_count for line in rows):
+        lines = frame.lines[1:-1]
+        first_line = lines[0]
+        part_count = len(first_line.parts)
+        if any(len(line.parts) != part_count for line in lines):
             return False
+
+        # Check that all lines have identical signature if it's a dict
+        if first_line.kind == Kind.DICT:
+            dict_signature = first_line.dict_signature()
+            if not dict_signature:
+                return False
+            if any(line.dict_signature() != dict_signature for line in lines):
+                return False
 
         # Calculate max width for each part        
         widths = [
-            max(len(line.parts[i]) for line in rows)
+            max(len(line.parts[i]) for line in lines)
             for i in range(part_count)
         ]
         # Make sure all lines will fit.
@@ -889,7 +930,7 @@ class JSONFoldWriter:
             return False
 
         # Rebuild combined text from the parts, adjusting for width
-        for line in rows:
+        for line in lines:
             new_parts = self._format_parts(line.parts, widths)
             line.set_parts(new_parts)
             line.can_pack = False
