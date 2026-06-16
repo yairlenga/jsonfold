@@ -1,0 +1,64 @@
+{
+  "items": [
+    {
+      "description": "very long first value",
+      "code": "A1",
+      "qty": 1,
+      "ok": true
+    },
+    {
+      "description": "short",
+      "code": "B20",
+      "qty": 20,
+      "ok": false
+    },
+    {
+      "description": "medium value",
+      "code": "C300",
+      "qty": 300,
+      "ok": true
+    },
+    {
+      "description": "alpha",
+      "code": "D4",
+      "qty": 4,
+      "ok": false
+    },
+    {
+      "description": "another long value",
+      "code": "E50",
+      "qty": 50,
+      "ok": true
+    },
+    {
+      "description": "zeta",
+      "code": "F600",
+      "qty": 600,
+      "ok": false
+    },
+    {
+      "description": "eta",
+      "code": "G7",
+      "qty": 7,
+      "ok": true
+    },
+    {
+      "description": "theta value",
+      "code": "H80",
+      "qty": 80,
+      "ok": false
+    },
+    {
+      "description": "iota",
+      "code": "I900",
+      "qty": 900,
+      "ok": true
+    },
+    {
+      "description": "kappa",
+      "code": "J10",
+      "qty": 10,
+      "ok": false
+    }
+  ]
+}

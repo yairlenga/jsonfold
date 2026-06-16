@@ -1,0 +1,2 @@
+--compact=grid --width=120 --indent=2
+# description: object_grid_missing_extra_key_no_grid
