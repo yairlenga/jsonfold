@@ -361,7 +361,8 @@ _CLOSING_KIND: dict[str, Kind] = {
 @dataclass(slots=True)
 class Line:
     indent: int
-    text:   str
+    parts: list[str] | None = field(default_factory=list)
+    length: int | None  = None      # Current length of text/parts
     parent_kind: Kind = Kind.NONE   # "dict", "list", or None
     items:  int        = 1      # packed scalar count (>=1)
     leafs: int         = 1      # Total leaf items
@@ -380,6 +381,13 @@ class Line:
         def profile(func):
             return func
 
+    @staticmethod
+    def _parts_length(parts: list[str]) -> int:
+        return sum(len(part)+1 for part in parts)-1        
+
+    def __post_init__(self):
+        self.length = self._parts_length(self.parts)
+
     @classmethod
     @profile
     def parse(cls, s: str, parent_kind: Kind) -> "Line":
@@ -396,7 +404,7 @@ class Line:
 
         return cls(
             indent=len(s) - len(stripped),
-            text=body,
+            parts = [body],
             parent_kind=parent_kind,
             opener=opener,
             closer=closer,
@@ -405,18 +413,24 @@ class Line:
         )
 
     def raw(self) -> str:
-        return " " * self.indent + self.text + "\n"
+        return " " * self.indent + " ".join(self.parts) + "\n"
 
     def width(self) -> int:
-        return self.indent + len(self.text)
+        return self.indent + self.length
        
     def join_line(self, other: Line) -> None:
-        self.text += " " + other.text
+        self.parts += other.parts
+        if other.parts:
+            self.length += 1 + other.length
         self.items += other.items
         self.leafs += other.leafs
         if other.child_nesting > self.child_nesting:
             self.child_nesting = other.child_nesting
             self.can_pack = False
+
+    def set_parts(self, parts: list[str]) -> None:
+        self.parts = parts
+        self.length = self._parts_length(self.parts)
 
 @dataclass(slots=True)
 class Frame:
@@ -571,6 +585,7 @@ class JSONFoldWriter:
                 pack_limit=self._pack_limit(opener),
                 fold_limit=self._fold_limit(opener),
                 join_limit=self._join_limit(opener),
+                grid_limit=self._grid_limit(opener),
                 )
             )
 
@@ -700,7 +715,7 @@ class JSONFoldWriter:
         return (
             prev.indent == line.indent
             and prev.items + line.items <= limit
-            and prev.indent + len(prev.text) + 1 + len(line.text) <= self.cfg.width
+            and prev.indent + prev.length + 1 + line.length <= self.cfg.width
         )
 
     @profile
@@ -788,7 +803,8 @@ class JSONFoldWriter:
                         parent_frame.grid_ok = True
 
         elif frame.grid_ok:
-            self._try_grid(frame)
+            if self._try_grid(frame):
+                self._mark_no_grid()
 
         self._emit_lines(frame.lines)
         frame.lines.clear()
@@ -810,16 +826,18 @@ class JSONFoldWriter:
         ):
             return False
 
-        folded_length = sum(1 + len(line.text) for line in frame.lines) - 1
+        folded_length = sum(1 + line.length for line in frame.lines) - 1
 
         if frame.lines[0].indent + folded_length > self.cfg.width:
             return False
 
-        text = " ".join(line.text for line in frame.lines)
+#        parts = [part for part in line.parts for line in frame.lines]
+        parts = [part for line in frame.lines for part in line.parts]
+        
 
         line = Line(
             indent=frame.lines[0].indent,
-            text=text,
+            parts = parts,
             parent_kind=self._parent_kind(),
             items=1,
             leafs=frame.leafs,
@@ -831,13 +849,47 @@ class JSONFoldWriter:
         frame.lines = [ line ]
         return True
 
+    @staticmethod
+    def _format_parts(parts: list[str], widths: list[int]) -> list[str]:
+        last = len(widths)-1
+        return [
+            (
+                part.rjust(widths[i])
+                if part[:1] in "-0123456789"
+                else part.ljust(widths[i]) if i<last
+                else part
+            ) for i, part in enumerate(parts)
+        ]
+
     def _try_grid(self, frame: Frame) -> bool:
-        if ( len(frame.lines) < self.cfg.grid_min_lines or
-            len(frame.lines) > self.cfg.grid_max_lines
-            ):
+        nrows = len(frame.lines)-2
+        if ( nrows < 1 or
+            nrows < self.cfg.grid_min_lines or
+            nrows > self.cfg.grid_max_lines
+        ):
             return False
-        for line in frame.lines[1:-1]:
-            line.text += " //GRID"
+
+        # Check that all rows have identical count
+        rows = frame.lines[1:-1]
+        first_row = rows[0]
+        part_count = len(first_row.parts)
+        if any(len(line.parts) != part_count for line in rows):
+            return False
+
+        # Calculate max width for each part        
+        widths = [
+            max(len(line.parts[i]) for line in rows)
+            for i in range(part_count)
+        ]
+        # Make sure all lines will fit.
+        grided_length = sum(1 + width for width in widths)- 1
+        if frame.lines[0].indent + grided_length > self.cfg.width:
+            return False
+
+        # Rebuild combined text from the parts, adjusting for width
+        for line in rows:
+            new_parts = self._format_parts(line.parts, widths)
+            line.set_parts(new_parts)
             line.can_pack = False
             line.can_join = False
             line.can_grid = False
@@ -865,6 +917,10 @@ class JSONFoldWriter:
     def _mark_no_fold(self) -> None:
         for frame in self.stack:
             frame.fold_ok = False
+
+    def _mark_no_grid(self) -> None:
+        for frame in self.stack:
+            frame.grid_ok = False
 
     def _parent_kind(self) -> Kind:
         return self.stack[-1].kind if self.stack else Kind.NONE
@@ -1019,8 +1075,8 @@ def _demo() -> dict[str, Any]:
     return {
         "meta":   {"version": 1, "ok": True, "name": "jsonfold demo"},
         "ids": [ 1, 2, 3, 4, 5, 6 ],
-        "matrix": [[1, 20, 300], [4000, 50, 6], [ 70, 800, 9000]],
-        "items":  [{"id": 1, "name": "alpha", "qty": 12}, {"id": 20, "name": "beta", "qty": 3000,}, { "id": 300, "name": "Charlie", "qty": 4,}],
+        "matrix": [[1, 20, "Red", 300], [4000, 50, "Yellow", 6], [ 70, 800, "Green", 9000]],
+        "items":  [{"id": 1, "name": "alpha", "qty": 12, "size": "Medium"}, {"id": 20, "name": "beta", "qty": 3000, "size": "Large"}, { "id": 300, "name": "Charlie", "qty": 4, "size": "Tiny"}],
         "long": [
             "this is a long message that may force the block to stay expanded",
             "second", "third", "fourth",
