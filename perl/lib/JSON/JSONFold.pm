@@ -2,11 +2,12 @@ package JSON::JSONFold;
 
 use strict;
 use warnings;
+use 5.014 ;
 use JSON::PP ();
 use Exporter 'import';
 
 our $VERSION = '0.002';
-our @EXPORT_OK = qw(dump dumps dumpi fold_text preset config);
+our @EXPORT_OK = qw(dump dumps dumpi fold_text preset config run);
 
 sub config {
     my ($preset) = @_ ;
@@ -63,6 +64,9 @@ sub dumps {
     return $output ;
 }
 
+sub run {
+    JSON::JSONFold::CLI::run() ;
+}
 
 package JSON::JSONFold::Kind;
 
@@ -870,7 +874,143 @@ sub _fold_limit { _choose_limit($_[1], $_[0][W_CFG][C_FOLD_ARRAY_ITEMS], $_[0][W
 sub _join_limit { _choose_limit($_[1], $_[0][W_CFG][C_JOIN_ARRAY_ITEMS], $_[0][W_CFG][C_JOIN_OBJ_ITEMS]) }
 sub _count_newlines { return ($_[0] =~ tr/\n//) }
 
-package JSON::JSONFold;
+package JSON::JSONFold::CLI ;
+
+use 5.014 ;
+use strict;
+use warnings;
+
+sub setup {
+    require Carp ;
+
+    $SIG{__DIE__} = sub {
+        return if $^S;
+        local $SIG{__DIE__};
+        Carp::confess(@_);
+    };
+
+    $SIG{__WARN__} = sub {
+        local $SIG{__WARN__};
+        Carp::cluck(@_);
+    };
+
+    require Getopt::Long ;
+
+    require JSON ;
+
+}
+
+sub demo_data {
+    return {
+        meta  => { version => 1, ok => JSON::PP::true },
+        items => [ { id => 1, name => "alpha" }, { id => 2, name => "beta" }, ],
+        matrix => [ [ 1, 2 ], [ 3, 4 ] ],
+        long   => [
+            "this is a long message that may force the block to stay expanded",
+            "second",
+            "third",
+            "fourth",
+        ],
+        "single-array" => [1],
+        "single-obj"   => [2],
+        wide_array     => [ map { "abcdefghijklmnopqrstuvwxyz$_" } 1 .. 9 ],
+        wide_object    => { map { ; "abcdefghijk$_" => "lmnopqrstuvwxyz$_" } 1 .. 9 },
+
+    };
+}
+
+sub parse_options {
+    my %cfg ;
+
+    my %opt = (
+        compact   => 'default',
+        indent    => 2,
+        sort_keys => 1,
+        cfg       => \%cfg,
+    );
+
+    Getopt::Long::GetOptions(
+        'demo'       => \$opt{demo},
+        'verbose|v'  => \$opt{verbose},
+        'help|h'     => \$opt{help},
+        'input|i=s'  => \$opt{input},
+        'compact=s'  => \$opt{compact},
+        'indent=i'   => \$opt{indent},
+        'sort-keys!' => \$opt{sort_keys},
+
+        'width=i'            => \$cfg{width},
+    ) or die "Try --help\n";
+
+    return \%opt;
+}
+
+sub usage {
+    my $out = shift ;
+    $out->print(<<___
+Usage: json-jsonfold [options] < input.json
+
+  --demo
+  --compact=default|none|low|med|high|max|pack|fold|join|off
+  --width=N
+  --indent=N
+  --sort-keys
+  --input=FILE
+___
+    ) ;
+}
+
+sub read_input {
+    my ($input) = @_ ;
+
+    my $json_text;
+    if (defined $input) {
+        open my $fh, '<', $input or die "$input: $!\n";
+        local $/;
+        $json_text = <$fh>;
+        close $fh or die "$input: $!\n";
+    } else {
+        local $/;
+        $json_text = <STDIN>;
+    }
+
+    return JSON::PP->new->allow_nonref->decode($json_text);
+}
+
+sub show_verbose {
+    require Data::Dumper ;
+
+    my ($label) = shift ;
+    my $dumper = new Data::Dumper([])->Terse(1)->Indent(1)->Sortkeys(1)->Pair('=')->Quotekeys(0) ;
+
+    my $s = $dumper->Values( \@_)->Dump ;
+    $s =~ s/\s+/ /gsm ;
+
+    print STDERR "$label: $s\n" ;
+
+}
+
+sub run {
+    setup() ;
+    my $opt = parse_options();
+
+    if ($opt->{help}) {
+        usage();
+        return 0;
+    }
+
+    my $data = $opt->{demo} ? demo_data() : read_input($opt->{input});
+    my %cfg = %{$opt->{cfg}} ;
+    my $config = JSON::JSONFold::config($opt->{compact}, %cfg);
+    my $verbose = $opt->{verbose} ;
+    my $cfg = {} ;
+
+    show_verbose("config", { $config->as_hash } ) if $verbose ;
+ 
+    my $info = JSON::JSONFold::dumpi($data, \*STDOUT, compact => $config, sort_keys => $opt->{sort_keys});
+
+    show_verbose("stats", { % $info }) if $verbose ;
+    return 0;
+}
 
 1;
 
@@ -911,3 +1051,5 @@ C<default>, C<none>, C<low>, C<med>, C<high>, C<max>, C<pack>, C<fold>, C<join>,
 and C<off>.
 
 =cut
+
+
