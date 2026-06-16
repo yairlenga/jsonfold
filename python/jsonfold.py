@@ -232,22 +232,38 @@ class JSONFoldConfig:
     pack_array_items: int = 8       # max scalars per line inside a list
     pack_obj_items:   int = 4       # max scalars per line inside a dict
     pack_nesting:     int = 1       # max container nesting depth for packing
+
     # Phase 2 – fold single-content-line containers onto one line
     fold_array_items: int = 8       # max items allowed in a folded list
     fold_obj_items:   int = 4       # max items allowed in a folded dict
     fold_nesting:     int = 1       # max container nesting depth for folding
-    # Phase 3 - merging folded lines.
+
+    # Phase 3 - aligning packed lines
+    grid_array_items: int = 0
+    grid_obj_items: int  = 0
+    grid_min_lines: int = 0
+    grid_max_lines: int = 0
+
+    # Phase 4 - joining folded lines.
     join_array_items: int = 8
     join_obj_items:   int = 4
     join_nesting:     int = 1
+
 
 JSONFoldConfig.NONE = JSONFoldConfig(
     pack_array_items = 0,
     pack_obj_items   = 0,
     pack_nesting     = 0,
+
     fold_array_items = 0,
     fold_obj_items   = 0,
     fold_nesting     = 0,
+
+    grid_array_items = 0,
+    grid_obj_items   = 0,
+    grid_min_lines   = 0,
+    grid_max_lines   = 0,
+
     join_array_items = 0,
     join_obj_items = 0,
     join_nesting = 0,
@@ -282,7 +298,6 @@ JSONFoldConfig.PRESETS = {
         join_nesting     = 2,
     ),
 
-
     "max": replace(JSONFoldConfig.NONE,
         width = 255,
         pack_array_items = MAX_ARRAY_ITEMS,
@@ -295,6 +310,16 @@ JSONFoldConfig.PRESETS = {
         join_obj_items = MAX_OBJ_ITEMS,
         join_nesting    = MAX_NESTING,
     ),
+
+    # Grid is like default + grid
+    "grid":  replace(JSONFoldConfig.DEFAULT,
+        grid_array_items = 8,
+        grid_obj_items   = 4,
+        grid_min_lines   = 3,
+        grid_max_lines   = 10,
+    ),
+ 
+
     # pack only – no folding
     "pack": replace(JSONFoldConfig.NONE,
         pack_array_items = MAX_ARRAY_ITEMS,
@@ -347,6 +372,7 @@ class Line:
     # Line state
     can_pack: bool = True        # Line is possible candidate for pack
     can_join: bool = True        # Line is possible candidate for join
+    can_grid: bool = False       # Line is possible candidate for grid
 
     try:
         profile
@@ -401,12 +427,14 @@ class Frame:
     pack_limit: int = 0
     fold_limit: int = 0
     join_limit: int = 0
+    grid_limit: int = 0
 
     content_lines: int = 0
     items: int = 0
     leafs: int = 0
 
     fold_ok: bool = True
+    grid_ok: bool = False
     child_nesting: int = -1
 
 @dataclass(slots=True)
@@ -604,23 +632,30 @@ class JSONFoldWriter:
         return self._choose_limit(kind,
                                  list_limit = self.cfg.join_array_items,
                                  dict_limit = self.cfg.join_obj_items)
+    
+    def _grid_limit(self, kind: Kind) -> int:
+        return self._choose_limit(kind,
+                                 list_limit = self.cfg.grid_array_items,
+                                 dict_limit = self.cfg.grid_obj_items)
 
     # --------------------------------------------------------- phase 1: pack
 
     @profile
-    def _add_to_frame(self, frame: Frame, line: Line) -> None:
+    def _add_to_frame(self, frame: Frame, line: Line, allow_pack: bool = True, allow_join: bool = True) -> None:
 
-        # Consider adding the line to previous line
-
-        if frame.lines:
+        # pack/join relevant only if lines exists and grid not enabled
+        if frame.lines and not frame.grid_ok:
+            # Consider adding the line to previous line
             prev = frame.lines[-1]
-            if (line.can_pack and
+            if (allow_pack and
+                line.can_pack and
                 prev.can_pack and
                 self._try_pack(frame, prev, line)
             ):
                 return
         
-            if (line.can_join and
+            if (allow_join and
+                line.can_join and
                 prev.can_join and
                 self._try_join(frame, prev, line)
             ):
@@ -651,7 +686,11 @@ class JSONFoldWriter:
                 if not self._check_fold_limits(frame):
                     self._mark_no_fold()
 
-        if not frame.fold_ok:
+            if frame.grid_ok:
+                if not line.can_grid:
+                    frame.grid_ok = False
+
+        if not frame.fold_ok and not frame.grid_ok:
             self._stream_frame(frame)
         return
 
@@ -741,10 +780,19 @@ class JSONFoldWriter:
 #        if frame.kind != closing_kind: ...
 
         if frame.fold_ok:
-            self._try_fold(frame)
+            if self._try_fold(frame):
+                # After successful fold, parent frame may support grid, based on the first child.
+                if (self.stack and frame.lines[0].can_grid):
+                    parent_frame = self.stack[-1]
+                    if parent_frame.content_lines == 0:
+                        parent_frame.grid_ok = True
+
+        elif frame.grid_ok:
+            self._try_grid(frame)
 
         self._emit_lines(frame.lines)
         frame.lines.clear()
+        return
 
     # Fold a frame with 3 lines into a single line:
     #   {
@@ -752,9 +800,9 @@ class JSONFoldWriter:
     #   }
     # To a single line:
     #   { "a" : "b" }
-    # Which is returned.
+    # which is placed into the frame
     @profile
-    def _try_fold(self, frame: Frame) -> Line | None:
+    def _try_fold(self, frame: Frame) -> bool:
         
         if (not frame.fold_ok or
             frame.content_lines != 1 or
@@ -777,9 +825,23 @@ class JSONFoldWriter:
             leafs=frame.leafs,
             child_nesting=frame.child_nesting,
             can_pack=False,
-            can_join=frame.child_nesting < self.cfg.join_nesting
+            can_join=frame.child_nesting < self.cfg.join_nesting,
+            can_grid=self.cfg.grid_max_lines > 0,
         )
         frame.lines = [ line ]
+        return True
+
+    def _try_grid(self, frame: Frame) -> bool:
+        if ( len(frame.lines) < self.cfg.grid_min_lines or
+            len(frame.lines) > self.cfg.grid_max_lines
+            ):
+            return False
+        for line in frame.lines[1:-1]:
+            line.text += " //GRID"
+            line.can_pack = False
+            line.can_join = False
+            line.can_grid = False
+
         return True
 
     # --------------------------------------------------------- streaming
@@ -957,8 +1019,8 @@ def _demo() -> dict[str, Any]:
     return {
         "meta":   {"version": 1, "ok": True, "name": "jsonfold demo"},
         "ids": [ 1, 2, 3, 4, 5, 6 ],
-        "matrix": [[1, 2], [3, 4], [ 5, 6 ]],
-        "items":  [{"id": 1, "name": "alpha"}, {"id": 2, "name": "beta"}],
+        "matrix": [[1, 20, 300], [4000, 50, 6], [ 70, 800, 9000]],
+        "items":  [{"id": 1, "name": "alpha", "qty": 12}, {"id": 20, "name": "beta", "qty": 3000,}, { "id": 300, "name": "Charlie", "qty": 4,}],
         "long": [
             "this is a long message that may force the block to stay expanded",
             "second", "third", "fourth",
