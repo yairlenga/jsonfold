@@ -2,67 +2,189 @@ package JSON::JSONFold;
 
 use strict;
 use warnings;
+use 5.014 ;
 use JSON::PP ();
 use Exporter 'import';
 
 our $VERSION = '0.002';
-our @EXPORT_OK = qw(dump dumps dumpi fold_text preset config);
+our @EXPORT_OK = qw(
+    config format_json write_json filter_stream
+    fold_text write_text preset run);
 
-sub config {
-    my ($preset) = @_ ;
-    return JSON::JSONFold::Config::config(@_) ;
-}
+# Object Orient Interface
 
-# Backward-compatible constructor: the public package acts as a writer/filter.
 sub new {
-    my ($class, %args) = @_;
-    return JSON::JSONFold::Writer->new(%args);
-}
+    my ($class, $width, $config, %overrides) = @_ ;
 
-sub _json_coder {
-    my (%opt) = @_;
-    my $indent = exists $opt{indent} ? $opt{indent} : 2;
-    my $json = JSON::PP->new->allow_nonref->canonical($opt{sort_keys} ? 1 : 0);
-    if ($indent && $indent > 0) {
-        $json->pretty->indent_length($indent)->space_before(0)->space_after(1);
+    # User may provide his own pretty printer
+    my $indent = delete $overrides{indent} || 2 ;
+    my $gold = delete $overrides{gold} ;
+    my $json = delete $overrides{json} ;
+    my $do_close = delete $overrides{do_close} ;
+    unless ( $json ) {
+        $overrides{sort_keys} //= 1 ;
+        $json = _json_coder($gold, $indent, %overrides) ;
     }
-    return $json;
+    return bless {
+        json => $json,
+        width => $width,
+        config => _config($config, $width),
+        do_close => $do_close,
+    }, ref($class) || $class || __PACKAGE__ ;
 }
 
-sub _print_stream {
-    my ($obj, $fh, $compact, %opt) = @_;
-    my $text = _json_coder(%opt)->encode($obj);
-    my $out = JSON::JSONFold::Writer->new($fh, $compact, %opt);
-    $out->write($text);
-    $out->finish;
-    return $out->stats ;
-}
+sub format {
+    my($self, $data) = @_ ;
 
-sub dump {
-    my ($obj, $fh, %opt) = @_;
-    my $compact = delete $opt{compact} // '' ;
-    my $info = _print_stream($obj, $fh, $compact, %opt) ;
-    return;
-}
+    my $config = $self->{config} ;
 
-sub dumpi {
-    my ($obj, $fh, %opt) = @_;
-    my $compact = delete $opt{compact} // '' ;
-    my $info = _print_stream($obj, $fh, $compact, %opt) ;
-    return $info ;
-}
-
-sub dumps {
-    my ($obj, %opt) = @_;
-    my $compact = delete $opt{compact} // '' ;
     my $output = '' ;
-    open my $fh, '>', \$output or die "open output: $!" ;
-    my $info = _print_stream($obj, $fh, $compact, %opt) ;
-    close $fh or die "close output: $!" ;
+    open my $out, '>', \$output or die "open output: $!" ;
+
+    my $stream = _stream($out, $config, 0) ;
+    my $json = $self->{json} ;
+    my $text = $json->encode($data) ;
+
+    $stream->write($text);
+    $stream->finish;
+    $stream->flush;
+
+    close $out or die "close output: $!" ;
     $output .= "\n" unless $output =~ /\n\z/;
     return $output ;
 }
 
+sub write {
+    my($self, $data, $fh) = @_ ;
+
+    my $config = $self->{config} ;
+
+    my $do_close = $self->{do_close} ;
+    my $stream = _stream($fh, $config, $do_close) ;
+    my $json = $self->{json} ;
+
+    my $text = $json->encode($data) ;
+    $stream->write($text);
+    $stream->finish;
+    $stream->flush;
+    my $info = $stream->stats ;
+    $stream->close() ;
+
+    return $info ;
+}
+
+# Functional Interface
+
+sub config {
+    my($base_config, $width, %overrides) = @_ ;
+    $width //= $overrides{width} ;
+    return _config($base_config, $width, %overrides) ;
+}
+
+sub format_json {
+    my($data, $width, $config, %overrides) = @_ ;
+
+    my $fmt = __PACKAGE__->new($width, $config, %overrides) ;
+    my $output = $fmt->format($data) ;
+    return $output ;
+}
+
+sub write_json {
+    my($data, $fh, $width, $config, %overrides) = @_ ;
+
+    my $fmt = __PACKAGE__->new($width, $config, %overrides) ;
+    my $info = $fmt->write($data, $fh) ;
+    return $info ;
+}
+
+sub format_text {
+    my($text, $width, $config) = @_ ;
+
+    my $cfg = _config($config, $width) ;
+
+    my $output = '' ;
+    open my $out, '>', \$output or die "open output: $!" ;
+
+    my $stream = _stream($out, $config, 0) ;
+    $stream->write($text) ;
+    $stream->close() ;
+
+    $output .= "\n" unless $output =~ /\n\z/;
+    return $output ;
+}
+
+sub write_text {
+    my ($fh, $text, $width, $config) = @_ ;
+
+    my $cfg = _config($config, $width) ;
+
+    my $stream = _stream($fh, $config, 0) ;
+    $stream->write($text) ;
+    my $info = $stream->info ;
+    $stream->close() ;
+
+    return $info ;
+}
+
+sub filter_stream {
+    my($fh, $width, $config, %overrides) = @_ ;
+    my $do_close = delete $overrides{close_fp} ;
+    return _stream($fh, _config($config, $width, %overrides), $do_close) ;
+}
+
+sub _config {
+    my ($preset, $width, %overrides) = @_ ;
+    $overrides{width} = $width if $width ;
+    return JSON::JSONFold::Config::config($preset, %overrides) ;
+}
+
+sub _stream {
+    my ($fp, $config, $close_fp) = @_ ;
+    return JSON::JSONFold::Writer->new($fp, $config, $close_fp) ;
+}
+
+sub _json_coder {
+    my ($gold, $indent, %opt) = @_;
+    # Must have valid indent, otherwise cannot parse the data
+    my $sort_keys = $opt{sort_keys} // 1 ;
+    my $json = JSON::PP->new->allow_nonref->canonical($sort_keys);
+    if ( $gold ) {
+        $json->pretty->indent_length(2)->space_before(0)->space_after(1);
+    } else {
+        $json->pretty(1)->indent_length($indent || 2) ;
+    }
+    return $json;
+}
+
+# JSON compatible API - OO
+
+sub encode {
+    my $data = shift ;
+    
+}
+
+
+# JSON compatiable API - Functional
+
+sub encode_json {
+    my ($data, $opts) = @_ ;
+    my %overrides = %$opts if $opts ;
+    my $width = delete $overrides{width} ;
+    my $compact = delete $overrides{compact} // "" ;
+    return format_json($data, $width, $compact, %overrides) ;
+}
+
+sub to_json {
+    my ($data, $opts) = @_ ;
+    my %overrides = %$opts if $opts ;
+    my $width = delete $overrides{width} ;
+    my $compact = delete $overrides{compact} // "" ;
+    return format_json($data, $width, $compact, %overrides) ;
+}
+
+sub run {
+    JSON::JSONFold::CLI::run() ;
+}
 
 package JSON::JSONFold::Kind;
 
@@ -128,9 +250,9 @@ use constant {
     C_UNUSED_LAST       => $SEQ++,
 };
 
+our %PRESETS ;        # values defined later
+
 BEGIN {
-
-
 
     our @EXPORT = qw(
         C_WIDTH
@@ -238,6 +360,7 @@ sub _replace {
     my $overrides = @_ == 1 && ref($_[0]) ? $_[0] : { @_ };
     return $base unless %$overrides;
 
+    # Make  acopy of the original object.
     my @d = @$base;
     for my $key (keys %$overrides) {
         unless ( exists $NAME_TO_INDEX{$key} ) {
@@ -249,20 +372,29 @@ sub _replace {
     return bless \@d, ref($base) || __PACKAGE__;
 }
 
-sub _new_preset {
-    my $base = shift ;
-    return _replace($base, 1, @_) ;
-}
-
-sub _config {
+    # Resolve named config into actual config object.
+sub _resolve_config {
     my ($config) = @_;
+
+    unless ( ref($config)) {
+        my $name //= '';
+        die "unknown JSON::JSONFold preset: $name\n"
+            unless exists $PRESETS{$name};
+
+    return $PRESETS{$name};
+
+    }
+    my ($name) = @_;
+
+
     $config = _preset($config) unless ref($config);
     return $config;
 }
 
+
 sub config {
     my ($preset, %overrides)  = @_;
-    return _replace(_config($preset), 0, \%overrides);
+    return _replace(_resolve_config($preset), 0, \%overrides);
 }
 
 sub new {
@@ -270,7 +402,13 @@ sub new {
     return config($config, @args);
 }
 
-our %PRESETS = (
+    # Create preset - force validation.
+sub _new_preset {
+    my $base = shift ;
+    return _replace($base, 1, @_) ;
+}
+
+%PRESETS = (
     off     => undef,
     ''      => $DEFAULT,
     default => $DEFAULT,
@@ -307,17 +445,6 @@ our %PRESETS = (
     ),
 );
 
-sub _preset {
-    my ($name) = @_;
-
-    $name //= '';
-
-    die "unknown JSON::JSONFold preset: $name\n"
-        unless exists $PRESETS{$name};
-
-    return $PRESETS{$name};
-}
-
 
 # -------------------------------------------------------------------------
 # Internal package: one physical pretty-printed line
@@ -327,7 +454,6 @@ package JSON::JSONFold::Line;
 use strict;
 use warnings;
 use Exporter 'import' ;
-use Data::Dumper ;
 
 use constant KIND_NONE => $JSON::JSONFold::Kind::KIND_NONE ;
 
@@ -566,7 +692,7 @@ sub new {
     my @d ;
     $#d = $SEQ ;
     $d[W_FH]      = $fh;
-    $d[W_CFG]     = JSON::JSONFold::config($compact);
+    $d[W_CFG]     = JSON::JSONFold::Config::config($compact);
     $d[W_PENDING] = '';
     $d[W_STACK]   = [];
     $d[W_STATS]   = JSON::JSONFold::Stats->new;
@@ -625,15 +751,12 @@ sub finish {
         $self->_write_line($_) for @{ $frame->[F_LINES] };
     }
     @{ $self->[W_STACK] } = ();
-    return $self;
 }
 
 sub flush {
     my ($self) = @_;
-    $self->finish;
     my $fh = $self->[W_FH];
     $fh->flush if $fh && $fh->can('flush');
-    return $self;
 }
 
 sub close { return $_[0]->finish }
@@ -870,7 +993,141 @@ sub _fold_limit { _choose_limit($_[1], $_[0][W_CFG][C_FOLD_ARRAY_ITEMS], $_[0][W
 sub _join_limit { _choose_limit($_[1], $_[0][W_CFG][C_JOIN_ARRAY_ITEMS], $_[0][W_CFG][C_JOIN_OBJ_ITEMS]) }
 sub _count_newlines { return ($_[0] =~ tr/\n//) }
 
-package JSON::JSONFold;
+package JSON::JSONFold::CLI ;
+
+use 5.014 ;
+use strict;
+use warnings;
+
+sub setup {
+    require Carp ;
+
+    $SIG{__DIE__} = sub {
+        return if $^S;
+        local $SIG{__DIE__};
+        Carp::confess(@_);
+    };
+
+    $SIG{__WARN__} = sub {
+        local $SIG{__WARN__};
+        Carp::cluck(@_);
+    };
+
+    require Getopt::Long ;
+
+    require JSON ;
+
+}
+
+sub demo_data {
+    return {
+        meta  => { version => 1, ok => JSON::PP::true },
+        items => [ { id => 1, name => "alpha" }, { id => 2, name => "beta" }, ],
+        matrix => [ [ 1, 2 ], [ 3, 4 ] ],
+        long   => [
+            "this is a long message that may force the block to stay expanded",
+            "second",
+            "third",
+            "fourth",
+        ],
+        "single-array" => [1],
+        "single-obj"   => [2],
+        wide_array     => [ map { "abcdefghijklmnopqrstuvwxyz$_" } 1 .. 9 ],
+        wide_object    => { map { ; "abcdefghijk$_" => "lmnopqrstuvwxyz$_" } 1 .. 9 },
+
+    };
+}
+
+sub parse_options {
+    my %opt = (
+        compact   => 'default',
+        indent    => 2,
+        sort_keys => 1,
+    );
+
+    Getopt::Long::GetOptions(
+        'demo'       => \$opt{demo},
+        'verbose|v'  => \$opt{verbose},
+        'help|h'     => \$opt{help},
+        'input|i=s'  => \$opt{input},
+        'compact=s'  => \$opt{compact},
+        'indent=i'   => \$opt{indent},
+        'sort-keys!' => \$opt{sort_keys},
+
+        'width=i'            => \$opt{width},
+    ) or die "Try --help\n";
+
+    return \%opt;
+}
+
+sub usage {
+    my $out = shift ;
+    $out->print(<<___
+Usage: json-jsonfold [options] < input.json
+
+  --demo
+  --compact=default|none|low|med|high|max|pack|fold|join|off
+  --width=N
+  --indent=N
+  --sort-keys
+  --input=FILE
+___
+    ) ;
+}
+
+sub read_input {
+    my ($input) = @_ ;
+
+    my $json_text;
+    if (defined $input) {
+        open my $fh, '<', $input or die "$input: $!\n";
+        local $/;
+        $json_text = <$fh>;
+        close $fh or die "$input: $!\n";
+    } else {
+        local $/;
+        $json_text = <STDIN>;
+    }
+
+    return JSON::PP->new->allow_nonref->decode($json_text);
+}
+
+sub show_verbose {
+    require Data::Dumper ;
+
+    my ($label) = shift ;
+    my $dumper = new Data::Dumper([])->Terse(1)->Indent(1)->Sortkeys(1)->Pair('=')->Quotekeys(0) ;
+
+    my $s = $dumper->Values( \@_)->Dump ;
+    $s =~ s/\s+/ /gsm ;
+
+    print STDERR "$label: $s\n" ;
+
+}
+
+sub run {
+    setup() ;
+    my $opt = parse_options();
+
+    if ($opt->{help}) {
+        usage();
+        return 0;
+    }
+
+    my $data = $opt->{demo} ? demo_data() : read_input($opt->{input});
+    my %cfg ;
+    my $config = JSON::JSONFold::config($opt->{compact}, $opt->{width}, %cfg);
+    my $verbose = $opt->{verbose} ;
+
+    show_verbose("config", { $config->as_hash } ) if $verbose ;
+ 
+    my $info = JSON::JSONFold::write_json($data, \*STDOUT, $opt->{width}, $config, sort_keys => $opt->{sort_keys});
+
+    show_verbose("stats", { % $info }) if $verbose ;
+    return 0;
+}
+
+run() unless caller() ;
 
 1;
 
@@ -911,3 +1168,5 @@ C<default>, C<none>, C<low>, C<med>, C<high>, C<max>, C<pack>, C<fold>, C<join>,
 and C<off>.
 
 =cut
+
+
