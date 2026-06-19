@@ -17,11 +17,21 @@
         {
             "type": "perl",
             "request": "launch",
-            "name": "Perl-Debug",
+            "name": "Perl-jsonfold",
+            "cwd": "${workspaceFolder}/perl",
+            "program": "${workspaceFolder}/perl/lib/JSON/JSONFold.pm",
+            "stopOnEntry": false,
+            "args": [ "--verbose", "--demo", "--compact=off", "--width=10" ]
+        },
+
+        {
+            "type": "perl",
+            "request": "launch",
+            "name": "Perl-CLI",
             "cwd": "${workspaceFolder}/perl",
             "program": "${workspaceFolder}/perl/script/jsonfold.pl",
             "stopOnEntry": true,
-            "args": [ "--input=../tests/unit/028.json", "--compact=high" ]
+            "args": [ "--verbose", "--demo", "--compact=high" ]
         },
         {
             "type": "perl",
@@ -80,17 +90,18 @@
             "program": "python/benchmark.py",
             "args": [ "--show=100"]
         },
+
         {
-            "name": "benchmark --dump",
+            "name": "Python jsonfold ",
             "type": "debugpy",
             "request": "launch",
-            "program": "python/benchmark.py",
+            "program": "python/jsonfold.py",
             "args": [
-                "--dump"
+                "-v", "--input=python/sample.json", "--compact=grid"
             ]
         },
         {
-            "name": "Python Debugger: Unit Test",
+            "name": "Python jsonfold CLI",
             "type": "debugpy",
             "request": "launch",
             "program": "python/jsonfold_cli.py",

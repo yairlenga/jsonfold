@@ -6,8 +6,8 @@ use 5.014 ;
 use FindBin;
 use lib "$FindBin::RealBin/../lib";
 use Getopt::Long   qw(GetOptions);
-use JSON::PP       ();
-use JSON::JSONFold qw(dumpi);
+use JSON::PP ;
+use JSON::JSONFold qw(jsonfold_config write_json) ;
 use Data::Dumper;
 
 use Carp qw(confess cluck);
@@ -27,22 +27,7 @@ BEGIN {
 }
 
 sub demo_data {
-    return {
-        meta  => { version => 1, ok => JSON::PP::true },
-        items => [ { id => 1, name => "alpha" }, { id => 2, name => "beta" }, ],
-        matrix => [ [ 1, 2 ], [ 3, 4 ] ],
-        long   => [
-            "this is a long message that may force the block to stay expanded",
-            "second",
-            "third",
-            "fourth",
-        ],
-        "single-array" => [1],
-        "single-obj"   => [2],
-        wide_array     => [ map { "abcdefghijklmnopqrstuvwxyz$_" } 1 .. 9 ],
-        wide_object    => { map { ; "abcdefghijk$_" => "lmnopqrstuvwxyz$_" } 1 .. 9 },
-
-    };
+    return JSON::JSONFold::CLI::demo_data() ;
 }
 
 sub parse_options {
@@ -65,6 +50,7 @@ sub parse_options {
         'input|i=s'  => \$opt{input},
         'compact=s'  => \$opt{compact},
         'indent=i'   => \$opt{indent},
+        'native'     => \$opt{native},
         'sort-keys!' => \$cfg{sort_keys},
 
         'width=i'            => \$cfg{width},
@@ -139,7 +125,7 @@ sub get_config {
 
     $cfg{sort_keys} = 1 ;
 
-    my $config = JSON::JSONFold::config($opt->{compact}, %cfg);
+    my $config = jsonfold_config($opt->{compact}, $opt->{width}, %cfg);
     return $config ;
 }
 
@@ -182,10 +168,11 @@ sub main {
 
     my $cfg = get_config($opt);
     my $verbose = $opt->{verbose} ;
+    my $native = $opt->{native} ;
 
     show_verbose("config", { $cfg->as_hash }) if $verbose ;
  
-    my $info = dumpi($data, \*STDOUT, compact => $cfg, sort_keys => $opt->{sort_keys});
+    my $info = write_json($data, \*STDOUT, $opt->{width}, $cfg, sort_keys => $opt->{sort_keys}, gold => !$native);
 
     show_verbose("stats", { % $info }) if $verbose ;
     return 0;

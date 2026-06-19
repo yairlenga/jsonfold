@@ -5,8 +5,7 @@ use 5.014;
 
 use FindBin;
 use lib "$FindBin::Bin/lib", "$FindBin::Bin/../lib", "lib";
-use JSON::PP ;
-use JSON::JSONFold qw(dumps dump);
+use JSON::JSONFold ;
 
 use Getopt::Long qw(GetOptionsFromArray);
 use Time::HiRes qw(time clock_gettime CLOCK_PROCESS_CPUTIME_ID);
@@ -195,7 +194,7 @@ sub run_jsonfold_dumps {
     my ($data, $compact, $show) = @_;
 
     my $w = NullWriter->new()->capture($show);
-    $w->print(JSON::JSONFold::dumps($data, compact => $compact, indent => 2));
+    JSON::JSONFold::write_json($data, $w, undef, $compact) ;
     print STDOUT $w->data if $show;
     return $w ;
 }
@@ -204,17 +203,10 @@ sub run_jsonfold_dump {
     my ($data, $compact, $show) = @_;
     my $w = NullWriter->new()->capture($show);
 
-    JSON::JSONFold::dump($data, $w, compact => $compact, indent => 2);
+    JSON::JSONFold::write_json($data, $w, undef, $compact);
 
     print STDOUT $w->data if $show;
     return $w;
-}
-
-sub jsonfold_preset {
-    my ($compact) = @_;
-
-    return undef if defined($compact) && $compact eq 'off';
-    return JSON::JSONFold::preset($compact // 'default');
 }
 
 # ----------------------------------------------------------------------

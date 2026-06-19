@@ -4,27 +4,31 @@ use strict;
 use warnings;
 use 5.014 ;
 use JSON::PP ();
+
 use Exporter 'import';
 
 our $VERSION = '0.002';
-our @EXPORT_OK = qw(
-    config format_json write_json filter_stream
-    fold_text write_text preset run);
+our @EXPORT = qw(
+    format_json write_json fold_text
+    encode_json to_json) ;
 
+our @EXPORT_OK = qw(
+    jsonfold_config
+    create_formatter
+) ;
 # Object Orient Interface
 
 sub new {
-    my ($class, $width, $config, %overrides) = @_ ;
+    my ($class, %overrides) = @_ ;
 
-    # User may provide his own pretty printer
-    my $indent = delete $overrides{indent} || 2 ;
-    my $gold = delete $overrides{gold} ;
-    my $json = delete $overrides{json} ;
+    # Required parameters
+    my $width = delete $overrides{width} ;
+    my $config = delete $overrides{config} ;
+
+    my $gold = delete $overrides{gold} // 1 ;
+    my $indent = delete $overrides{indent} ;
+    my $json = delete $overrides{json} // _json_coder($gold, $indent, %overrides) ;
     my $do_close = delete $overrides{do_close} ;
-    unless ( $json ) {
-        $overrides{sort_keys} //= 1 ;
-        $json = _json_coder($gold, $indent, %overrides) ;
-    }
     return bless {
         json => $json,
         width => $width,
@@ -44,6 +48,25 @@ sub format {
     my $stream = _stream($out, $config, 0) ;
     my $json = $self->{json} ;
     my $text = $json->encode($data) ;
+
+    $stream->write($text);
+    $stream->finish;
+    $stream->flush;
+
+    close $out or die "close output: $!" ;
+    $output .= "\n" unless $output =~ /\n\z/;
+    return $output ;
+}
+
+sub fold {
+    my ($self, $text) = @_ ;
+
+    my $config = $self->{config} ;
+
+    my $output = '' ;
+    open my $out, '>', \$output or die "open output: $!" ;
+
+    my $stream = _stream($out, $config, 0) ;
 
     $stream->write($text);
     $stream->finish;
@@ -75,7 +98,14 @@ sub write {
 
 # Functional Interface
 
+# Not exportable. Allow using DEV::JSONFold::config(...)
 sub config {
+    my($base_config, $width, %overrides) = @_ ;
+    $width //= $overrides{width} ;
+    return _config($base_config, $width, %overrides) ;
+}
+
+sub jsonfold_config {       
     my($base_config, $width, %overrides) = @_ ;
     $width //= $overrides{width} ;
     return _config($base_config, $width, %overrides) ;
@@ -84,7 +114,7 @@ sub config {
 sub format_json {
     my($data, $width, $config, %overrides) = @_ ;
 
-    my $fmt = __PACKAGE__->new($width, $config, %overrides) ;
+    my $fmt = __PACKAGE__->new(width => $width, config => $config, %overrides) ;
     my $output = $fmt->format($data) ;
     return $output ;
 }
@@ -92,45 +122,25 @@ sub format_json {
 sub write_json {
     my($data, $fh, $width, $config, %overrides) = @_ ;
 
-    my $fmt = __PACKAGE__->new($width, $config, %overrides) ;
+    my $fmt = __PACKAGE__->new(width => $width, config => $config, %overrides) ;
     my $info = $fmt->write($data, $fh) ;
     return $info ;
 }
 
-sub format_text {
+sub fold_text {
     my($text, $width, $config) = @_ ;
+    my $fmt = __PACKAGE__->new(width => $width, config => $config) ;
 
-    my $cfg = _config($config, $width) ;
-
-    my $output = '' ;
-    open my $out, '>', \$output or die "open output: $!" ;
-
-    my $stream = _stream($out, $config, 0) ;
-    $stream->write($text) ;
-    $stream->close() ;
-
-    $output .= "\n" unless $output =~ /\n\z/;
-    return $output ;
+    return $fmt->fold($text) ;
 }
 
-sub write_text {
-    my ($fh, $text, $width, $config) = @_ ;
-
-    my $cfg = _config($config, $width) ;
-
-    my $stream = _stream($fh, $config, 0) ;
-    $stream->write($text) ;
-    my $info = $stream->info ;
-    $stream->close() ;
-
-    return $info ;
-}
-
-sub filter_stream {
+sub create_formatter {
     my($fh, $width, $config, %overrides) = @_ ;
     my $do_close = delete $overrides{close_fp} ;
     return _stream($fh, _config($config, $width, %overrides), $do_close) ;
 }
+
+# Helper for Function/OO interface methods
 
 sub _config {
     my ($preset, $width, %overrides) = @_ ;
@@ -146,21 +156,22 @@ sub _stream {
 sub _json_coder {
     my ($gold, $indent, %opt) = @_;
     # Must have valid indent, otherwise cannot parse the data
-    my $sort_keys = $opt{sort_keys} // 1 ;
-    my $json = JSON::PP->new->allow_nonref->canonical($sort_keys);
+    my $json = JSON::PP->new->pretty ;
     if ( $gold ) {
-        $json->pretty->indent_length(2)->space_before(0)->space_after(1);
-    } else {
-        $json->pretty(1)->indent_length($indent || 2) ;
+        my $sort_keys = $opt{sort_keys} // 1 ;
+        $indent //=2 ;
+        $json->allow_nonref->canonical($sort_keys);
+        $json->space_before(0)->space_after(1);
     }
+    $json->indent_length($indent) if defined $indent ;
     return $json;
 }
 
 # JSON compatible API - OO
 
 sub encode {
-    my $data = shift ;
-    
+    my ($self, $data) = @_ ;
+    return $self->format($data) ;
 }
 
 
@@ -170,18 +181,26 @@ sub encode_json {
     my ($data, $opts) = @_ ;
     my %overrides = %$opts if $opts ;
     my $width = delete $overrides{width} ;
-    my $compact = delete $overrides{compact} // "" ;
-    return format_json($data, $width, $compact, %overrides) ;
+    my $compact = delete $overrides{compact} ;
+
+    my $fmt = __PACKAGE__->new(width => $width, config => $compact, %overrides) ;
+    my $output = $fmt->format($data) ;
+    return $output ;
 }
+
+# Same as encode_json - for users of legacy "JSON" wrapper.
 
 sub to_json {
     my ($data, $opts) = @_ ;
     my %overrides = %$opts if $opts ;
     my $width = delete $overrides{width} ;
-    my $compact = delete $overrides{compact} // "" ;
-    return format_json($data, $width, $compact, %overrides) ;
-}
+    my $compact = delete $overrides{compact} ;
 
+    my $fmt = __PACKAGE__->new(width => $width, config => $compact, %overrides) ;
+    my $output = $fmt->format($data) ;
+    return $output ;
+}
+ 
 sub run {
     JSON::JSONFold::CLI::run() ;
 }
@@ -233,7 +252,7 @@ use constant DEFAULT_WIDTH   => 100;
 
 our $SEQ;
 use constant {
-    C_UNUSED_FIRST      => $SEQ++,
+    C_OFF               => $SEQ++,
     C_WIDTH             => $SEQ++,
 
     C_PACK_ARRAY_ITEMS  => $SEQ++,
@@ -255,6 +274,7 @@ our %PRESETS ;        # values defined later
 BEGIN {
 
     our @EXPORT = qw(
+        C_OFF
         C_WIDTH
         C_PACK_ARRAY_ITEMS
         C_PACK_OBJ_ITEMS
@@ -269,6 +289,7 @@ BEGIN {
 }
 
 our @FIELDS = (
+    [ 'off',              C_OFF ],
     [ 'width',            C_WIDTH ],
     [ 'pack_array_items', C_PACK_ARRAY_ITEMS ],
     [ 'pack_obj_items',   C_PACK_OBJ_ITEMS ],
@@ -281,6 +302,8 @@ our @FIELDS = (
     [ 'join_nesting',     C_JOIN_NESTING ],
 );
 
+our %NAME_TO_INDEX = map { @$_ } @FIELDS ;
+
 sub as_hash {
     my ($self) = @_ ;
     map { my ($name, $idx) = @$_ ; ($name => $self->[$idx]) ; } @FIELDS ;
@@ -290,6 +313,7 @@ sub _make {
     my ($class, %arg) = @_;
     my @d;
     $#d = $SEQ;
+    $d[C_OFF] = $arg{off} ;
     $d[C_WIDTH] = $arg{width};
 
     $d[C_PACK_ARRAY_ITEMS] = $arg{pack_array_items};
@@ -338,22 +362,6 @@ our $DEFAULT = __PACKAGE__->_make(
     join_nesting     => 1,
 );
 
-our %NAME_TO_INDEX = (
-    width            => C_WIDTH,
-
-    pack_array_items => C_PACK_ARRAY_ITEMS,
-    pack_obj_items   => C_PACK_OBJ_ITEMS,
-    pack_nesting     => C_PACK_NESTING,
-
-    fold_array_items => C_FOLD_ARRAY_ITEMS,
-    fold_obj_items   => C_FOLD_OBJ_ITEMS,
-    fold_nesting     => C_FOLD_NESTING,
-
-    join_array_items => C_JOIN_ARRAY_ITEMS,
-    join_obj_items   => C_JOIN_OBJ_ITEMS,
-    join_nesting     => C_JOIN_NESTING,
-);
-
 sub _replace {
     my ($base, $validate) = (shift, shift) ;
     return $base unless @_;
@@ -376,19 +384,14 @@ sub _replace {
 sub _resolve_config {
     my ($config) = @_;
 
-    unless ( ref($config)) {
-        my $name //= '';
-        die "unknown JSON::JSONFold preset: $name\n"
-            unless exists $PRESETS{$name};
+    return $config if ref($config) ;
 
-    return $PRESETS{$name};
+    my $name = $config // '';
+    $config = $PRESETS{$name} ;
+    die "unknown JSON::JSONFold preset: $name\n"
+        unless defined $config ;
 
-    }
-    my ($name) = @_;
-
-
-    $config = _preset($config) unless ref($config);
-    return $config;
+    return $config ;
 }
 
 
@@ -409,7 +412,7 @@ sub _new_preset {
 }
 
 %PRESETS = (
-    off     => undef,
+    off     => __PACKAGE__->_make(off => 1),
     ''      => $DEFAULT,
     default => $DEFAULT,
     none    => $NONE,
@@ -649,6 +652,13 @@ sub new {
     }, $class;
 }
 
+sub bytes_in  { $_[0]{bytes_in}  }
+sub bytes_out { $_[0]{bytes_out} }
+sub lines_in  { $_[0]{lines_in}  }
+sub lines_out { $_[0]{lines_out} }
+
+sub as_hash { return %{ $_[0] } }
+
 # -------------------------------------------------------------------------
 # Internal package: streaming folding filter/writer
 # -------------------------------------------------------------------------
@@ -671,6 +681,7 @@ use constant {
     W_PENDING      => $SEQ++,
     W_STACK        => $SEQ++,
     W_STATS        => $SEQ++,
+    W_DO_CLOSE      => $SEQ++,
     W_UNUSED_LAST  => $SEQ++,
 } ;
 
@@ -682,20 +693,23 @@ BEGIN {
         W_PENDING
         W_STACK
         W_STATS
+        W_DO_CLOSE
         W_UNUSED_LAST
     ) ;
 }
 
 sub new {
-    my ($class, $fh, $compact) = @_;
+    my ($class, $fh, $config, $do_close) = @_;
 
+    my $cfg = JSON::JSONFold::Config::config($config) ;
     my @d ;
     $#d = $SEQ ;
     $d[W_FH]      = $fh;
-    $d[W_CFG]     = JSON::JSONFold::Config::config($compact);
+    $d[W_CFG]     = $cfg unless $cfg->[C_OFF] ;
     $d[W_PENDING] = '';
     $d[W_STACK]   = [];
     $d[W_STATS]   = JSON::JSONFold::Stats->new;
+    $d[W_DO_CLOSE] = $do_close;
     return bless \@d, $class;
 }
 
@@ -759,7 +773,12 @@ sub flush {
     $fh->flush if $fh && $fh->can('flush');
 }
 
-sub close { return $_[0]->finish }
+sub close {
+    my ($self) = @_;
+    $self->finish;
+    $self->flush;
+    $self->[W_FH]->close if $self->[W_DO_CLOSE] ;
+}
 
 sub _feed {
     my ($self, $line) = @_;
@@ -995,7 +1014,13 @@ sub _count_newlines { return ($_[0] =~ tr/\n//) }
 
 package JSON::JSONFold::CLI ;
 
-use 5.014 ;
+use Exporter 'import';
+
+our @EXPORT_OK = qw(
+    demo_data
+    run
+) ;
+
 use strict;
 use warnings;
 
@@ -1015,15 +1040,14 @@ sub setup {
 
     require Getopt::Long ;
 
-    require JSON ;
-
 }
 
 sub demo_data {
     return {
-        meta  => { version => 1, ok => JSON::PP::true },
+        meta  => { version => 1, ok => JSON::PP::true, name => "jsonfold demo" },
+        ids => [ 1, 2, 3, 4, 5, 6 ],
         items => [ { id => 1, name => "alpha" }, { id => 2, name => "beta" }, ],
-        matrix => [ [ 1, 2 ], [ 3, 4 ] ],
+        matrix => [ [ 1, 2 ], [ 3, 4 ], [ 5, 6 ] ],
         long   => [
             "this is a long message that may force the block to stay expanded",
             "second",
@@ -1031,7 +1055,8 @@ sub demo_data {
             "fourth",
         ],
         "single-array" => [1],
-        "single-obj"   => [2],
+        "single-obj"   => { x => 2 },
+        long_array     => [ map { "a$_" } 1..50 ],
         wide_array     => [ map { "abcdefghijklmnopqrstuvwxyz$_" } 1 .. 9 ],
         wide_object    => { map { ; "abcdefghijk$_" => "lmnopqrstuvwxyz$_" } 1 .. 9 },
 
@@ -1110,7 +1135,7 @@ sub run {
     my $opt = parse_options();
 
     if ($opt->{help}) {
-        usage();
+        usage(\*STDOUT);
         return 0;
     }
 
@@ -1135,38 +1160,311 @@ __END__
 
 =head1 NAME
 
-JSON::JSONFold - hybrid pretty/compact JSON output
+JSON::JSONFold - compact, readable JSON formatting
 
 =head1 SYNOPSIS
 
-    use JSON::JSONFold qw(dumps dump);
+    use JSON::JSONFold;
 
-    my $text = dumps($data, compact => 'default', indent => 2);
-    dump($data, \*STDOUT, compact => 'max', sort_keys => 1);
+    # Functional interface
 
-    my $filter = JSON::JSONFold->new(compact => 'join');
-    $filter->write($pretty_json_chunk);
-    $filter->finish;
-    print $filter->output;
+    my $text = format_json($data, 100, 'default');
+
+    write_json($data, \*STDOUT, 100, 'default');
+
+    my $folded = fold_text($pretty_json, 100, 'default');
+
+    # Object interface
+
+    my $fmt = JSON::JSONFold->new(
+        width  => 100,
+        config => 'default',
+    );
+
+    my $text = $fmt->format($data);
+
+    # JSON-compatible interface
+
+    my $text = encode_json($data, {
+        width   => 100,
+        compact => 'default',
+    });
+
+    # Streaming interface
+
+    my $formatter = create_formatter(\*STDOUT, 100, 'default');
+
+    $formatter->write($text);
+    $formatter->finish;
 
 =head1 DESCRIPTION
 
-C<JSON::JSONFold> formats JSON using a normal pretty-printer first, then folds
-small containers and adjacent scalar lines when they fit within a target width.
-It is a line-oriented streaming filter, not a validating JSON parser.
+C<JSON::JSONFold> formats JSON using a regular pretty-printer and then folds
+the output into a more compact layout.
 
-=head1 INTERNAL PACKAGES
+It is intended to preserve readability while reducing unnecessary vertical
+space in arrays, objects, and simple nested structures.
 
-The implementation keeps internal records as lightweight packages in this same
-file: C<JSON::JSONFold::Config>, C<JSON::JSONFold::Line>,
-C<JSON::JSONFold::Frame>, C<JSON::JSONFold::Stats>, and
-C<JSON::JSONFold::Writer>.
+JSONFold may be used as:
 
-=head1 PRESETS
+=over
 
-C<default>, C<none>, C<low>, C<med>, C<high>, C<max>, C<pack>, C<fold>, C<join>,
-and C<off>.
+=item *
+
+A functional API.
+
+=item *
+
+An object-oriented formatter.
+
+=item *
+
+A streaming post-processor.
+
+=item *
+
+A drop-in replacement for C<encode_json> and C<to_json>.
+
+=back
+
+=head1 EXPORTED FUNCTIONS
+
+The following functions are exported by default:
+
+    format_json
+    write_json
+    fold_text
+    encode_json
+    to_json
+
+The following functions are exported on request:
+
+    jsonfold_config
+    create_formatter
+
+
+=head1 FUNCTIONAL INTERFACE
+
+=head2 jsonfold_config
+
+    my $config = jsonfold_config($preset, $width, %overrides);
+
+Creates a JSONFold configuration object.
+
+C<$preset> may be a preset name or an existing configuration object.
+Additional named arguments override individual configuration settings.
+
+=head2 format_json
+
+    my $text = format_json($data, $width, $config, %overrides);
+
+Formats a Perl data structure as folded JSON and returns the resulting text.
+
+=head2 write_json
+
+    my $stats = write_json($data, $fh, $width, $config, %overrides);
+
+Formats a Perl data structure and writes the folded JSON to C<$fh>.
+
+Returns formatting statistics.
+
+=head2 fold_text
+
+    my $text = fold_text($pretty_json, $width, $config);
+
+Folds existing pretty-printed JSON text and returns the folded result.
+
+=head1 OBJECT INTERFACE
+
+=head2 new
+
+    my $fmt = JSON::JSONFold->new(
+        width     => 100,
+        config    => 'default',
+        indent    => 2,
+        sort_keys => 1,
+    );
+
+Creates a formatter object.
+
+Recognized options include:
+
+    width
+        Target line width.
+
+    config
+        Preset name or configuration object.
+
+    indent
+        Pretty-print indentation width.
+
+    sort_keys
+        Sort object keys before formatting.
+
+    gold
+        Use JSONFold reference formatting (indent=2, space_before=0, space_after=1). default = true
+
+    json
+        Custom JSON encoder object.
+
+    do_close
+        Close the underlying filehandle when writing finishes.
+
+If C<json> is not supplied, a default pretty-printing JSON encoder is created.
+
+=head2 format
+
+    my $text = $fmt->format($data);
+
+Formats a Perl data structure and returns folded JSON text.
+
+=head2 fold
+
+    my $text = $fmt->fold($pretty_json);
+
+Folds existing pretty-printed JSON text.
+
+=head2 write
+
+    my $stats = $fmt->write($data, $fh);
+
+Formats a Perl data structure and writes the result to C<$fh>.
+
+Returns formatting statistics.
+
+=head2 encode
+
+    my $text = $fmt->encode($data);
+
+Alias for C<format>, provided for compatibility with JSON-style APIs.
+
+=head1 STREAMING INTERFACE
+
+=head2 create_formatter
+
+    my $formatter = create_formatter($fh, $width, $config, %overrides);
+
+Creates a streaming formatter around an existing filehandle.
+
+The C<$config> parameter may be a preset name or a
+L<JSON::JSONFold::Config> object.
+
+
+The returned object accepts pretty-printed JSON text incrementally and writes
+folded JSON to C<$fh>. This allows JSONFold to be used as a streaming
+post-processor without buffering the entire document in memory.
+
+    my $formatter = create_formatter(\*STDOUT, 100, 'default');
+
+    $formatter->write("{\n");
+    $formatter->write(qq(  "name": "Alice"\n));
+    $formatter->write("}\n");
+
+    $formatter->finish;
+    $formatter->flush;
+
+The returned object is a L<JSON::JSONFold::Writer> and supports:
+
+    write($text)
+    finish()
+    flush()
+    close()
+    stats()
+
+Normally, users should prefer C<format_json>, C<write_json>, or the object
+interface. C<create_formatter> is intended for advanced use cases and
+integration with existing serializers and streaming APIs.
+
+=head1 JSON-COMPATIBLE FUNCTIONS
+
+=head2 encode_json
+
+This function may be used as a drop-in replacement for C<JSON::encode_json>.
+The optional second argument controls JSONFold formatting.
+
+    my $text = encode_json($data);
+
+    my $text = encode_json($data, {
+        width   => 100,
+        compact => 'default',
+    });
+
+Encodes C<$data> as folded JSON.
+
+When called without a second argument, C<encode_json> is compatible with
+C<JSON::encode_json> and uses the default JSONFold settings.
+
+The optional second argument is a hash reference containing JSONFold options.
+
+JSONFold-specific options:
+
+=over
+
+=item * C<width>
+
+Target output width.
+
+=item * C<compact>
+
+Preset name or configuration object.
+
+=back
+
+=head2 to_json
+
+This function may be used as a drop-in replacement for C<JSON::to_json>.
+The optional second argument controls JSONFold formatting.
+It will ignore other legacy C<JSON> options (canonical, etc).
+
+    my $text = to_json($data);
+
+    my $text = to_json($data, {
+        canonical => 1,
+        pretty    => 1,
+    });
+
+    my $text = to_json($data, {
+        width     => 100,
+        compact   => 'high',
+        canonical => 1,
+    });
+
+Compatibility wrapper similar to C<JSON::to_json>.
+
+When called without a second argument, C<to_json> behaves like
+C<JSON::to_json> followed by JSONFold formatting using the default settings.
+
+The optional hash reference may contain both JSON options and JSONFold
+options. JSONFold-specific options are removed before the remaining options
+are forwarded to C<JSON::to_json>.
+
+JSONFold-specific options:
+
+=over
+
+=item * C<width>
+
+Target output width.
+
+=item * C<compact>
+
+Preset name or configuration object.
+
+=back
+
+=head1 SEE ALSO
+
+L<JSON>,
+L<JSON::PP>,
+L<JSON::JSONFold::Config>,
+L<JSON::JSONFold::Writer>
+
+=head1 AUTHOR
+
+Yair Lenga
+
+=head1 COPYRIGHT AND LICENSE
+
+See the distribution license.
 
 =cut
-
-
