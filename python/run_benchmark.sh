@@ -1,4 +1,4 @@
-#! /bin/bash -uex
+#! /bin/bash -ue
 
 rm -f *.cover benchmark.out
 rm -rf prof nytprof
