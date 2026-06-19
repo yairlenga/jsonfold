@@ -7,14 +7,14 @@ use JSON::PP ();
 
 use Exporter 'import';
 
-our $VERSION = '0.002';
+our $VERSION = '0.1.7';
 our @EXPORT = qw(
     format_json write_json fold_text
     encode_json to_json) ;
 
 our @EXPORT_OK = qw(
     jsonfold_config
-    create_formatter
+    create_writer
 ) ;
 # Object Orient Interface
 
@@ -50,8 +50,6 @@ sub format {
     my $text = $json->encode($data) ;
 
     $stream->write($text);
-    $stream->finish;
-    $stream->flush;
 
     close $out or die "close output: $!" ;
     $output .= "\n" unless $output =~ /\n\z/;
@@ -69,8 +67,6 @@ sub fold {
     my $stream = _stream($out, $config, 0) ;
 
     $stream->write($text);
-    $stream->finish;
-    $stream->flush;
 
     close $out or die "close output: $!" ;
     $output .= "\n" unless $output =~ /\n\z/;
@@ -134,7 +130,7 @@ sub fold_text {
     return $fmt->fold($text) ;
 }
 
-sub create_formatter {
+sub create_writer {
     my($fh, $width, $config, %overrides) = @_ ;
     my $do_close = delete $overrides{close_fp} ;
     return _stream($fh, _config($config, $width, %overrides), $do_close) ;
@@ -1192,7 +1188,7 @@ JSON::JSONFold - compact, readable JSON formatting
 
     # Streaming interface
 
-    my $formatter = create_formatter(\*STDOUT, 100, 'default');
+    my $formatter = create_writer(\*STDOUT, 100, 'default');
 
     $formatter->write($text);
     $formatter->finish;
@@ -1240,7 +1236,7 @@ The following functions are exported by default:
 The following functions are exported on request:
 
     jsonfold_config
-    create_formatter
+    create_writer
 
 
 =head1 FUNCTIONAL INTERFACE
@@ -1340,9 +1336,9 @@ Alias for C<format>, provided for compatibility with JSON-style APIs.
 
 =head1 STREAMING INTERFACE
 
-=head2 create_formatter
+=head2 create_writer
 
-    my $formatter = create_formatter($fh, $width, $config, %overrides);
+    my $formatter = create_writer($fh, $width, $config, %overrides);
 
 Creates a streaming formatter around an existing filehandle.
 
@@ -1354,7 +1350,7 @@ The returned object accepts pretty-printed JSON text incrementally and writes
 folded JSON to C<$fh>. This allows JSONFold to be used as a streaming
 post-processor without buffering the entire document in memory.
 
-    my $formatter = create_formatter(\*STDOUT, 100, 'default');
+    my $formatter = create_writer(\*STDOUT, 100, 'default');
 
     $formatter->write("{\n");
     $formatter->write(qq(  "name": "Alice"\n));
@@ -1372,7 +1368,7 @@ The returned object is a L<JSON::JSONFold::Writer> and supports:
     stats()
 
 Normally, users should prefer C<format_json>, C<write_json>, or the object
-interface. C<create_formatter> is intended for advanced use cases and
+interface. C<create_writer> is intended for advanced use cases and
 integration with existing serializers and streaming APIs.
 
 =head1 JSON-COMPATIBLE FUNCTIONS
