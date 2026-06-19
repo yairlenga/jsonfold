@@ -12,6 +12,6 @@ WriteMakefile(
         'JSON::PP'  => 0,
         'Exporter'  => 0,
     },
-    EXE_FILES    => [ 'script/json-jsonfold' ],
+    EXE_FILES => [ 'script/jsonfold.pl' ],
     test         => { TESTS => 't/*.t' },
 );
