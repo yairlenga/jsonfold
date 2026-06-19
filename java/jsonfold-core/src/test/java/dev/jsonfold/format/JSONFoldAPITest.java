@@ -51,16 +51,16 @@ class JSONFoldApiTest {
             }
             """;
 
-        String folded1 = fmt.formatJsonText(jsonText);
+        String folded1 = fmt.fold(jsonText);
         assertNotNull(folded1);
         assertTrue(folded1.contains("\"a\""));
 
-        String folded2 = JSONFold.formatJsonText(jsonText, 100, cfg);
+        String folded2 = JSONFold.foldText(jsonText, 100, cfg);
         assertNotNull(folded2);
         assertTrue(folded2.contains("\"a\""));
 
         StringWriter sw = new StringWriter();
-        Writer filter = JSONFold.filter_stream(sw, 100, cfg, false);
+        Writer filter = JSONFold.create_writer(sw, 100, cfg, false);
         filter.write(jsonText);
         filter.close();
 

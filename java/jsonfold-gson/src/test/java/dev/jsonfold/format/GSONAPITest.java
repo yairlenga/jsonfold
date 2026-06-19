@@ -111,15 +111,15 @@ class GsonApiTest {
             }
             """;
 
-        String folded1 = fmt.formatJsonText(jsonText);
+        String folded1 = fmt.fold(jsonText);
         assertNotNull(folded1);
         assertTrue(folded1.contains("\"a\""));
 
-        String folded2 = JSONFold.formatJsonText(jsonText, 100, cfg);
+        String folded2 = JSONFold.foldText(jsonText, 100, cfg);
         assertNotNull(folded2);
 
         StringWriter sw = new StringWriter();
-        Writer filter = JSONFold.filter_stream(sw, 100, cfg, false);
+        Writer filter = JSONFold.create_writer(sw, 100, cfg, false);
         filter.write(jsonText);
         filter.close();
 
@@ -143,12 +143,12 @@ class GsonApiTest {
         assertTrue(fmt.isSortKeys());
         assertFalse(fmt.isDoClose());
 
-        String json = fmt.formatJson(data);
+        String json = fmt.format(data);
         assertNotNull(json);
         assertTrue(json.contains("\"id\""));
 
         StringWriter sw = new StringWriter();
-        Stats stats = fmt.writeJson(data, sw);
+        Stats stats = fmt.write(data, sw);
         assertNotNull(stats);
         assertFalse(sw.toString().isEmpty());
         assertTrue(stats.getBytesIn() > 0);

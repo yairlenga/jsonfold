@@ -12,7 +12,7 @@ import java.io.Writer;
  * serializer-specific behavior, such as Jackson object serialization.</p>
  *
  * <p>This class can also fold already pretty-printed JSON text through
- * {@link #formatJsonText(String)}.</p>
+ * {@link #fold(String)}.</p>
  */
 public class JSONFold {
 
@@ -30,6 +30,13 @@ public class JSONFold {
 
     /** Whether the underlying writer should be closed by the folding writer. */
     protected boolean doClose ;
+
+    /**
+     * Whether to use the gold/test pretty-printer variant.
+     *
+     * <p>This is mainly useful for matching cross-language golden test output.</p>
+     */
+    protected boolean gold = true ;
 
     /**
      * Create a builder using the default configuration and the supplied width.
@@ -130,6 +137,17 @@ public class JSONFold {
             return self();
         }
 
+       /**
+         * Enable or disable gold/test formatting mode.
+         *
+         * @param gold {@code true} to enable gold mode
+         * @return this builder
+         */
+        public B gold(boolean gold) {
+            target.gold = gold;
+            return self();
+        }
+
         /**
          * Build the configured formatter.
          *
@@ -192,6 +210,17 @@ public class JSONFold {
     }
 
     /**
+     * Return whether gold/test formatting mode is enabled.
+     *
+     * @return {@code true} if gold mode is enabled
+     */
+    public boolean isGold() {
+        return gold;
+    }
+
+
+
+    /**
      * Create a configuration builder from a base configuration and optional width.
      *
      * @param baseConfig base configuration
@@ -238,7 +267,7 @@ public class JSONFold {
      * @param close_fp whether closing the folding writer should close {@code base}
      * @return folding writer
      */
-    static public JSONFoldWriter filter_stream(Writer base, int width, Config config, boolean close_fp)
+    static public JSONFoldWriter create_writer(Writer base, int width, Config config, boolean close_fp)
     {
         JSONFoldWriter writer = new JSONFoldWriter(base, configBuilder(config, width).build(), close_fp) ;
         return writer ;
@@ -251,11 +280,11 @@ public class JSONFold {
      * @return folded JSON text
      * @throws IOException if writing fails
      */
-    public String formatJsonText(String jsonText)
+    public String fold(String jsonText)
     throws IOException
     {
         try (StringWriter sw = new StringWriter() ;
-            Writer out = filter_stream(sw, width, config, false) ;
+            Writer out = create_writer(sw, width, config, false) ;
             ) {
             out.write(jsonText) ;
             return sw.toString() ;
@@ -271,11 +300,11 @@ public class JSONFold {
      * @return folded JSON text
      * @throws IOException if writing fails
      */
-    public static String formatJsonText(String jsonText, int width, Config config)
+    public static String foldText(String jsonText, int width, Config config)
     throws IOException
     {
         JSONFold fmt = new JSONFold(width, config) ;
-        return fmt.formatJsonText(jsonText) ;
+        return fmt.fold(jsonText) ;
     }
 
     // The complete API includes 2 additional methods, and 2 additional static helpers.

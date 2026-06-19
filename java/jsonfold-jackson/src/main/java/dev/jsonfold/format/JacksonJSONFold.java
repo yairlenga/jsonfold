@@ -76,12 +76,6 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 
 public final class JacksonJSONFold extends JSONFold implements JFFormatter {
 
-    /**
-     * Whether to use the gold/test pretty-printer variant.
-     *
-     * <p>This is mainly useful for matching cross-language golden test output.</p>
-     */
-    protected boolean gold = false ;
 
     /**
      * Create a Jackson-backed formatter.
@@ -92,15 +86,6 @@ public final class JacksonJSONFold extends JSONFold implements JFFormatter {
     public JacksonJSONFold(int width, Config config)
     {
         super(width, config) ;
-    }
-
-    /**
-     * Return whether gold/test formatting mode is enabled.
-     *
-     * @return {@code true} if gold mode is enabled
-     */
-    public boolean isGold() {
-        return gold;
     }
 
     /**
@@ -141,16 +126,7 @@ public final class JacksonJSONFold extends JSONFold implements JFFormatter {
             this.target = (JacksonJSONFold) super.target;
         }
 
-        /**
-         * Enable or disable gold/test formatting mode.
-         *
-         * @param gold {@code true} to enable gold mode
-         * @return this builder
-         */
-        public Builder gold(boolean gold) {
-            target.gold = gold;
-            return this;
-        }
+
 
         /**
          * Build the configured formatter.
@@ -362,7 +338,7 @@ public final class JacksonJSONFold extends JSONFold implements JFFormatter {
      * @return formatting statistics
      * @throws IOException if Jackson serialization or writing fails
      */
-    public Stats writeJson(Object obj, Writer writer) throws IOException
+    public Stats write(Object obj, Writer writer) throws IOException
     {
         ObjectMapper mapper = sortKeys ? SORTED_MAPPER : DEFAULT_MAPPER ;
         PrettyPrinter pp = gold ? goldPrettyPrinter(width) : prettyPrinter(width) ;
@@ -379,11 +355,12 @@ public final class JacksonJSONFold extends JSONFold implements JFFormatter {
      * @return folded JSON text
      * @throws IOException if serialization fails
      */
-    public String formatJson(Object obj) 
+    @Override
+    public String format(Object obj) 
     throws IOException
     {
         Writer sw = new StringWriter() ;
-        Stats stats = writeJson(obj, sw) ;
+        Stats stats = write(obj, sw) ;
         if ( stats == null ) throw new IOException("Failed to generate JSON string") ;
         return sw.toString();
     }
@@ -402,7 +379,7 @@ public final class JacksonJSONFold extends JSONFold implements JFFormatter {
     throws IOException
     {
         JacksonJSONFold fmt = new JacksonJSONFold(width, config) ;
-        return fmt.writeJson(obj, writer);
+        return fmt.write(obj, writer);
     }
 
 

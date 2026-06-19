@@ -44,7 +44,7 @@ public final class GsonMain {
     public Stats writeTo(Writer out, Object value, Config config, int indent, boolean gold )
     throws IOException {
         if ( out == null ) out =  new BufferedWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8)); 
-        JSONFoldWriter jfw = JSONFold.filter_stream(out, config.getWidth(), config, false) ;
+        JSONFoldWriter jfw = JSONFold.create_writer(out, config.getWidth(), config, false) ;
 
         GsonJSONFold.writeJson(value, jfw, config.getWidth(), config) ;
 

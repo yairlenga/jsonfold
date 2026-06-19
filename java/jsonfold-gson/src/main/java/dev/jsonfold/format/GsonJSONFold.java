@@ -86,10 +86,10 @@ public final class GsonJSONFold extends JSONFold implements JFFormatter {
         }
     }
 
-    public Stats writeJson(Object value, Writer out)
+    public Stats write(Object value, Writer out)
     throws IOException {
 
-        JSONFoldWriter jfw = JSONFold.filter_stream(out, config.getWidth(), config, doClose) ;
+        JSONFoldWriter jfw = JSONFold.create_writer(out, config.getWidth(), config, doClose) ;
 
         if ( indent != null && indent > 0 ) {
             Gson prettyWriter = new GsonBuilder().create();
@@ -107,9 +107,9 @@ public final class GsonJSONFold extends JSONFold implements JFFormatter {
     }
 
     @Override
-    public String formatJson(Object obj) throws IOException {
+    public String format(Object obj) throws IOException {
         StringWriter sw = new StringWriter();
-        Stats stats = writeJson(obj, sw);
+        Stats stats = write(obj, sw);
         if (stats == null) {
             throw new IOException("Failed to generate JSON string");
         }
@@ -123,7 +123,7 @@ public final class GsonJSONFold extends JSONFold implements JFFormatter {
             Config config)
     throws IOException {
         GsonJSONFold fmt = new GsonJSONFold(width, config);
-        return fmt.writeJson(obj, writer);
+        return fmt.write(obj, writer);
     }
 
     public static String formatJson(
@@ -132,6 +132,6 @@ public final class GsonJSONFold extends JSONFold implements JFFormatter {
             Config config)
     throws IOException {
         GsonJSONFold fmt = new GsonJSONFold(width, config);
-        return fmt.formatJson(obj);
+        return fmt.format(obj);
     }
 }
