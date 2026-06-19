@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { dump, dumps } from "./jsonfold.js";
+import { format_json, write_json } from "./jsonfold.js";
 
 const REPEATS = 3;
 
@@ -75,25 +75,28 @@ function makeData(rows) {
 function runCase(data, name, t0) {
   const w = new NullWriter(t0);
 
-  if (name === "base.dumps.plain") {
-    w.write(JSON.stringify(data));
-    return w;
-  }
+  switch (name) {
+    case "base.dumps.plain":
+    case "base.dump.plain":
+      w.write(JSON.stringify(data));
+      return w;
 
-  if (name === "base.dumps.pretty") {
-    w.write(JSON.stringify(data, null, 2));
-    return w;
+    case "base.dumps.pretty":
+    case "base.dump.pretty":
+      w.write(JSON.stringify(data, null, 2));
+      return w;
+
   }
 
   if (name.startsWith("jsonfold.dumps.")) {
     const compact = name.split(".")[2];
-    w.write(dumps(data, { compact, indent: 2 }));
+    w.write(format_json(data, undefined, compact));
     return w;
   }
 
   if (name.startsWith("jsonfold.dump.")) {
     const compact = name.split(".")[2];
-    dump(data, w, { compact, indent: 2 });
+    write_json(data, w, undefined, compact);
     return w;
   }
 
@@ -103,18 +106,27 @@ function runCase(data, name, t0) {
 function validateCase(data, name) {
   let text;
 
-  if (name === "base.dumps.plain") {
-    text = JSON.stringify(data);
-  } else if (name === "base.dumps.pretty") {
-    text = JSON.stringify(data, null, 2);
-  } else if (name.startsWith("jsonfold.dumps.")) {
-    text = dumps(data, { compact: name.split(".")[2], indent: 2 });
-  } else if (name.startsWith("jsonfold.dump.")) {
-    let out = "";
-    dump(data, s => { out += s; }, { compact: name.split(".")[2], indent: 2 });
-    text = out;
-  } else {
-    throw new Error(`unknown test: ${name}`);
+  switch (name) {
+    case "base.dumps.plain":
+    case "base.dump.plain":
+      text = JSON.stringify(data);
+      break
+
+    case "base.dumps.pretty":
+    case "base.dump.pretty":
+      text = JSON.stringify(data);
+      break
+
+    default:
+      if (name.startsWith("jsonfold.dumps.")) {
+        text = format_json(data, { compact: name.split(".")[2], indent: 2 });
+      } else if (name.startsWith("jsonfold.dump.")) {
+        let out = "";
+        write_json(data, s => { out += s; }, { compact: name.split(".")[2], indent: 2 });
+        text = out;
+      } else {
+        throw new Error(`unknown test: ${name}`);
+    }
   }
 
   JSON.parse(text);

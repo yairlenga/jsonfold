@@ -67,6 +67,18 @@ export class JSONFoldConfig {
     }
     return JSONFoldConfig.PRESETS[name];
   }
+
+  static resolve(base_config, width, overrides) {
+    let cfg = asConfig(base_config)
+    if ( overrides || width != null) {
+      overrides = overrides ? {...overrides } : {}
+      if ( width != null ) overrides.width = width
+      if ( Object.keys(overrides).length ) {
+        cfg = cfg.replace(overrides)
+      }
+    }
+    return cfg
+  }
 }
 
 JSONFoldConfig.NONE = new JSONFoldConfig({
@@ -347,10 +359,11 @@ function sortedReplacer(userReplacer) {
 }
 
 export class JSONFoldFilter {
-  constructor(fp, { config = "" } = {}) {
+  constructor(fp, { config = "", doClose = false } = {}) {
     this.fp = fp;
     this.stats = new JSONFoldStats();
     this.cfg = asConfig(config);
+    this.doClose = doClose
     this.pending = "";
     this.stack = [];
   }
@@ -416,7 +429,7 @@ export class JSONFoldFilter {
   close() {
     this.finish();
     if ( this.fp && typeof this.fp.flush === "function") this.fp.flush();
-    if ( this.close_fp ) this.fp.close()
+    if ( this.doClose ) this.fp.close()
   }
 
   finish() {
@@ -716,134 +729,118 @@ export class JSONFoldFilter {
   }
 }
 
-function _config(base_config, width, overrides) {
-  let cfg = asConfig(base_config)
-  if ( overrides || width != null) {
-    if (! overrides ) overrides = {}
-    if ( width != null ) overrides.width = width
-    if ( Object.keys(overrides).length ) {
-      cfg = cfg.replace(overrides)
-    }
+// Public API - OO
+
+export class JSONFold {
+
+  constructor( width=undefined, config=undefined, {
+    doClose = false,
+    indent = 2,
+    gold = true,
+    json = JSON,
+    replacer = undefined,
+    sortKeys = false,
+  } = {} ) 
+  {
+    if ( sortKeys ) replacer = sortedReplacer(replacer)
+
+    this.width  = width
+    this.config = JSONFoldConfig.resolve(config, width)
+    this.json = json
+    this.doClose = doClose
+    this.gold = gold
+    this.indent = indent
+    this.replacer = replacer
   }
-  return cfg
+
+  format(data)
+  {
+    const text = this.json.stringify(data, this.replacer, this.indent)
+    if ( typeof text != "string" ) return text
+
+    let buff = ""
+    const fp = s => { buff += s ; }
+    const out = new JSONFoldFilter(fp, { config: this.config })
+    out.write(text);
+    if ( ! text.endsWith("\n")) out.write("\n")
+    out.close()
+    return buff  
+  }
+
+  write(data, fp)
+  {
+    const text = this.json.stringify(data, this.replacer, this.indent)
+    if ( typeof text != "string" ) return text
+
+    const out = new JSONFoldFilter(fp, { config: this.config })
+    out.write(text);
+    const stats = out.stats
+    out.close()
+    return stats
+  }
+
+  fold(text)
+  {
+    let buff = ""
+    const fp = s => { buff += s ; }
+    const out = new JSONFoldFilter(fp, { config: this.config })
+    out.write(text)
+    out.close()
+    if ( ! text.endsWith("\n")) out.write("\n")
+    return buff  
+  }
+
+  // Public API - Helpers
+
 }
 
-function _stream_text(text, fp, cfg)
+// Public API - Functional
+
+export function create_writer(fp, { width=undefined, config= "", doClose= false} = {})
 {
-  const out = new JSONFoldFilter(fp, { config: cfg })
-
-  out.write(text);
-  if ( ! text.endsWith("\n")) out.write("\n")
-  out.finish();
-  return out.stats
+  const cfg = JSONFoldConfig.resolve(config, width)
+  return new JSONFoldFilter( fp , { config: cfg, doClose})
 }
 
-export function filter_stream(fp, { config= "", close_fp= false})
+export function write_json(data, fp, width, config = "", ...args)
 {
-  return new JSONFoldFilter( fp , { config: config, close_fp: close_fp})
-}
-
-export function write_json(obj, fp, width, config, {
-  indent = 2,
-  sortKeys = false,
-  replacer = undefined,
-} = {} ) {
-  const cfg = _config(config, width)
-  if ( sortKeys ) replacer = sortedReplacer(replacer)
-
-  const text = JSON.stringify(obj, replacer, indent);
-  if ( typeof text != "string" ) return false
-
-  let stats = _stream_text(text, fp, cfg)
+  const fmt = new JSONFold(width, config, ...args )
+  const stats = fmt.write(data, fp)
   return stats
 }
 
-export function format_json(obj, width, config, {
-  indent = 2,
-  sortKeys = false,
-  replacer = undefined,
-} = {} ) {
-  const cfg = _config(config, width)
-  if ( sortKeys ) replacer = sortedReplacer(replacer)
-
-  const text = JSON.stringify(obj, replacer, indent)
-  if ( typeof text != "string" ) return text
-
-  let buff = ""
-  const fp = s => { buff += s ; }
-  let stats = _stream_text(text, fp, width, cfg)
-  return buff
-}
-
-export function config(config, width, overrides)
+export function format_json(data, width, config = "", ...args)
 {
-  return _config(config, width, overrides)
+  const fmt = new JSONFold( width, config, ...args)
+  return fmt.format(data)
 }
 
-export function dump(obj, fp, {
-  compact = "",
-  width = undefined,
-  indent = 2,
-  replacer = undefined,
-  sortKeys = false,
-} = {}) {
-  const cfg = _config(compact, width)
-  if ( sortKeys ) replacer = sortedReplacer(replacer)
-
-  const text = JSON.stringify(obj, replacer, indent);
-
-  if ( typeof text != "string" ) return
-
-  _stream_text(text, fp, cfg)
+export function jsonfold_config(config, width, overrides)
+{
+  return JSONFoldConfig.resolve(config, width, overrides)
 }
 
-export function dumps(obj, {
-  compact = "",
-  width = undefined,
-  indent = 2,
-  replacer = undefined,
-  sortKeys = false,
-} = {}) {
-  const cfg = _config(compact, width)
-  if ( sortKeys ) replacer = sortedReplacer(replacer)
-
-
-  const text = JSON.stringify(obj, replacer, indent)
-  if ( typeof text != "string" ) return text
-
-  let buff = ""
-  const fp = s => { buff += s ; }
-  let stats = _stream_text(text, fp, width, cfg)
-  return buff
+export function fold_text(text, width, config = "")
+{
+  const fmt = new JSONFold(width, config)
+  const output = fmt.fold(text)
+  return output
 }
 
-export function stringify(obj, replacer = null, space = null) {
-  let text = "";
+// Compatability API
 
+export function stringify(data, replacer = null, space = null) {
   let options = {}
   if ( space && typeof space === "object" && !Array.isArray(space)) {
-    options = space
+    options = { ... space }
   } else {
-    options.indent = space ?? 2 ;
+    options.indent = space ?? 2
   }
 
   if ( replacer != null ) options.replacer = replacer
-  dump(obj, s => {
-    text += s;
-  }, options);
+
+  const text = format_json(data, options.width, options.config, options);
 
   return text;
 }
 
-export default {
-  JSONFoldConfig,
-  JSONFoldFilter,
-  JSONFoldStats,
-  format_json,
-  write_json,
-  filter_stream,
-  config,
-  stringify,
-  dump,
-  dumps,
-};

@@ -6,15 +6,17 @@ import fs from "node:fs";
 
 function demoData() {
   return {
-    meta: { version: 1, ok: true },
+    meta: { version: 1, ok: true, name: "jsonfold demo" },
+    ids: [ 1, 2, 3, 4, 5, 6 ],
     items: [{ id: 1, name: "alpha" }, { id: 2, name: "beta" }],
-    matrix: [[1, 2], [3, 4]],
+    matrix: [[1, 2], [3, 4], [5, 6]],
     long: [
       "this is a long message that may force the block to stay expanded",
       "second", "third", "fourth",
     ],
     "single-array": [1],
     "single-obj": { value: 2 },
+    long_array: Array.from({ length: 50 }, (_, i) => `a${i + 1}`),
     wide_array: Array.from({ length: 9 }, (_, i) => `abcdefghijklmnopqrstuvwxyz1${i + 1}`),
     wide_object: Object.fromEntries(
       Array.from({ length: 9 }, (_, i) => [`abcdefghijk${i + 1}`, `lmnopqrstuvwxyz${i + 1}`])
