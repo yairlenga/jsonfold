@@ -1,0 +1,14 @@
+{
+  "items": [
+    { "id": 1,   "code": "A1",   "qty": 12,   "comment": "last column is very wide"      },
+    { "id": 20,  "code": "B20",  "qty": 3000, "comment": "ok"                            },
+    { "id": 300, "code": "C300", "qty": 5,    "comment": "medium note"                   },
+    { "id": 4,   "code": "D4",   "qty": 66,   "comment": "another long trailing comment" },
+    { "id": 50,  "code": "E50",  "qty": 700,  "comment": "x"                             },
+    { "id": 600, "code": "F600", "qty": 8,    "comment": "short"                         },
+    { "id": 7,   "code": "G7",   "qty": 90,   "comment": "tail value"                    },
+    { "id": 80,  "code": "H80",  "qty": 1000, "comment": "long tail value"               },
+    { "id": 900, "code": "I900", "qty": 11,   "comment": "q"                             },
+    { "id": 10,  "code": "J10",  "qty": 220,  "comment": "end"                           }
+  ]
+}
