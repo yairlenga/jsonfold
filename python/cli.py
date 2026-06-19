@@ -93,7 +93,7 @@ from typing import Any
 from dataclasses import replace
 import json
 
-from jsonfold import config, write_json, JSONFoldConfig
+from jsonfold import jsonfold_config, write_json, JSONFoldConfig
 
 # ---------------------------------------------------------------------------
 # Demo data
@@ -189,7 +189,7 @@ def main(argv: list[str] | None = None) -> int:
             import shutil
             width = shutil.get_terminal_size(fallback=(24,80)).columns
 
-    cfg = config(args.compact, **overrides)
+    cfg = jsonfold_config(args.compact, **overrides)
         
     if args.verbose:
         print(cfg, file= sys.stderr)

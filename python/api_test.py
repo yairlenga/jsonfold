@@ -16,11 +16,11 @@ def run_api_test() -> int:
     }
 
     # config()
-    cfg = jsonfold.config("high", width=120)
+    cfg = jsonfold.jsonfold_config("high", width=120)
     assert isinstance(cfg, jsonfold.JSONFoldConfig)
     assert cfg.width == 120
 
-    cfg2 = jsonfold.config(cfg, fold_nesting=1)
+    cfg2 = jsonfold.jsonfold_config(cfg, fold_nesting=1)
     assert isinstance(cfg2, jsonfold.JSONFoldConfig)
     assert cfg2.width == 120
     assert cfg2.fold_nesting == 1
@@ -44,7 +44,7 @@ def run_api_test() -> int:
 
     # filter_stream()
     out = io.StringIO()
-    with jsonfold.filter_stream(out, 80) as fp:
+    with jsonfold.create_writer(out, 80) as fp:
         json.dump(data, fp, indent=2)
     assert json.loads(out.getvalue()) == data
 
