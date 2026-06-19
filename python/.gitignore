@@ -3,3 +3,4 @@ jsonfold.egg-info
 *.cover
 *.lprof
 dist
+MANIFEST.bak
