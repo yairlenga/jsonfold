@@ -40,7 +40,7 @@ Public API
     write_json(obj, fp, width, config="", indent=2, **json_options) -> JSONFoldStats
         Serialize obj to fp and return formatting statistics.
 
-    create_writer(fp, width, config="") -> JSONFoldWriter
+    filter_stream(fp, width, config="") -> JSONFoldWriter
         Wrap a text stream with a JSONFold formatting filter.
 
 Compatibility API
@@ -174,7 +174,7 @@ Example - Using jsonfold API:
 
     # Format existing JSON string.
     json_in = ... # Pretty-printed JSON
-    with jsonfold.create_writer(sys.stdout, width=120, config="max") as out
+    with jsonfold.filter_stream(sys.stdout, width=120, config="max") as out
         print(json_in, out)      
 
 Streaming behavior
@@ -985,7 +985,7 @@ def _config(config: JSONFoldConfig | str, width: int | None = None, **overrides)
 
 # Generic API
 
-def jsonfold_config(base_config: JSONFoldConfig | str = "", width: int = None, **overrides):
+def config(base_config: JSONFoldConfig | str = "", width: int = None, **overrides):
     """Create a JSONFold configuration.
 
     Starts from a preset name or existing JSONFold object and applies
@@ -1040,7 +1040,7 @@ def write_json(obj: Any, fp : TextIO, width: int, config: JSONFoldConfig | str =
         json.dump(obj, out, indent=indent, **kwargs)
     return out.stats
 
-def create_writer(fp: TextIO, width: int, config: JSONFoldConfig | str = "", *, close_fp: bool = False) -> JSONFoldWriter:
+def filter_stream(fp: TextIO, width: int, config: JSONFoldConfig | str = "", *, close_fp: bool = False) -> JSONFoldWriter:
     """Create a JSONFold filtering stream.
 
     Returns a writable stream wrapper that accepts pretty-printed JSON
@@ -1055,29 +1055,6 @@ def create_writer(fp: TextIO, width: int, config: JSONFoldConfig | str = "", *, 
         A JSONFoldWriter instance.
     """
     return _stream(fp, _config(config, width=width), close_fp=close_fp)
-
-
-def fold_text(text: str, width: int, config: JSONFoldConfig | str = "") -> str:
-    """Format an object as JSON and return the resulting string.
-
-    The output is first pretty-printed using ``json.dump()`` and then
-    compacted by JSONFold according to the selected configuration.
-
-    Args:
-        obj: Object to serialize.
-        width: Maximum output line width.
-        config: JSONFold preset name or configuration object.
-        indent: JSON indentation level.
-        **kwargs: Additional arguments passed to ``json.dump()``.
-
-    Returns:
-        Compacted formatted JSON text.
-    """
-
-    with io.StringIO() as str_io:
-        with _stream(str_io, _config(config, width=width)) as out:
-            out.write(text)
-        return str_io.getvalue()
 
 # Python json compatible API
 
@@ -1180,7 +1157,7 @@ def main(argv: list[str] | None = None) -> int:
             import shutil
             width = shutil.get_terminal_size(fallback=(24,DEFAULT_WIDTH)).columns
 
-    cfg = jsonfold_config(args.compact)
+    cfg = config(args.compact)
 
     if args.verbose:
         print(cfg, file= sys.stderr)
