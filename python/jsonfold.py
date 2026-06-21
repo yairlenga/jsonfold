@@ -313,7 +313,7 @@ JSONFoldConfig.PRESETS = {
     ),
 
     # Grid is like default + grid
-    "grid":  replace(JSONFoldConfig.DEFAULT,
+    "grid":  replace(JSONFoldConfig.NONE,
         pack_array_items = MAX_ARRAY_ITEMS,
         pack_obj_items   = MAX_OBJ_ITEMS,
         pack_nesting     = MAX_NESTING,
@@ -689,25 +689,24 @@ class JSONFoldWriter:
     # --------------------------------------------------------- phase 1: pack
 
     @profile
-    def _add_to_frame(self, frame: Frame, line: Line, allow_pack: bool = True, allow_join: bool = True) -> None:
+    def _add_to_frame(self, frame: Frame, line: Line) -> None:
 
         # pack/join relevant only if lines exists and grid not enabled
-        if frame.lines and not frame.grid_ok:
-            # Consider adding the line to previous line
-            prev = frame.lines[-1]
-            if (allow_pack and
-                line.can_pack and
-                prev.can_pack and
-                self._try_pack(frame, prev, line)
-            ):
-                return
-        
-            if (allow_join and
-                line.can_join and
-                prev.can_join and
-                self._try_join(frame, prev, line)
-            ):
-                return
+        if frame.lines:
+            if not frame.grid_ok:
+                # Consider adding the line to previous line
+                prev = frame.lines[-1]
+                if (line.can_pack and
+                    prev.can_pack and
+                    self._try_pack(frame, prev, line)
+                ):
+                    return
+            
+                if (line.can_join and
+                    prev.can_join and
+                    self._try_join(frame, prev, line)
+                ):
+                    return
             
         # If frame is empty, may be it's in "streaming" mode, which
         # mean that lines that can not be packed/joined can be sent
@@ -985,15 +984,15 @@ def _config(config: JSONFoldConfig | str, width: int | None = None, **overrides)
 
 # Generic API
 
-def config(base_config: JSONFoldConfig | str = "", width: int = None, **overrides):
+def jsonfold_config(base_config: JSONFoldConfig | str = "", width: int = None, **overrides):
     """Create a JSONFold configuration.
 
     Starts from a preset name or existing JSONFold object and applies
     any supplied overrides.
 
     Examples:
-        config("high", width=120)
-        config(JSONFold.DEFAULT, fold_nesting=2)
+        jsonfold_config("high", width=120)
+        jsonfold_config(JSONFold.DEFAULT, fold_nesting=2)
     """
     return _config(base_config, width, **overrides)
 

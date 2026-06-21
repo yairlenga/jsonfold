@@ -18,6 +18,7 @@ public class Config {
     public static final int MAX_ARRAY_ITEMS = 1000;
     public static final int MAX_OBJ_ITEMS = 1000;
     public static final int MAX_NESTING = 10;
+    public static final int MAX_GRID_LINES = 1000 ;
     public static final int DEFAULT_WIDTH = 100;
 
     public static final String PRESET_DEFAULT = "default" ;
@@ -29,6 +30,7 @@ public class Config {
     static final String PRESET_FOLD = "fold" ;
     static final String PRESET_PACK = "pack" ;
     static final String PRESET_JOIN = "join" ;
+    static final String PRESET_GRID = "grid" ;
 
     int width = DEFAULT_WIDTH;
 
@@ -39,6 +41,11 @@ public class Config {
     int foldArrayItems ;
     int foldObjItems ;
     int foldNesting ;
+
+    int gridArrayItems ;
+    int gridObjItems ;
+    int gridMinLines ;
+    int gridMaxLines ;
 
     int joinArrayItems ;
     int joinObjItems ;
@@ -77,6 +84,11 @@ public class Config {
         this.joinArrayItems = other.joinArrayItems;
         this.joinObjItems = other.joinObjItems;
         this.joinNesting = other.joinNesting;
+
+        this.gridArrayItems = other.gridArrayItems  ;
+        this.gridObjItems = other.gridObjItems ;
+        this.gridMaxLines = other.gridMaxLines ;
+        this.gridMinLines = other.gridMinLines ;
     }
 
     public Config(Config other, int width)
@@ -162,6 +174,26 @@ public class Config {
             return this;
         }
 
+        public Builder gridArrayItems(int value) {
+            gridArrayItems = value;
+            return this;
+        }
+
+        public Builder gridObjItems(int value) {
+            gridObjItems = value;
+            return this;
+        }
+
+        public Builder gridMinLines(int value) {
+            gridMinLines = value;
+            return this;
+        }
+
+        public Builder gridMaxLines(int value) {
+            gridMaxLines = value;
+            return this;
+        }
+
     /**
      * Build a configuration from the current builder settings.
      *
@@ -182,6 +214,7 @@ public class Config {
     private static final Config PACK_CONFIG = createPack() ;
     private static final Config FOLD_CONFIG = createFold() ;
     private static final Config JOIN_CONFIG = createJoin() ;
+    private static final Config GRID_CONFIG = createGrid() ;
 
     private static final Map<String, Config> PRESETS = Map.ofEntries(
         Map.entry("", DEFAULT_CONFIG),
@@ -193,7 +226,8 @@ public class Config {
         Map.entry(PRESET_MAX, MAX_CONFIG),
         Map.entry(PRESET_PACK, PACK_CONFIG),
         Map.entry(PRESET_FOLD, FOLD_CONFIG),
-        Map.entry(PRESET_JOIN, JOIN_CONFIG)
+        Map.entry(PRESET_JOIN, JOIN_CONFIG),
+        Map.entry(PRESET_GRID, GRID_CONFIG)
     );
 
 /**
@@ -347,6 +381,10 @@ public class Config {
     private static Config createJoin() {
         Config cfg = createNone();
 
+        cfg.packArrayItems = MAX_ARRAY_ITEMS;
+        cfg.packObjItems = MAX_OBJ_ITEMS;
+        cfg.packNesting = MAX_NESTING;
+
         cfg.foldArrayItems = MAX_ARRAY_ITEMS;
         cfg.foldObjItems = MAX_OBJ_ITEMS;
         cfg.foldNesting = MAX_NESTING;
@@ -356,6 +394,25 @@ public class Config {
         cfg.joinNesting = MAX_NESTING;
 
         return cfg;
+    }
+
+    private static Config createGrid() {
+        Config cfg = createNone() ;
+
+        cfg.packArrayItems = MAX_ARRAY_ITEMS;
+        cfg.packObjItems = MAX_OBJ_ITEMS;
+        cfg.packNesting = MAX_NESTING;
+
+        cfg.foldArrayItems = MAX_ARRAY_ITEMS;
+        cfg.foldObjItems = MAX_OBJ_ITEMS;
+        cfg.foldNesting = MAX_NESTING;
+
+        cfg.gridArrayItems = MAX_ARRAY_ITEMS ;
+        cfg.gridObjItems = MAX_OBJ_ITEMS ;
+        cfg.gridMinLines = 3 ;
+        cfg.gridMaxLines = MAX_GRID_LINES ;
+
+        return cfg ;
     }
 
 /**

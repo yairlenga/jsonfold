@@ -12,7 +12,7 @@
                 "<node_internals>/**"
             ],
             "type": "node",
-            "args": [ "--input=tests/unit/009.json", "--sort-keys"]
+            "args": [ "--input=javascript/small.json"]
         },
         {
             "type": "perl",
@@ -44,28 +44,20 @@
         },
         {
             "type": "java",
-            "name": "Java/JSONFold demo - default",
+            "name": "Java - Jackson demo",
             "request": "launch",
             "mainClass": "dev.jsonfold.format.Main",
             "projectName": "jsonfold-cli",
             "args": "--demo --verbose"
         },
-        {
-            "type": "java",
-            "name": "Java JSONFold demo - max",
-            "request": "launch",
-            "mainClass": "dev.jsonfold.format.Main",
-            "projectName": "jsonfold-cli",
-            "args": "--demo --compact=max --verbose"
-        },
 
         {
             "type": "java",
-            "name": "Java JSONFold demo - off",
+            "name": "Java - Jackson Unit",
             "request": "launch",
             "mainClass": "dev.jsonfold.format.Main",
             "projectName": "jsonfold-cli",
-            "args": "--demo --compact=off --verbose"
+            "args": [ "--input=tests/future/110.json", "--compact=grid", "--width=120", "--indent=2"]
         },
         {
             "type": "java",

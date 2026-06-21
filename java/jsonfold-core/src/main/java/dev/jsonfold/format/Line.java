@@ -1,6 +1,9 @@
 package dev.jsonfold.format;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Represents a single pretty-printed JSON line.
@@ -24,8 +27,12 @@ final class Line {
     /** Leading indentation width in spaces. */
     int indent;
 
+    Kind kind = Kind.NONE ;
+    List<String> parts = new ArrayList<>() ;
+    int length = 0 ;
+
     /** Line text without leading indentation or trailing newline. */
-    String text;
+//    String text;
 
     /** Container kind of the parent frame, or {@link Kind#NONE}. */
     Kind parentKind;
@@ -56,8 +63,11 @@ final class Line {
     /** Whether this line may be joined with another line. */
     boolean canJoin;
 
+    boolean canGrid;
+
     private Line() {
     }
+
 
     /**
      * Parse one pretty-printed JSON line.
@@ -77,7 +87,8 @@ final class Line {
         String body = rstrip(s.substring(start));
 
         line.indent = start;
-        line.text = body;
+        line.parts.add(body);
+        line.length = body.length();
         line.parentKind = parentKind;
 
         if (body.endsWith("{")) {
@@ -104,7 +115,16 @@ final class Line {
      * @return indentation, line text, and trailing newline
      */
     String raw() {
-        return " ".repeat(indent) + text + "\n";
+        return " ".repeat(indent) + String.join(" ", parts) + "\n";
+    }
+
+    /**
+     * Return the line text.
+     *
+     * @return indentation, line text, and trailing newline
+     */
+    String text() {
+        return String.join(" ", parts) ;
     }
 
     /**
@@ -113,7 +133,26 @@ final class Line {
      * @return indentation plus text length
      */
     int width() {
-        return indent + text.length();
+        return indent + length;
+    }
+
+    static int partsLength(List<String> parts) {
+        if (parts.isEmpty()) {
+            return 0;
+        }
+
+        int length = parts.size() - 1;   // spaces between parts
+
+        for (String part : parts) {
+            length += part.length();
+        }
+
+        return length;
+    }
+
+    void setParts(List<String> parts) {
+        this.parts = parts;
+        this.length = partsLength(parts);
     }
 
     /**
@@ -124,8 +163,10 @@ final class Line {
      *
      * @param other line to append
      */
-    void joinLine(Line other) {
-        text += " " + other.text;
+    void merge(Line other) {
+        if ( other.parts.isEmpty() ) return ;
+        this.parts.addAll(other.parts) ;
+        this.length += 1 + other.length;
         items += other.items;
         leafs += other.leafs;
 
@@ -151,67 +192,59 @@ final class Line {
         return s.substring(0, end);
     }
 
-/**
- * Pack another scalar line into this line.
- *
- * <p>This mutates the current line. Eligibility checks belong in
- * {@link JSONFoldWriter}; this method only performs the merge.
- */
-void pack(Line other) {
-    merge(other);
-}
+    /**
+     * Create a folded line from opener, body, and closer lines.
+     */
+    static Line fold(
+            List<Line> lines,
+            Kind kind,
+            Kind parentKind,
+            int leafs,
+            int childNesting) {
 
-/**
- * Join another line into this line.
- *
- * <p>This mutates the current line. Used after folding/packing checks
- * have already passed.
- */
-void join(Line other) {
-    merge(other);
-}
+        List<String> parts = new ArrayList<>();
+        int length = -1 ;
+        for (Line line: lines) {
+            parts.addAll(line.parts) ;
+            length += 1+line.length ;
+        };
 
-/**
- * Shared implementation for pack/join.
- */
-private void merge(Line other) {
-    text += " " + other.text;
-    items += other.items;
-    leafs += other.leafs;
+        Line line = new Line();
+        line.parts = parts ;
+        line.length = length ;
 
-    if (other.childNesting > childNesting) {
-        childNesting = other.childNesting;
-        canPack = false;
+        Line first = lines.get(0);
+        line.kind = kind ;
+        line.indent = first.indent;
+
+        line.parentKind = parentKind;
+        line.items = 1;
+        line.leafs = leafs;
+        line.childNesting = childNesting;
+        line.opener = Kind.NONE;
+        line.closer = Kind.NONE;
+        line.canPack = false;
+        line.canJoin = true;
+
+        return line;
     }
-}
 
-/**
- * Create a folded line from opener, body, and closer lines.
- */
-static Line fold(
-        List<Line> lines,
-        Kind parentKind,
-        int leafs,
-        int childNesting) {
+    private static final Pattern KEY_RE = Pattern.compile(
+            "^\\s*(?:\"[^\"\\\\]*\"|'[^'\\\\]*'|[A-Za-z_$][A-Za-z0-9_$]*)\\s*:"
+    );
 
-    Line first = lines.get(0);
+    List<String> dictSignature() {
+        ArrayList<String> signature = new ArrayList<>();
 
-    Line line = new Line();
-    line.indent = first.indent;
-    line.text = lines.stream()
-            .map(l -> l.text)
-            .collect(java.util.stream.Collectors.joining(" "));
-    line.parentKind = parentKind;
-    line.items = 1;
-    line.leafs = leafs;
-    line.childNesting = childNesting;
-    line.opener = Kind.NONE;
-    line.closer = Kind.NONE;
-    line.canPack = false;
-    line.canJoin = true;
+        for (int i = 1; i < parts.size() - 1; i++) {
+            Matcher m = KEY_RE.matcher(parts.get(i));
+            if (!m.find()) {
+                return null;
+            }
+            signature.add(m.group());
+        }
 
-    return line;
-}
-
+        return signature;
+    }
 
 }

@@ -13,7 +13,8 @@ class LineTest {
         Line line = Line.parse("    \"x\": 1,", Kind.DICT);
 
         assertEquals(4, line.indent);
-        assertEquals("\"x\": 1,", line.text);
+        assertEquals(1, line.parts.size());
+        assertEquals("\"x\": 1,", line.parts.get(0));
         assertEquals(Kind.DICT, line.parentKind);
         assertEquals(Kind.NONE, line.opener);
         assertEquals(Kind.NONE, line.closer);
@@ -26,7 +27,7 @@ class LineTest {
         Line line = Line.parse("  {", Kind.LIST);
 
         assertEquals(2, line.indent);
-        assertEquals("{", line.text);
+        assertEquals("{", line.text());
         assertEquals(Kind.DICT, line.opener);
         assertEquals(Kind.NONE, line.closer);
         assertFalse(line.canPack);
@@ -38,7 +39,7 @@ class LineTest {
         Line line = Line.parse("  \"items\": [", Kind.DICT);
 
         assertEquals(2, line.indent);
-        assertEquals("\"items\": [", line.text);
+        assertEquals("\"items\": [", line.text());
         assertEquals(Kind.LIST, line.opener);
         assertEquals(Kind.NONE, line.closer);
         assertFalse(line.canPack);
@@ -75,9 +76,9 @@ class LineTest {
         Line a = Line.parse("    1,", Kind.LIST);
         Line b = Line.parse("    2,", Kind.LIST);
 
-        a.pack(b);
-
-        assertEquals("1, 2,", a.text);
+        a.merge(b);
+        assertEquals(1, a.parts.size());
+        assertEquals("1, 2,", a.text()) ;
         assertEquals(2, a.items);
         assertEquals(2, a.leafs);
         assertEquals(-1, a.childNesting);
@@ -90,9 +91,10 @@ class LineTest {
         Line a = Line.parse("    { \"x\": 1 },", Kind.LIST);
         Line b = Line.parse("    { \"y\": 2 },", Kind.LIST);
 
-        a.join(b);
+        a.merge(b);
+        assertEquals("1, 2,", String.join(" ", a.parts)) ;
 
-        assertEquals("{ \"x\": 1 }, { \"y\": 2 },", a.text);
+        assertEquals("{ \"x\": 1 }, { \"y\": 2 },", a.text());
         assertEquals(2, a.items);
         assertEquals(2, a.leafs);
         assertEquals(-1, a.childNesting);
@@ -105,9 +107,9 @@ class LineTest {
         Line b = Line.parse("    2,", Kind.LIST);
         b.childNesting = 2;
 
-        a.pack(b);
+        a.merge(b);
 
-        assertEquals("1, 2,", a.text);
+        assertEquals("1, 2,", a.text());
         assertEquals(2, a.childNesting);
         assertFalse(a.canPack);
     }
@@ -119,10 +121,10 @@ class LineTest {
                 Line.parse("    \"x\": 1", Kind.DICT),
                 Line.parse("  }", Kind.LIST));
 
-        Line folded = Line.fold(lines, Kind.LIST, 1, 0);
+        Line folded = Line.fold(lines, Kind.DICT, Kind.NONE, 1, 0);
 
         assertEquals(2, folded.indent);
-        assertEquals("{ \"x\": 1 }", folded.text);
+        assertEquals("{ \"x\": 1 }", folded.text());
         assertEquals(Kind.LIST, folded.parentKind);
         assertEquals(Kind.NONE, folded.opener);
         assertEquals(Kind.NONE, folded.closer);
@@ -140,11 +142,11 @@ class LineTest {
                 Line.parse("    123", Kind.LIST),
                 Line.parse("  ]", Kind.DICT));
 
-        Line folded = Line.fold(lines, Kind.DICT, 1, 0);
+        Line folded = Line.fold(lines, Kind.NONE, Kind.LIST, 1, 0);
 
         assertEquals(2, folded.indent);
-        assertEquals("[ 123 ]", folded.text);
-        assertEquals(Kind.DICT, folded.parentKind);
+        assertEquals("[ 123 ]", folded.text());
+        assertEquals(Kind.LIST, folded.parentKind);
         assertFalse(folded.canPack);
         assertTrue(folded.canJoin);
     }
@@ -156,7 +158,7 @@ class LineTest {
                 Line.parse("    { \"x\": 1 }", Kind.LIST),
                 Line.parse("  ]", Kind.DICT));
 
-        Line folded = Line.fold(lines, Kind.DICT, 3, 2);
+        Line folded = Line.fold(lines, Kind.DICT, Kind.LIST, 3, 2);
 
         assertEquals(3, folded.leafs);
         assertEquals(2, folded.childNesting);

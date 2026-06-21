@@ -29,6 +29,9 @@ final class Frame {
     /** Join item limit. */
     final int joinLimit;
 
+    /** Grid item Limit */
+    final int gridLimit ;
+
     /** Number of content lines. */
     int contentLines;
 
@@ -44,18 +47,23 @@ final class Frame {
     /** Maximum child nesting depth. */
     int childNesting = -1;
 
+    /** Whether grid can be used */
+    boolean gridOk = false;
+
     Frame(
             Kind kind,
             int depth,
             int packLimit,
             int foldLimit,
-            int joinLimit) {
+            int joinLimit,
+            int gridLimit) {
 
         this.kind = kind;
         this.depth = depth;
         this.packLimit = packLimit;
         this.foldLimit = foldLimit;
         this.joinLimit = joinLimit;
+        this.gridLimit = gridLimit;
     }
 
     /**
@@ -74,6 +82,29 @@ final class Frame {
         return lines.isEmpty()
                 ? null
                 : lines.get(lines.size() - 1);
+    }
+
+    void addLine(Line line) {
+        lines.add(line);
+
+        if (line.childNesting >= childNesting) {
+            childNesting = line.childNesting + 1;
+        }
+
+        if (line.closer != Kind.NONE) {
+            return;
+        }
+
+        contentLines++;
+        items += line.items;
+        leafs += line.leafs;
+    }
+
+    void mergeLine(Line prev, Line line) {
+        prev.merge(line);
+
+        items += line.items;
+        leafs += line.leafs;
     }
 
     @Override

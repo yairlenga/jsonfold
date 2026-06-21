@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-JSONFOLD=${JSONFOLD:-python3 ../../python/jsonfold.py}
+JSONFOLD=${JSONFOLD:-python3 ../../python/cli.py}
 
 read_args() {
     # Strip blank lines and comments from .args files.
