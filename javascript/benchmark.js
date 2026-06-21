@@ -76,25 +76,25 @@ function runCase(data, name, t0) {
   const w = new NullWriter(t0);
 
   switch (name) {
-    case "base.dumps.plain":
-    case "base.dump.plain":
+    case "base.stringify.plain":
+    case "base.print.plain":
       w.write(JSON.stringify(data));
       return w;
 
-    case "base.dumps.pretty":
-    case "base.dump.pretty":
+    case "base.stringify.pretty":
+    case "base.print.pretty":
       w.write(JSON.stringify(data, null, 2));
       return w;
 
   }
 
-  if (name.startsWith("jsonfold.dumps.")) {
+  if (name.startsWith("jf.format.")) {
     const compact = name.split(".")[2];
     w.write(format_json(data, undefined, compact));
     return w;
   }
 
-  if (name.startsWith("jsonfold.dump.")) {
+  if (name.startsWith("jf.write.")) {
     const compact = name.split(".")[2];
     write_json(data, w, undefined, compact);
     return w;
@@ -107,20 +107,20 @@ function validateCase(data, name) {
   let text;
 
   switch (name) {
-    case "base.dumps.plain":
-    case "base.dump.plain":
+    case "base.stringify.plain":
+    case "base.print.plain":
       text = JSON.stringify(data);
       break
 
-    case "base.dumps.pretty":
-    case "base.dump.pretty":
+    case "base.stringify.pretty":
+    case "base.print.pretty":
       text = JSON.stringify(data);
       break
 
     default:
-      if (name.startsWith("jsonfold.dumps.")) {
+      if (name.startsWith("jf.format.")) {
         text = format_json(data, { compact: name.split(".")[2], indent: 2 });
-      } else if (name.startsWith("jsonfold.dump.")) {
+      } else if (name.startsWith("jf.write.")) {
         let out = "";
         write_json(data, s => { out += s; }, { compact: name.split(".")[2], indent: 2 });
         text = out;
@@ -184,24 +184,24 @@ function runOneSize(rows, onlyName = null) {
   const data = makeData(rows);
 
   const names = onlyName ? [onlyName] : [
-    "base.dump.plain",
-    "base.dump.pretty",
-    "jsonfold.dump.off",
-    "jsonfold.dump.none",
-    "jsonfold.dump.default",
-    "jsonfold.dump.low",
-    "jsonfold.dump.med",
-    "jsonfold.dump.high",
-    "jsonfold.dump.max",
-    "jsonfold.dump.pack",
-    "jsonfold.dump.fold",
-    "jsonfold.dump.join",
-    "base.dumps.plain",
-    "base.dumps.pretty",
-    "jsonfold.dumps.none",
-    "jsonfold.dumps.default",
-    "jsonfold.dumps.high",
-    "jsonfold.dumps.max",
+    "base.print.plain",
+    "base.print.pretty",
+    "jf.write.off",
+    "jf.write.none",
+    "jf.write.default",
+    "jf.write.low",
+    "jf.write.med",
+    "jf.write.high",
+    "jf.write.max",
+    "jf.write.pack",
+    "jf.write.fold",
+    "jf.write.join",
+    "base.stringify.plain",
+    "base.stringify.pretty",
+    "jf.format.none",
+    "jf.format.default",
+    "jf.format.high",
+    "jf.format.max",
   ];
 
   const results = [];
@@ -227,7 +227,7 @@ function runOneSize(rows, onlyName = null) {
       rows,
       name,
       ...speed,
-      peakMB: Number(size_units(peakMem).toFixed(1)),
+      "peak(MB)": Number(size_units(peakMem).toFixed(1)),
       "duration(ms)": msg,
     });
 
