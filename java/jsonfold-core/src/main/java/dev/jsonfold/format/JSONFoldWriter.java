@@ -249,9 +249,10 @@ public final class JSONFoldWriter extends Writer {
             return false;
         }
 
-        prev.pack(line);
-        updateAfterMerge(frame, prev, line);
-        if ( !prev.canPack) prev.canJoin = false ;
+        mergeIntoFrame(frame, prev, line, true);
+        if (!prev.canPack) {
+            prev.canJoin = false;
+        }
         return true;
     }
 
@@ -259,23 +260,16 @@ public final class JSONFoldWriter extends Writer {
      * Try joining a scalar/folded line with the previous line.
      */
     private boolean tryJoin(Frame frame, Line line) {
-        if (frame.joinLimit <= 1
-                || !line.canJoin
-                || line.childNesting >= cfg.joinNesting
-                || frame.isEmpty()) {
+        if (frame.joinLimit <= 1 || !line.canJoin || frame.isEmpty()) {
             return false;
         }
 
         Line prev = frame.lastLine();
-        if (prev == null
-                || !prev.canJoin
-                || prev.childNesting >= cfg.joinNesting
-                || !canMerge(prev, line, frame.joinLimit)) {
+        if (prev == null || !prev.canJoin || !canMerge(prev, line, frame.joinLimit)) {
             return false;
         }
 
-        prev.join(line);
-        updateAfterMerge(frame, prev, line);
+        mergeIntoFrame(frame, prev, line, false);
         return true;
     }
 
@@ -289,17 +283,30 @@ public final class JSONFoldWriter extends Writer {
     }
 
     /**
+     * Merge {@code line} into {@code prev} and update the owning frame.
+     */
+    private void mergeIntoFrame(Frame frame, Line prev, Line line, boolean pack) {
+        if (pack) {
+            prev.pack(line);
+        } else {
+            prev.join(line);
+        }
+
+        updateAfterMerge(frame, prev, line);
+    }
+
+    /**
      * Update frame counters after pack/join merged {@code line} into {@code prev}.
      */
     private void updateAfterMerge(Frame frame, Line prev, Line line) {
         frame.items += line.items;
         frame.leafs += line.leafs;
 
-        if (prev.items >= frame.packLimit) {
+        if (prev.items >= frame.packLimit || prev.childNesting >= cfg.packNesting) {
             prev.canPack = false;
         }
 
-        if (prev.items >= frame.joinLimit) {
+        if (prev.items >= frame.joinLimit || prev.childNesting >= cfg.joinNesting) {
             prev.canJoin = false;
         }
 
@@ -375,11 +382,15 @@ public final class JSONFoldWriter extends Writer {
             return null;
         }
 
-        return Line.fold(
+        Line line = Line.fold(
                 frame.lines,
                 parentKind(),
                 frame.leafs,
                 Math.max(0, frame.childNesting));
+
+        line.canPack=false ;
+        line.canJoin=frame.childNesting < cfg.joinNesting ;
+        return line ;
     }
 
     /**
@@ -413,13 +424,9 @@ public final class JSONFoldWriter extends Writer {
     /**
      * Mark all currently open frames as non-foldable.
      */
-    private void markNoFold() throws IOException {
+    private void markNoFold() {
         for (Frame frame : stack) {
             frame.foldOk = false;
-        }
-
-        if (!stack.isEmpty()) {
-            streamFrame(stack.get(stack.size() - 1));
         }
     }
 

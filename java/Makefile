@@ -22,7 +22,7 @@ test:
 	cd ../tests/samples && ./run_tests.sh java
 
 benchmark:
-	./run.sh dev.jsonfold.format.Benchmark
+	./run.sh dev.jsonfold.format.Benchmark | tee bench.out
 
 package:
 	mvn install -P release -Dgpg.skip=true
