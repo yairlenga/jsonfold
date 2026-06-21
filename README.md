@@ -196,13 +196,13 @@ It is useful when ordinary pretty-printing is too verbose, but compact JSON is t
 This repository contains language-specific implementations in subdirectories:
 
 
-| Language | Package | Status | CLI | Filter | Stream | Notes |
-|---|---|---|---|---|---|---|
-| Python | [python/](./python/) | Ready | YES | YES | YES | wrapper for json.dump(s) API |
-| JavaScript | [javascript/](./javascript/) | Beta | YES | YES | - | wrapper for JSON.stringify |
-| Java | [java/](./java/) | Beta | YES | YES | YES | Wrapper for Jackson ObjectMapper |
-| Perl | [perl/](./perl/ ) | Alpha | YES | YES | - | Streaming and wrapper around JSON::encode |
-| C | [c/](./c/) | Alpha | YES | YES | - | Process pretty-printed JSON text |
+| Language | Package | Status | CLI | Filter | Stream | Grid | Notes |
+|---|---|---|---|---|---|---|---|
+| Python | [python/](./python/) | Ready | YES | YES | YES | YES | wrapper for json.dump(s) API |
+| JavaScript | [javascript/](./javascript/) | Ready | YES | YES | - | YES | wrapper for JSON.stringify |
+| Java | [java/](./java/) | Ready | YES | YES | YES | - | Wrapper for Jackson ObjectMapper |
+| Perl | [perl/](./perl/ ) | Beta | YES | YES | - | - | Streaming and wrapper around JSON::encode |
+| C | [c/](./c/) | Beta | YES | YES | - | - | Process pretty-printed JSON text |
 
 
 ## Configuration
@@ -239,6 +239,7 @@ JSONFold works by applying three optional formatting phases:
 
 - Pack – combine adjacent scalar values onto the same line.
 - Fold – collapse small containers onto a single line.
+- Grid - Place similar folded lines on a grid.
 - Join – combine folded containers when they still fit within the configured width.
 
 Each phase behavior is controlled by parameters. The output of the 1st phase is fed into the 2nd phase, which is then fed into the 3rd phase.
