@@ -59,7 +59,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
  * <h2>Configuring an ObjectMapper</h2>
  *
  * <p>JSONFold works best when Jackson first expands arrays and objects into
- * normal multi-line pretty JSON. The {@link #configure(ObjectMapper)} method
+ * normal multi-line pretty JSON. The {@link #configureMapper(ObjectMapper)} method
  * installs a JSONFold-friendly pretty printer on an existing mapper.</p>
  *
  * <pre>{@code
@@ -87,6 +87,7 @@ public final class JacksonJSONFold extends JSONFold implements JFFormatter {
     {
         super(width, config) ;
     }
+
 
     /**
      * Create a builder using the default configuration and the supplied width.
@@ -140,23 +141,7 @@ public final class JacksonJSONFold extends JSONFold implements JFFormatter {
         }
     }
 
-    
-    /**
-     * Configure an existing {@link ObjectMapper} for use with JSONFold.
-     *
-     * <p>This method mutates the supplied mapper by setting a JSONFold-friendly
-     * default pretty-printer, then returns the same mapper.</p>
-     *
-     * @param mapper mapper to configure
-     * @return the same mapper instance
-     */
-    public static ObjectMapper configure(ObjectMapper mapper) {
-        mapper.setDefaultPrettyPrinter(prettyPrinter());
-
-        return mapper;
-    }
-
-    /**
+     /**
      * Pretty-printer variant used by golden tests.
      *
      * <p>This printer keeps formatting behavior stable for expected-output
@@ -242,7 +227,7 @@ public final class JacksonJSONFold extends JSONFold implements JFFormatter {
      * @param indent indentation string, or {@code null} for Jackson's default
      * @return configured pretty-printer
      */
-    public static DefaultPrettyPrinter prettyPrinter(String indent) {
+    private static DefaultPrettyPrinter nativePrettyPrinter(String indent) {
         DefaultPrettyPrinter pp = new DefaultPrettyPrinter();
 
         // Expand arrays and objects before JSONFold processes the stream.
@@ -256,31 +241,12 @@ public final class JacksonJSONFold extends JSONFold implements JFFormatter {
     }
 
     /**
-     * Return a JSONFold-friendly Jackson pretty-printer using default indentation.
-     *
-     * @return configured pretty-printer
-     */
-    public static DefaultPrettyPrinter prettyPrinter() {
-        return prettyPrinter(null);
-    }
-
-    /**
-     * Return a JSONFold-friendly Jackson pretty-printer using N-space indentation.
-     *
-     * @param indent number of spaces to use for indentation
-     * @return configured pretty-printer
-     */
-    public static DefaultPrettyPrinter prettyPrinter(int indent) {
-        return prettyPrinter(" ".repeat(indent));
-    }
-
-    /**
      * Return the gold/test pretty-printer using the supplied indentation string.
      *
      * @param indent indentation string, or {@code null} for Jackson's default
      * @return configured gold pretty-printer
      */
-    public static DefaultPrettyPrinter goldPrettyPrinter(String indent) {
+    private static DefaultPrettyPrinter goldPrettyPrinter(String indent) {
         DefaultPrettyPrinter pp = new GoldPrettyPrinter();
 
         // Expand arrays and objects before JSONFold processes the stream.
@@ -295,16 +261,6 @@ public final class JacksonJSONFold extends JSONFold implements JFFormatter {
     }
 
     /**
-     * Return the gold/test pretty-printer using N-space indentation.
-     *
-     * @param indent number of spaces to use for indentation
-     * @return configured gold pretty-printer
-     */
-    public static DefaultPrettyPrinter goldPrettyPrinter(int indent) {
-        return goldPrettyPrinter(" ".repeat(indent));
-    }
-
-    /**
      * Create a shared mapper for normal or sorted-key output.
      *
      * @param sortKeys {@code true} to order map entries by key
@@ -314,7 +270,7 @@ public final class JacksonJSONFold extends JSONFold implements JFFormatter {
     {
      ObjectMapper mapper = new ObjectMapper();
 
-        JacksonJSONFold.configure(mapper);
+        JacksonJSONFold.configureMapper(mapper);
 
         if (sortKeys) {
             mapper.enable(
@@ -323,6 +279,8 @@ public final class JacksonJSONFold extends JSONFold implements JFFormatter {
 
         return mapper;    
     }
+
+
 
     /** Shared mapper for normal key order. */
     private static ObjectMapper DEFAULT_MAPPER = createMapper(false) ;
@@ -341,7 +299,7 @@ public final class JacksonJSONFold extends JSONFold implements JFFormatter {
     public Stats write(Object obj, Writer writer) throws IOException
     {
         ObjectMapper mapper = sortKeys ? SORTED_MAPPER : DEFAULT_MAPPER ;
-        PrettyPrinter pp = gold ? goldPrettyPrinter(width) : prettyPrinter(width) ;
+        PrettyPrinter pp = prettyPrinter(gold, width) ;
         try (JSONFoldWriter out = new JSONFoldWriter(writer, config, isDoClose())) {
             mapper.writer(pp).writeValue(out, obj) ;
             return out.getStats() ;
@@ -380,6 +338,53 @@ public final class JacksonJSONFold extends JSONFold implements JFFormatter {
     {
         JacksonJSONFold fmt = new JacksonJSONFold(width, config) ;
         return fmt.write(obj, writer);
+    }
+
+    /**
+     * Serialize an object as folded JSON using an explicit width and config and return folded JSON text
+     *
+     * @param obj object to serialize
+     * @param writer destination writer
+     * @param width target maximum line width
+     * @param config folding configuration
+     * @return formatting statistics
+     * @throws IOException if Jackson serialization or writing fails
+     */
+
+    public static String formatJson(Object obj, int width, Config config) throws IOException
+    {
+        JacksonJSONFold fmt = new JacksonJSONFold(width, config) ;
+        return fmt.format(obj);
+    }
+    
+    public static DefaultPrettyPrinter prettyPrinter(boolean gold, int indent)
+    {
+        String indent_str = " ".repeat(indent) ;    
+        return gold ? goldPrettyPrinter(indent_str) : nativePrettyPrinter(indent_str) ;
+    }
+
+    /**
+     * Return a JSONFold-friendly Jackson pretty-printer using default indentation.
+     *
+     * @return configured pretty-printer
+     */
+    public static DefaultPrettyPrinter prettyPrinter() {
+        return prettyPrinter(true, 2);
+    }
+       
+    /**
+     * Configure an existing {@link ObjectMapper} for use with JSONFold.
+     *
+     * <p>This method mutates the supplied mapper by setting a JSONFold-friendly
+     * default pretty-printer, then returns the same mapper.</p>
+     *
+     * @param mapper mapper to configure
+     * @return the same mapper instance
+     */
+    public static ObjectMapper configureMapper(ObjectMapper mapper) {
+        mapper.setDefaultPrettyPrinter(prettyPrinter());
+
+        return mapper;
     }
 
 

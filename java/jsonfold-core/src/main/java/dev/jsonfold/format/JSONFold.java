@@ -71,7 +71,8 @@ public class JSONFold {
         this.sortKeys = other.sortKeys;
         this.width = other.width;
         this.config = other.config;
-        this.doClose = other.doClose;        
+        this.doClose = other.doClose;
+        this.gold = other.gold ;
     }
 
     /**
@@ -227,7 +228,7 @@ public class JSONFold {
      * @param width optional width override
      * @return configuration builder
      */
-    static private Config.Builder configBuilder(Config baseConfig, Integer width)
+    static private Config.Builder createBuilder(Config baseConfig, Integer width)
     {
         Config.Builder builder = baseConfig.builder() ;
         if ( width != null && width > 0 ) builder.width(width) ;
@@ -241,8 +242,8 @@ public class JSONFold {
      * @param width optional width override
      * @return configuration builder
      */
-    static public Config.Builder config(Config baseConfig, Integer width) {
-        return configBuilder(baseConfig, width) ;
+    static public Config.Builder configBuilder(Config baseConfig, Integer width) {
+        return createBuilder(baseConfig, width) ;
     }
 
     /**
@@ -252,10 +253,10 @@ public class JSONFold {
      * @param width optional width override
      * @return configuration builder, or {@code null} for the {@code off} preset
      */
-    static public Config.Builder config(String name, Integer width) {
+    static public Config.Builder configBuilder(String name, Integer width) {
         Config config = Config.preset(name) ;
         if ( config == null ) return null ;
-        return configBuilder(config, width) ;
+        return createBuilder(config, width) ;
     }
  
     /**

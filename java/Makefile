@@ -18,8 +18,8 @@ build:
 	mvn package
 
 test:
-	cd ../tests/unit && ./run_tests.sh javagold
-	cd ../tests/samples && ./run_tests.sh javagold
+	cd ../tests/unit && ./run_tests.sh java
+	cd ../tests/samples && ./run_tests.sh java
 
 benchmark:
 	./run.sh dev.jsonfold.format.Benchmark

@@ -18,9 +18,8 @@ public interface JFFormatter {
     public String format(Object obj) throws IOException;
 
     // Static methods expected:
-    // public static Writer filter_stream(Writer base, int width, Config config, boolean close_fp);
+    // public static Writer createWriter(Writer base, int width, Config config, boolean close_fp);
     // public static Stats writeJson(Object obj, Writer writer, int width, Config config) throws IOException ;
-    // public static String formatJSON(Object obj, int width, Config config) throws IOException ;
     // public static Config.Builder config(Config baseConfig, Integer width) ;
     // public static Config.Builder config(String name, Integer width) ;
     // public static String formatJsonText(String jsonText, int width, Config config)

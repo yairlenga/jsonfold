@@ -4,7 +4,6 @@ root=../..
 
 case "${@-}" in
 	java) JSONFOLD="java -jar $root/java/jsonfold-cli/target/jsonfold.jar" ;;
-	javagold) JSONFOLD="java -jar $root/java/jsonfold-cli/target/jsonfold.jar --gold" ;;
 	python) JSONFOLD="python3 $root/python/cli.py" ;;
 	javascript) JSONFOLD="node --expose-gc $root/javascript/cli.js" ;;
 	perl) JSONFOLD="perl $root/perl/script/jsonfold.pl" ;;

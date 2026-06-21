@@ -32,7 +32,7 @@ public final class JacksonMain {
     static private Config buildConfig(Args args)
     {
 
-        Config.Builder builder = JSONFold.config(args.compact, args.width) ;
+        Config.Builder builder = JSONFold.configBuilder(args.compact, args.width) ;
         if ( builder == null ) return null ;
 
         if (args.width != null) builder.width(args.width);
@@ -68,9 +68,7 @@ public final class JacksonMain {
             System.err.println(cfg);
         }
 
-        DefaultPrettyPrinter pp = args.gold ?
-            JacksonJSONFold.goldPrettyPrinter(args.indent) : 
-            JacksonJSONFold.prettyPrinter(args.indent) ;
+        DefaultPrettyPrinter pp = JacksonJSONFold.prettyPrinter(args.gold, args.indent) ;
 
         JsonMapper.Builder builder = JsonMapper.builder()
             .defaultPrettyPrinter(pp)

@@ -94,15 +94,15 @@ class JacksonApiTest {
         assertEquals(fmt.getIndent(), copy.getIndent());
         assertEquals(fmt.isSortKeys(), copy.isSortKeys());
 
-        Config.Builder cfgBuilder1 = JSONFold.config(cfg, 120);
+        Config.Builder cfgBuilder1 = JSONFold.configBuilder(cfg, 120);
         assertNotNull(cfgBuilder1);
         assertEquals(120, cfgBuilder1.build().getWidth());
 
-        Config.Builder cfgBuilder2 = JSONFold.config(Config.PRESET_HIGH, 130);
+        Config.Builder cfgBuilder2 = JSONFold.configBuilder(Config.PRESET_HIGH, 130);
         assertNotNull(cfgBuilder2);
         assertEquals(130, cfgBuilder2.build().getWidth());
 
-        assertNull(JSONFold.config("off", 100));
+        assertNull(JSONFold.configBuilder("off", 100));
 
         String jsonText = """
             {
@@ -164,22 +164,22 @@ class JacksonApiTest {
         assertNotNull(stats2);
         assertFalse(sw2.toString().isEmpty());
 
-        ObjectMapper mapper = JacksonJSONFold.configure(new ObjectMapper());
+        ObjectMapper mapper = JacksonJSONFold.configureMapper(new ObjectMapper());
         assertNotNull(mapper);
 
-        DefaultPrettyPrinter pp1 = JacksonJSONFold.prettyPrinter();
-        DefaultPrettyPrinter pp2 = JacksonJSONFold.prettyPrinter(2);
-        DefaultPrettyPrinter pp3 = JacksonJSONFold.prettyPrinter("  ");
+        DefaultPrettyPrinter pp2 = JacksonJSONFold.prettyPrinter(false, 2);
+        DefaultPrettyPrinter pp3 = JacksonJSONFold.prettyPrinter(false, 4)  ;
 
-        assertNotNull(pp1);
         assertNotNull(pp2);
         assertNotNull(pp3);
 
-        DefaultPrettyPrinter gold1 = JacksonJSONFold.goldPrettyPrinter(2);
-        DefaultPrettyPrinter gold2 = JacksonJSONFold.goldPrettyPrinter("  ");
+        DefaultPrettyPrinter gold1 = JacksonJSONFold.prettyPrinter() ;
+        DefaultPrettyPrinter gold2 = JacksonJSONFold.prettyPrinter(true, 2) ;
+        DefaultPrettyPrinter gold3 = JacksonJSONFold.prettyPrinter(true, 4) ;
 
         assertNotNull(gold1);
         assertNotNull(gold2);
+        assertNotNull(gold3);
 
         JacksonJSONFold goldFmt = JacksonJSONFold.builder(100)
                 .gold(true)
@@ -187,5 +187,25 @@ class JacksonApiTest {
 
         assertTrue(goldFmt.isGold());
         assertNotNull(goldFmt.format(data));
+  
+    }
+
+              // Check Static Methods
+    @Test
+    @SuppressWarnings("static-access")
+    void staticApiTest() throws Exception {
+        Map<String, Object> data = sampleData();
+
+        JacksonJSONFold static_fmt = new JacksonJSONFold(100, null) ;
+        Config cfg = Config.defaultConfig();
+
+        StringWriter sw2 = new StringWriter();
+        Stats stats2 = static_fmt.writeJson(data, sw2, 100, cfg);
+        assertNotNull(stats2);
+        assertFalse(sw2.toString().isEmpty());
+
+        String json2 = static_fmt.formatJson(data, 100, cfg);
+        assertNotNull(json2);
+        assertTrue(json2.contains("\"id\""));
     }
 }

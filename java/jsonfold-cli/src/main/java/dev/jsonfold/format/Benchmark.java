@@ -60,7 +60,7 @@ public final class Benchmark {
     );
 
     static private ObjectMapper createMapper() {
-        ObjectMapper mapper = JacksonJSONFold.configure(new ObjectMapper())
+        ObjectMapper mapper = JacksonJSONFold.configureMapper(new ObjectMapper())
             .configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false);
         return mapper ;
     }
@@ -278,7 +278,7 @@ public final class Benchmark {
         var base = new OutputStreamWriter(out, StandardCharsets.UTF_8);
         var folded = new JSONFoldWriter(base, cfg);
 
-        MAPPER.writer(prettyPrinter("  "))
+        MAPPER.writer(prettyPrinter())
                 .writeValue(folded, data);
 
         folded.flush();
@@ -290,7 +290,7 @@ public final class Benchmark {
         StringWriter sw = new StringWriter();
         var folded = new JSONFoldWriter(sw, cfg);
 
-        MAPPER.writer(prettyPrinter("  "))
+        MAPPER.writer(prettyPrinter())
                 .writeValue(folded, data);
 
         folded.flush();
@@ -308,8 +308,8 @@ public final class Benchmark {
      * this method should compile unchanged. If the method has a different name,
      * keep the benchmark unchanged and modify only this adapter.
      */
-    private static PrettyPrinter prettyPrinter(String compact) {
-        return JacksonJSONFold.goldPrettyPrinter(compact);
+    private static PrettyPrinter prettyPrinter() {
+        return JacksonJSONFold.prettyPrinter();
     }
 
     private static void writeString(OutputStream out, String s) throws IOException {

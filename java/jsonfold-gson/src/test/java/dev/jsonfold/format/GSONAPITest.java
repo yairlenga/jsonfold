@@ -91,15 +91,15 @@ class GsonApiTest {
         assertEquals(fmt.getIndent(), copy.getIndent());
         assertEquals(fmt.isSortKeys(), copy.isSortKeys());
 
-        Config.Builder cfgBuilder1 = JSONFold.config(cfg, 120);
+        Config.Builder cfgBuilder1 = JSONFold.configBuilder(cfg, 120);
         assertNotNull(cfgBuilder1);
         assertEquals(120, cfgBuilder1.build().getWidth());
 
-        Config.Builder cfgBuilder2 = JSONFold.config(Config.PRESET_HIGH, 130);
+        Config.Builder cfgBuilder2 = JSONFold.configBuilder(Config.PRESET_HIGH, 130);
         assertNotNull(cfgBuilder2);
         assertEquals(130, cfgBuilder2.build().getWidth());
 
-        assertNull(JSONFold.config("off", 100));
+        assertNull(JSONFold.configBuilder("off", 100));
 
         String jsonText = """
             {
@@ -163,4 +163,23 @@ class GsonApiTest {
         assertNotNull(json2);
         assertTrue(json2.contains("\"id\""));
     }
+
+    @Test
+    @SuppressWarnings("static-access")
+    void staticApiTest() throws Exception {
+        Map<String, Object> data = sampleData();
+
+        GsonJSONFold static_fmt = new GsonJSONFold(100, null) ;
+        Config cfg = Config.defaultConfig();
+
+        StringWriter sw2 = new StringWriter();
+        Stats stats2 = static_fmt.writeJson(data, sw2, 100, cfg);
+        assertNotNull(stats2);
+        assertFalse(sw2.toString().isEmpty());
+
+        String json2 = static_fmt.formatJson(data, 100, cfg);
+        assertNotNull(json2);
+        assertTrue(json2.contains("\"id\""));
+    }
+
 }

@@ -31,15 +31,15 @@ class JSONFoldApiTest {
         assertEquals(fmt.isSortKeys(), copy.isSortKeys());
         assertEquals(fmt.isDoClose(), copy.isDoClose());
 
-        Config.Builder cfgBuilder1 = JSONFold.config(cfg, 120);
+        Config.Builder cfgBuilder1 = JSONFold.configBuilder(cfg, 120);
         assertNotNull(cfgBuilder1);
         assertEquals(120, cfgBuilder1.build().getWidth());
 
-        Config.Builder cfgBuilder2 = JSONFold.config(Config.PRESET_HIGH, 130);
+        Config.Builder cfgBuilder2 = JSONFold.configBuilder(Config.PRESET_HIGH, 130);
         assertNotNull(cfgBuilder2);
         assertEquals(130, cfgBuilder2.build().getWidth());
 
-        assertNull(JSONFold.config("off", 100));
+        assertNull(JSONFold.configBuilder("off", 100));
 
         String jsonText = """
             {

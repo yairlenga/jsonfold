@@ -28,7 +28,7 @@ public final class Main {
     static private Config buildConfig(Args args)
     {
 
-        Config.Builder builder = JSONFold.config(args.compact, args.width) ;
+        Config.Builder builder = JSONFold.configBuilder(args.compact, args.width) ;
         if ( builder == null ) return null ;
 
         if (args.width != null) builder.width(args.width);
@@ -65,9 +65,7 @@ public final class Main {
             System.err.println(cfg);
         }
 
-        DefaultPrettyPrinter pp = args.gold ?
-            JacksonJSONFold.goldPrettyPrinter(args.indent) : 
-            JacksonJSONFold.prettyPrinter(args.indent) ;
+        DefaultPrettyPrinter pp = JacksonJSONFold.prettyPrinter(args.gold, args.indent) ;
 
         JsonMapper.Builder builder = JsonMapper.builder()
             .defaultPrettyPrinter(pp)
@@ -109,7 +107,7 @@ public final class Main {
         boolean demo;
         boolean verbose;
         boolean sortKeys;
-        boolean gold;    // Match Python/Javascript Style
+        boolean gold = true;    // Match Python/Javascript Style
 
         String input;
         String compact = "default";
@@ -142,8 +140,8 @@ public final class Main {
                 continue;
             }
 
-            if (arg.equals("--gold")) {
-                out.gold = true;
+            if (arg.equals("--native")) {
+                out.gold = false;
                 continue;
             }
 

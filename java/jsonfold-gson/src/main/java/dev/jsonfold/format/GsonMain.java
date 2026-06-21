@@ -62,7 +62,7 @@ public final class GsonMain {
     static private Config buildConfig(Args args)
     {
 
-        Config.Builder builder = JSONFold.config(args.compact, args.width) ;
+        Config.Builder builder = JSONFold.configBuilder(args.compact, args.width) ;
         if ( builder == null ) return null ;
 
         if (args.width != null) builder.width(args.width);

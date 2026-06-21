@@ -40,7 +40,7 @@
  * JSONFold jf = JSONFold.builder(120).build();
  *
  * try (BufferedReader in = Files.newBufferedReader(inputFile);
- *      Writer out = jf.filterStream(
+ *      Writer out = jf.createWriter(
  *          Files.newBufferedWriter(outputFile))) {
  *
  *     String line;
