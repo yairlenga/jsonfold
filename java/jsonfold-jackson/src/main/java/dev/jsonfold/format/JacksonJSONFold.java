@@ -268,7 +268,7 @@ public final class JacksonJSONFold extends JSONFold implements JFFormatter {
      */
     private static ObjectMapper createMapper(boolean sortKeys)
     {
-     ObjectMapper mapper = new ObjectMapper();
+        ObjectMapper mapper = new ObjectMapper();
 
         JacksonJSONFold.configureMapper(mapper);
 
