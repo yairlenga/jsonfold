@@ -11,4 +11,4 @@ tmp/
 new/
 *.log
 [1-9]
-
+*:Zone.Identifier
