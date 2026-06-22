@@ -489,7 +489,7 @@ class Frame:
     kind: Kind
     depth: int
     lines: list[Line] = field(default_factory=list)
-
+    length: int = 0                  # Total length of parts
     pack_limit: int = 0
     fold_limit: int = 0
     join_limit: int = 0
@@ -635,6 +635,7 @@ class JSONFoldWriter:
                 kind=opener,
                 depth=len(self.stack),
                 lines=[line],
+                length = line.length,
                 pack_limit=self._pack_limit(opener),
                 fold_limit=self._fold_limit(opener),
                 join_limit=self._join_limit(opener),
@@ -642,7 +643,6 @@ class JSONFoldWriter:
                 grid_min_items=self._grid_min_items(opener),
                 )
             )
-
             return
 
         closer = line.closer
@@ -743,6 +743,7 @@ class JSONFoldWriter:
 
         # Add as new line
         frame.lines.append(line)
+        frame.length += 1 + line.length
 
         if frame.fold_ok and line.width() > self.cfg.width:
             self._mark_no_fold()
@@ -860,7 +861,9 @@ class JSONFoldWriter:
 
     @profile
     def _check_fold_limits(self, frame: Frame) -> bool:
-        if frame.content_lines > 1:
+#        if frame.content_lines > 1:
+#            return False
+        if frame.length > self.cfg.width:
             return False
 
         if frame.items > frame.fold_limit:
@@ -886,6 +889,14 @@ class JSONFoldWriter:
 #       Need to handle mismatch between closing and opening.
 #        if frame.kind != closing_kind: ...
 
+        if frame.grid_ok:
+            if self._try_grid(frame):
+                self._mark_no_grid()
+            else:
+                self._mark_no_grid()
+                self._join_frame(frame)
+                frame.fold_ok = self._check_fold_limits(frame)
+
         if frame.fold_ok:
             if self._try_fold(frame):
                 # After successful fold, parent frame may support grid, based on the first child.
@@ -894,14 +905,6 @@ class JSONFoldWriter:
                     if parent_frame.content_lines == 0:
                         parent_frame.grid_ok = True
 
-        elif frame.grid_ok:
-            if self._try_grid(frame):
-                self._mark_no_grid()
-            else:
-                self._mark_no_grid()
-                self._join_frame(frame)
-                frame.fold_ok = self._check_fold_limits(frame)
-                self._try_fold(frame)
 
         self._emit_lines(frame.lines)
         return
