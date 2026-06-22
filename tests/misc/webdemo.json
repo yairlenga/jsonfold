@@ -1,0 +1,57 @@
+{
+  "name": "jsonfold",
+  "items": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "products": [
+    {
+      "id": 1,
+      "name": "USB Cable",
+      "price": 9.99,
+      "stock": 124,
+      "category": "Accessories"
+    },
+    {
+      "id": 20,
+      "name": "Wireless Mouse",
+      "price": 29.95,
+      "stock": 8,
+      "category": "Peripherals"
+    },
+    {
+      "id": 305,
+      "name": "Mechanical Keyboard",
+      "price": 129.5,
+      "stock": 42,
+      "category": "Peripherals"
+    },
+    {
+      "id": 4001,
+      "name": "4K Monitor",
+      "price": 399.99,
+      "stock": 3,
+      "category": "Displays"
+    },
+    {
+      "id": 52,
+      "name": "Laptop Stand",
+      "price": 24.5,
+      "stock": 75,
+      "category": "Accessories"
+    }
+  ],
+  "nested": {
+    "a": [
+      {
+        "x": 1
+      },
+      {
+        "x": 2
+      }
+    ]
+  }
+}

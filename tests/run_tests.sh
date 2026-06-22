@@ -6,7 +6,7 @@ mode=
 case "${1-}" in
 	-mjava) shift ; mode=java ; JSONFOLD="java -jar $root/java/jsonfold-cli/target/jsonfold.jar" ;;
 	-mpython | -mpy ) shift ; mode=python ; JSONFOLD="python3 $root/python/cli.py" ;;
-	-mjavascript | -mjs | -mnode ) shift ; mode=node ; JSONFOLD="node --expose-gc $root/javascript/cli.js" ;;
+	-mjavascript | -mjs | -mnode ) shift ; mode=javascript ; JSONFOLD="node --expose-gc $root/javascript/cli.js" ;;
 	-mperl | -mpl ) shift ; mode=perl ; JSONFOLD="perl $root/perl/script/jsonfold.pl" ;;
 	-mc) shift ; mode=c ; JSONFOLD="$root/c/jsonfold.exe" ;;
 esac
