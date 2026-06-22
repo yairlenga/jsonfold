@@ -14,15 +14,18 @@ setup:
 build:
 	$(PYTHON) -m py_compile jsonfold.py
 	$(PYTHON) -m py_compile benchmark.py
-#	$(PYTHON) -m py_compile cli.py
+	$(PYTHON) -m py_compile cli.py
+
+.PHONY: %.t
 
 run-test:
 	./api_test.py
 	./jsonfold.py --demo
 	./cli.py --demo
 	./benchmark.py 10
-	cd ../tests/unit && ./run_tests.sh python
-	cd ../tests/samples && ./run_tests.sh python
+	cd ../tests/unit && ../run_tests.sh -mpython
+	cd ../tests/samples && ../run_tests.sh -mpython
+	cd ../tests/future && ../run_tests.sh -mpython
 
 test:
 	$(MAKE) run-test > test.log

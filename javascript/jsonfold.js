@@ -257,8 +257,9 @@ export class Line {
   }
 
   joinLine(other) {
+    if ( other.parts ) return
     this.parts.push(...other.parts);
-    if (other.parts.length) this.length += 1 + other.length;
+    this.length += 1 + other.length;
     this.items += other.items;
     this.leafs += other.leafs;
 

@@ -72,7 +72,7 @@ def run_case(data, name):
 
     kind, func, compact = name.split(".")
 
-    if kind == "jsonfold":
+    if kind == "jf":
         if func == "dumps":
             return lambda t0: write_string(t0, jsonfold.dumps(data, compact=compact, indent=2))
         if func == "dump":
@@ -176,22 +176,24 @@ def run_one_size(rows, tests):
         tests = [
             "base.dump.plain",
             "base.dump.pretty",
-            "jsonfold.dump.off",
-            "jsonfold.dump.none",
-            "jsonfold.dump.default",
-            "jsonfold.dump.low",
-            "jsonfold.dump.med",
-            "jsonfold.dump.high",
-            "jsonfold.dump.max",
-            "jsonfold.dump.pack",
-            "jsonfold.dump.fold",
-            "jsonfold.dump.join",
+            "jf.dump.off",
+            "jf.dump.none",
+            "jf.dump.default",
+            "jf.dump.low",
+            "jf.dump.med",
+            "jf.dump.classic",
+            "jf.dump.high",
+            "jf.dump.max",
+            "jf.dump.pack",
+            "jf.dump.fold",
+            "jf.dump.grid",
+            "jf.dump.join",
             "base.dumps.plain",
             "base.dumps.pretty",
-            "jsonfold.dumps.none",
-            "jsonfold.dumps.default",
-            "jsonfold.dumps.high",
-            "jsonfold.dumps.max",
+            "jf.dumps.none",
+            "jf.dumps.default",
+            "jf.dumps.high",
+            "jf.dumps.max",
             ]
     results = []
 

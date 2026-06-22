@@ -92,6 +92,9 @@ Presets
     "med":
         Same as default, No nested structures in "join"
 
+    "classic":
+        Same as default, but no grid.
+        
     "high":
         aggressive setting. Up to 16 array elements, up to key/value pairs, max nesting = 2
 
@@ -205,18 +208,19 @@ import io
 import json
 import sys
 from dataclasses import dataclass, KW_ONLY, replace, field
-from typing import Any, TextIO
+from typing import Any, TextIO, ClassVar
 from enum import IntEnum, auto
 import re
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
 
+DEFAULT_WIDTH = 100
 MAX_ARRAY_ITEMS = 1000
 MAX_OBJ_ITEMS = 1000
 MAX_NESTING = 10
 MAX_GRID_LINES = 1000
-DEFAULT_WIDTH = 100
+MAX_WIDTH = 255
 
 @dataclass(frozen=True, slots=True)
 class JSONFoldConfig:
@@ -240,117 +244,132 @@ class JSONFoldConfig:
     fold_nesting:     int = 1       # max container nesting depth for folding
 
     # Phase 3 - aligning packed lines
-    grid_array_items: int = 0
-    grid_obj_items: int  = 0
-    grid_min_lines: int = 0
-    grid_max_lines: int = 0
+    # Grid limits are top of fold_limits, setting it to MAX imply they will
+    # use the fold limits.
+    grid_array_items: int = MAX_ARRAY_ITEMS
+    grid_obj_items: int  = MAX_OBJ_ITEMS
+    grid_min_lines: int = 3
+    grid_max_lines: int = 100
+    grid_array_min: int = 3
+    grid_obj_min:   int = 3
 
     # Phase 4 - joining folded lines.
     join_array_items: int = 8
     join_obj_items:   int = 4
     join_nesting:     int = 1
 
+    DEFAULT: ClassVar["JSONFoldConfig"]
+    NONE: ClassVar["JSONFoldConfig"]
 
-JSONFoldConfig.NONE = JSONFoldConfig(
-    pack_array_items = 0,
-    pack_obj_items   = 0,
-    pack_nesting     = 0,
+    @classmethod
+    def _class_init(cls) -> None:
+        base_cfg = cls()
 
-    fold_array_items = 0,
-    fold_obj_items   = 0,
-    fold_nesting     = 0,
+        none_cfg = cls(
+            pack_array_items = 0,
+            pack_obj_items   = 0,
+            pack_nesting     = 0,
 
-    grid_array_items = 0,
-    grid_obj_items   = 0,
-    grid_min_lines   = 0,
-    grid_max_lines   = 0,
+            fold_array_items = 0,
+            fold_obj_items   = 0,
+            fold_nesting     = 0,
 
-    join_array_items = 0,
-    join_obj_items = 0,
-    join_nesting = 0,
-)
+            grid_array_items = 0,
+            grid_obj_items   = 0,
+            grid_min_lines   = 0,
+            grid_max_lines   = 0,
+            grid_array_min   = 0,
+            grid_obj_min     = 0,
 
-JSONFoldConfig.DEFAULT = JSONFoldConfig()
+            join_array_items = 0,
+            join_obj_items = 0,
+            join_nesting = 0,
+        )
 
-JSONFoldConfig.PRESETS = {
-    "off": None,
-    "default": JSONFoldConfig.DEFAULT,
-    "": JSONFoldConfig.DEFAULT,
-    "none":    JSONFoldConfig.NONE,
+        pack_max = {
+            "pack_array_items" : MAX_ARRAY_ITEMS,
+            "pack_obj_items"   : MAX_OBJ_ITEMS,
+            "pack_nesting"     : MAX_NESTING,
+        }
 
-    "low": replace(JSONFoldConfig.DEFAULT, 
-        fold_nesting = 0,
-        join_nesting = 0,
-    ),
+        fold_max = {
+            "fold_array_items" : MAX_ARRAY_ITEMS,
+            "fold_obj_items"   : MAX_OBJ_ITEMS,
+            "fold_nesting"     : MAX_NESTING,
+        }
 
-    "med": replace(JSONFoldConfig.DEFAULT,
-        join_nesting = 0,
-    ),
+        join_max = {
+            "join_array_items" : MAX_ARRAY_ITEMS,
+            "join_obj_items"   : MAX_OBJ_ITEMS,
+            "join_nesting"     : MAX_NESTING,
+        }
 
-    "high": replace(JSONFoldConfig.DEFAULT,
-        pack_array_items = 16,
-        pack_obj_items   = 8,
-        pack_nesting     = 4,
-        fold_array_items = 16,
-        fold_obj_items   = 8,
-        fold_nesting     = 4,
-        join_array_items = 16,
-        join_obj_items   = 8,
-        join_nesting     = 2,
-    ),
+        grid_max = {
+            "grid_array_items" : MAX_ARRAY_ITEMS,
+            "grid_obj_items"   : MAX_OBJ_ITEMS,
+            "grid_min_lines"   : 3,
+            "grid_max_lines"   : MAX_GRID_LINES,
+        }
 
-    "max": replace(JSONFoldConfig.NONE,
-        width = 255,
-        pack_array_items = MAX_ARRAY_ITEMS,
-        pack_obj_items   = MAX_OBJ_ITEMS,
-        pack_nesting     = MAX_NESTING,
-        fold_array_items = MAX_ARRAY_ITEMS,
-        fold_obj_items   = MAX_OBJ_ITEMS,
-        fold_nesting     = MAX_NESTING,
-        join_array_items = MAX_ARRAY_ITEMS,
-        join_obj_items = MAX_OBJ_ITEMS,
-        join_nesting    = MAX_NESTING,
-    ),
+        cls.DEFAULT = base_cfg
+        cls.NONE = none_cfg
 
-    # Grid is like default + grid
-    "grid":  replace(JSONFoldConfig.NONE,
-        pack_array_items = MAX_ARRAY_ITEMS,
-        pack_obj_items   = MAX_OBJ_ITEMS,
-        pack_nesting     = MAX_NESTING,
+        cls.PRESETS = {
+            "off": None,
 
-        fold_array_items = MAX_ARRAY_ITEMS,
-        fold_obj_items   = MAX_OBJ_ITEMS,
-        fold_nesting     = MAX_NESTING,
+            "default": base_cfg,
+            "": base_cfg,
 
-        grid_array_items = MAX_ARRAY_ITEMS,
-        grid_obj_items   = MAX_OBJ_ITEMS,
-        grid_min_lines   = 3,
-        grid_max_lines   = MAX_GRID_LINES,
-    ),
+            "none": none_cfg,
+            "low": replace(base_cfg, 
+                fold_nesting = 0,
+                join_nesting = 0,
+                grid_max_lines = 0,
+            ),
 
-    # pack only – no folding
-    "pack": replace(JSONFoldConfig.NONE,
-        pack_array_items = MAX_ARRAY_ITEMS,
-        pack_obj_items   = MAX_OBJ_ITEMS,
-        pack_nesting     = MAX_NESTING,
-    ),
-    # fold only – no packing
-    "fold": replace(JSONFoldConfig.NONE,
-        fold_array_items = MAX_ARRAY_ITEMS,
-        fold_obj_items   = MAX_OBJ_ITEMS,
-        fold_nesting     = MAX_NESTING,
-    ),
-    "join": replace(JSONFoldConfig.NONE,
-        fold_array_items = MAX_ARRAY_ITEMS,
-        fold_obj_items   = MAX_OBJ_ITEMS,
-        fold_nesting     = MAX_NESTING,
-        join_array_items = MAX_ARRAY_ITEMS,
-        join_obj_items   = MAX_OBJ_ITEMS,
-        join_nesting     = MAX_NESTING,
-    ),
+            "med": replace(base_cfg,
+                join_nesting = 0,
+                grid_max_lines = 0,
+            ),
 
+            "classic": replace(base_cfg,
+                grid_max_lines = 0
+            ),
+
+            "high": replace(base_cfg, **pack_max, 
+                fold_array_items = 16,
+                fold_obj_items   = 8,
+                fold_nesting     = 4,
+                join_array_items = 16,
+                join_obj_items   = 8,
+                join_nesting     = 2,
+                grid_array_min   = 4,
+                grid_obj_min     = 4,
+            ),
+
+            "max": replace(base_cfg, width = 255,
+                **pack_max, **fold_max, **join_max,
+                grid_array_min = 4,
+                grid_obj_min = 4,
+                ),
+
+            # pack only – no folding
+            "pack": replace(JSONFoldConfig.NONE, **pack_max),
+            # fold only – no packing
+            "fold": replace(JSONFoldConfig.NONE, **fold_max),
+
+                # Grid is doing pack + fold
+            "grid":  replace(JSONFoldConfig.NONE, **pack_max, **fold_max, **grid_max),
+
+                # join only (include fold)
+            "join": replace(JSONFoldConfig.NONE, **fold_max,
+                join_array_items = MAX_ARRAY_ITEMS,
+                join_obj_items   = MAX_OBJ_ITEMS,
+                join_nesting     = MAX_NESTING,
+            ),
 }
 
+JSONFoldConfig._class_init()
 
 # ---------------------------------------------------------------------------
 # Internal data structures
@@ -475,6 +494,7 @@ class Frame:
     fold_limit: int = 0
     join_limit: int = 0
     grid_limit: int = 0
+    grid_min_items: int = 0
 
     content_lines: int = 0
     items: int = 0
@@ -619,6 +639,7 @@ class JSONFoldWriter:
                 fold_limit=self._fold_limit(opener),
                 join_limit=self._join_limit(opener),
                 grid_limit=self._grid_limit(opener),
+                grid_min_items=self._grid_min_items(opener),
                 )
             )
 
@@ -685,6 +706,11 @@ class JSONFoldWriter:
         return self._choose_limit(kind,
                                  list_limit = self.cfg.grid_array_items,
                                  dict_limit = self.cfg.grid_obj_items)
+    
+    def _grid_min_items(self, kind: Kind) -> int:
+        return self._choose_limit(kind,
+                                 list_limit = self.cfg.grid_array_min,
+                                 dict_limit = self.cfg.grid_obj_min)
 
     # --------------------------------------------------------- phase 1: pack
 
@@ -735,7 +761,8 @@ class JSONFoldWriter:
 
             if frame.grid_ok:
                 if not line.can_grid:
-                    frame.grid_ok = False
+                    self._mark_no_grid()
+                    self._join_frame(frame)
 
         if not frame.fold_ok and not frame.grid_ok:
             self._stream_frame(frame)
@@ -760,6 +787,7 @@ class JSONFoldWriter:
         if prev.items >= frame.join_limit or prev.child_nesting >= self.cfg.join_nesting:
             prev.can_join = False
 
+#        frame.content_lines += 1
         frame.items += line.items
         frame.leafs += line.leafs
 
@@ -796,6 +824,38 @@ class JSONFoldWriter:
         self._merge_into_frame(frame, prev, line)
         return True
 
+
+    @profile
+    def _join_frame(self, frame: Frame) -> None:
+        """Apply join compaction to already-buffered lines."""
+
+        lines = frame.lines
+        n = len(lines)
+        if n < 2:
+            return
+
+        prev = lines[0]
+        write_pos = 1
+
+        for read_pos in range(1, n):
+            line = lines[read_pos]
+
+            if (
+                prev.can_join
+                and line.can_join
+                and self._can_merge(prev, line, frame.join_limit)
+            ):
+                prev.join_line(line)
+                prev.can_pack = False
+
+            else:
+                if read_pos != write_pos:
+                    lines[write_pos] = line
+                prev = line
+                write_pos += 1
+
+        del lines[write_pos:]
+        frame.content_lines -= (n-write_pos)
     # --------------------------------------------------------- frame tracking
 
     @profile
@@ -837,9 +897,13 @@ class JSONFoldWriter:
         elif frame.grid_ok:
             if self._try_grid(frame):
                 self._mark_no_grid()
+            else:
+                self._mark_no_grid()
+                self._join_frame(frame)
+                frame.fold_ok = self._check_fold_limits(frame)
+                self._try_fold(frame)
 
         self._emit_lines(frame.lines)
-        frame.lines.clear()
         return
 
     # Fold a frame with 3 lines into a single line:
@@ -895,18 +959,27 @@ class JSONFoldWriter:
             ) for i, part in enumerate(parts)
         ]
 
+    @profile
     def _try_grid(self, frame: Frame) -> bool:
+        # currently, we only grid list of Dict or List of List.
+        if frame.kind != Kind.LIST:
+            return False
+        # Make sure we have at least 2 to grid.
         line_count = len(frame.lines)-2
-        if ( line_count < 1 or
+        if ( line_count < 2 or
             line_count < self.cfg.grid_min_lines or
             line_count > self.cfg.grid_max_lines
         ):
             return False
 
-        # Check that all rows have identical count
         lines = frame.lines[1:-1]
         first_line = lines[0]
         part_count = len(first_line.parts)
+        # No need to align, unless there are at least 2 data items in every children
+        if part_count < 4 or part_count-2 < frame.grid_min_items:
+            return False
+        
+        # Check that all rows have identical count
         if any(len(line.parts) != part_count for line in lines):
             return False
 
@@ -1039,7 +1112,7 @@ def write_json(obj: Any, fp : TextIO, width: int, config: JSONFoldConfig | str =
         json.dump(obj, out, indent=indent, **kwargs)
     return out.stats
 
-def filter_stream(fp: TextIO, width: int, config: JSONFoldConfig | str = "", *, close_fp: bool = False) -> JSONFoldWriter:
+def create_writer(fp: TextIO, width: int, config: JSONFoldConfig | str = "", *, close_fp: bool = False) -> JSONFoldWriter:
     """Create a JSONFold filtering stream.
 
     Returns a writable stream wrapper that accepts pretty-printed JSON
@@ -1113,7 +1186,7 @@ def dumps(
 # Demo data
 # ---------------------------------------------------------------------------
 
-def _demo() -> dict[str, Any]:
+def demo_data() -> dict[str, Any]:
     return {
         "meta":   {"version": 1, "ok": True, "name": "jsonfold demo"},
         "ids": [ 1, 2, 3, 4, 5, 6 ],
@@ -1156,13 +1229,13 @@ def main(argv: list[str] | None = None) -> int:
             import shutil
             width = shutil.get_terminal_size(fallback=(24,DEFAULT_WIDTH)).columns
 
-    cfg = config(args.compact)
+    cfg = jsonfold_config(args.compact)
 
     if args.verbose:
         print(cfg, file= sys.stderr)
 
     if args.demo:
-        data = _demo()
+        data = demo_data()
     else:
         fp = open(args.input) if args.input else sys.stdin
         with fp:

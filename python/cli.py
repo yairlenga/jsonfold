@@ -33,7 +33,7 @@ Configuration
 
 Presets
 -------
-    "default" (also "")
+    Default ("")
         Balanced default settings.
         Up to 8 array elements, up to 4 key/value pairs, max nesting = 1
 
@@ -46,11 +46,18 @@ Presets
     "med":
         Same as default, No nested structures in "join"
 
+    "classic":
+        Balanced default settings. Replicate traditional pretty-printing.
+        Up to 8 array elements, up to 4 key/value pairs, max nesting = 1
+
+    "default":
+        Balanced default setting - including conservative grid.
+    
     "high":
         aggressive setting. Up to 16 array elements, up to key/value pairs, max nesting = 2
 
     "max"
-        Enable aggressive packing and folding, still subject to width.
+        Unlimited packing, folding, grid and join subject to line width only.
 
 
 Test Presets
@@ -63,6 +70,9 @@ Test Presets
 
     "join"
         Enable folding and joining.
+
+    "grid"
+        Enable packing/folding/grid (no join).
 
 Streaming behavior
 ------------------
@@ -93,28 +103,7 @@ from typing import Any
 from dataclasses import replace
 import json
 
-from jsonfold import jsonfold_config, write_json, JSONFoldConfig
-
-# ---------------------------------------------------------------------------
-# Demo data
-# ---------------------------------------------------------------------------
-
-def _demo() -> dict[str, Any]:
-    return {
-        "meta":   {"version": 1, "ok": True, "name": "jsonfold demo"},
-        "ids": [ 1, 2, 3, 4, 5, 6 ],
-        "matrix": [[1, 2], [3, 4], [ 5, 6 ]],
-        "items":  [{"id": 1, "name": "alpha"}, {"id": 2, "name": "beta"}],
-        "long": [
-            "this is a long message that may force the block to stay expanded",
-            "second", "third", "fourth",
-        ],
-        "single_array": [ 1 ],
-        "single_object": { "x" : 2 },
-        "long_array": [ f"a{i+1}" for i in range(50)],
-        "wide_array": [f"abcdefghijklmnopqrstuvwxyz{i+1}" for i in range(9)],
-        "wide_object": {f"abcdefghijk{i+1}": f"lmnopqrstuvwxyz{i+1}" for i in range(9)},
-    }
+from jsonfold import jsonfold_config, write_json, JSONFoldConfig, demo_data
 
 
 # ---------------------------------------------------------------------------
@@ -146,6 +135,15 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--fold-array-items", type=int, default=None)
     g.add_argument("--fold-obj-items",   type=int, default=None)
     g.add_argument("--fold-nesting",     type=int, default=None)
+
+    # Grid phase
+    g = p.add_argument_group("Grid phase (align folded lines on grid)")
+    g.add_argument("--grid-items",       type=int, default=None,
+                   help="set both --grid-array-items and --grid-obj-items")
+    g.add_argument("--grid-array-items", type=int, default=None)
+    g.add_argument("--grid-obj-items",   type=int, default=None)
+    g.add_argument("--grid-min-lines",   type=int, default=None)
+    g.add_argument("--grid-max-lines",   type=int, default=None)
 
     # Join phase
     g = p.add_argument_group("Join phase (combine scalars/folded containers)")
@@ -195,7 +193,7 @@ def main(argv: list[str] | None = None) -> int:
         print(cfg, file= sys.stderr)
 
     if args.demo:
-        data = _demo()
+        data = demo_data()
     else:
         fp = open(args.input) if args.input else sys.stdin
         with fp:
