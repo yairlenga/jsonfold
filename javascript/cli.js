@@ -80,7 +80,7 @@ export async function main(argv = process.argv.slice(2)) {
   cfg = cfg.replace(overrides);
 
   if (args.verbose) {
-    console.error(cfg);
+    console.error("Config:", JSON.stringify(cfg) );
   }
   let backend = jsonfold
 // TBD: Choose backend
@@ -99,7 +99,7 @@ export async function main(argv = process.argv.slice(2)) {
   });
 
   if (args.verbose) {
-    console.error(stats);
+    console.error("Stats:", { ...stats });
   }
 
   return 0;
@@ -272,6 +272,14 @@ fold phase:
   --fold-array-items N
   --fold-obj-items N
   --fold-nesting N
+
+Grid Phase:
+  --grid-array-items N
+  --grid-obj-items N
+  --grid-min-lines N
+  --grid-max-lines N
+  --grid-obj-min N
+  --grid-array-min N
 
 join phase:
   --join-items N

@@ -17,29 +17,52 @@ const CLOSING_KIND = Object.freeze({
 export const MAX_ARRAY_ITEMS = 1000;
 export const MAX_OBJ_ITEMS = 1000;
 export const MAX_NESTING = 10;
+export const MAX_GRID_LINES = 1000;
+export const DEFAULT_WIDTH = 100;
+export const MAX_WIDTH = 255 ;
 
-export class JSONFold {
+/**
+ * Configuration for JSON folding.
+ *
+ * Packing, folding and joining are controlled by
+ * item-count, nesting and width limits.
+ */
+
+export class JSONFoldConfig {
   constructor({
-    width = 80,
-    packArrayItems = 8,
-    packObjItems = 4,
+    width = DEFAULT_WIDTH,
+    packArrayItems = 10,
+    packObjItems = 5,
     packNesting = 1,
-    foldArrayItems = 8,
-    foldObjItems = 4,
+    foldArrayItems = 10,
+    foldObjItems = 5,
     foldNesting = 1,
+    gridArrayItems = MAX_ARRAY_ITEMS,
+    gridObjItems = MAX_OBJ_ITEMS,
+    gridMinLines = 3,
+    gridMaxLines = 100,
+    gridArrayMin = 3,
+    gridObjMin = 3,
     joinArrayItems = 8,
     joinObjItems = 4,
     joinNesting = 1,
   } = {}) {
     this.width = width;
 
-    this.packArrayItems = packArrayItems;
-    this.packObjItems = packObjItems;
-    this.packNesting = packNesting;
+    this.packArrayItems = packArrayItems
+    this.packObjItems = packObjItems
+    this.packNesting = packNesting
 
-    this.foldArrayItems = foldArrayItems;
-    this.foldObjItems = foldObjItems;
-    this.foldNesting = foldNesting;
+    this.foldArrayItems = foldArrayItems
+    this.foldObjItems = foldObjItems
+    this.foldNesting = foldNesting
+
+    this.gridArrayItems = gridArrayItems
+    this.gridObjItems = gridObjItems
+    this.gridMinLines = gridMinLines
+    this.gridMaxLines = gridMaxLines
+    this.gridObjMin = gridObjMin
+    this.gridArrayMin = gridArrayMin
 
     this.joinArrayItems = joinArrayItems;
     this.joinObjItems = joinObjItems;
@@ -49,97 +72,135 @@ export class JSONFold {
   }
 
   replace(overrides = {}) {
-    return new JSONFold({ ...this, ...overrides });
+    return new JSONFoldConfig({ ...this, ...overrides });
   }
 
   static preset(name = "") {
-    if (!Object.prototype.hasOwnProperty.call(JSONFold.PRESETS, name)) {
+    if (!Object.hasOwn(this.PRESETS, name)) {
       throw new Error(`unknown JSONFold preset: ${name}`);
     }
-    return JSONFold.PRESETS[name];
+    return JSONFoldConfig.PRESETS[name];
+  }
+
+  static resolve(base_config, width, overrides) {
+    let cfg = asConfig(base_config)
+    if ( overrides || width != null) {
+      overrides = overrides ? {...overrides } : {}
+      if ( width != null ) overrides.width = width
+      if ( Object.keys(overrides).length ) {
+        cfg = cfg.replace(overrides)
+      }
+    }
+    return cfg
+  }
+
+  static setup() {
+    const base_cfg = new this()
+    const none_cfg = new this( {
+      packArrayItems: 0,
+      packObjItems: 0,
+      packNesting: 0,
+      foldArrayItems: 0,
+      foldObjItems: 0,
+      foldNesting: 0,
+      gridArrayItems: 0,
+      gridObjItems: 0,
+      gridMinLines: 0,
+      gridMaxLines: 0,
+      joinArrayItems: 0,
+      joinObjItems: 0,
+      joinNesting: 0,
+    })
+
+    const packMax = {
+      "packArrayItems": MAX_ARRAY_ITEMS,
+      "packObjItems": MAX_OBJ_ITEMS,
+      "packNesting": MAX_NESTING,
+    }
+
+    const foldMax = {
+      "foldArrayItems": MAX_ARRAY_ITEMS,
+      "foldObjItems": MAX_OBJ_ITEMS,
+      "foldNesting": MAX_NESTING,
+    }
+
+    const joinMax = {
+      "joinArrayItems": MAX_ARRAY_ITEMS,
+      "joinObjItems": MAX_OBJ_ITEMS,
+      "joinNesting": MAX_NESTING,
+    }
+
+    const gridMax = {
+      "gridArrayItems": MAX_ARRAY_ITEMS,
+      "gridObjItems": MAX_OBJ_ITEMS,
+      "gridMinLines": 3,
+      "gridMaxLines": MAX_GRID_LINES,
+    }
+
+    this.DEFAULT = base_cfg
+    this.NONE = none_cfg
+
+    this.PRESETS = Object.freeze({
+      off: null,
+
+      default: base_cfg,
+      "": base_cfg,
+
+      none: none_cfg,
+
+      low: base_cfg.replace({
+        foldNesting: 0,
+        joinNesting: 0,
+        gridMaxLines: 0,
+      }),
+
+      med: base_cfg.replace({
+        joinNesting: 0,
+        gridMaxLines: 0,
+      }),
+
+      classic: base_cfg.replace({gridMaxLines: 0}),
+
+      high: base_cfg.replace({
+        packArrayItems: 20,
+        packObjItems: 10,
+        packNesting: 4,
+        foldArrayItems: 20,
+        foldObjItems: 10,
+        foldNesting: 4,
+
+        gridArrayMin: 4,
+        gridObjMin: 4,
+
+        joinArrayItems: 16,
+        joinObjItems: 8,
+        joinNesting: 2,
+      }),
+
+      max: none_cfg.replace({width: MAX_WIDTH, ...packMax, ...foldMax, ...joinMax, gridArrayMin:4, gridObjMin:4}),
+
+      pack: none_cfg.replace({ ...packMax}),
+      fold: none_cfg.replace({ ...foldMax}),
+      grid: none_cfg.replace({ ...packMax, ...foldMax, ...gridMax}),
+      join: none_cfg.replace({ ...foldMax, 
+        joinArrayItems: MAX_ARRAY_ITEMS,
+        joinObjItems: MAX_OBJ_ITEMS,
+        joinNesting: MAX_NESTING,
+      })
+    });
   }
 }
+JSONFoldConfig.setup()
 
-JSONFold.NONE = new JSONFold({
-  packArrayItems: 0,
-  packObjItems: 0,
-  packNesting: 0,
-  foldArrayItems: 0,
-  foldObjItems: 0,
-  foldNesting: 0,
-  joinArrayItems: 0,
-  joinObjItems: 0,
-  joinNesting: 0,
-});
 
-JSONFold.DEFAULT = new JSONFold();
-
-JSONFold.PRESETS = Object.freeze({
-  off: null,
-  "": JSONFold.DEFAULT,
-  default: JSONFold.DEFAULT,
-  none: JSONFold.NONE,
-
-  low: JSONFold.DEFAULT.replace({
-    foldNesting: 0,
-    joinNesting: 0,
-  }),
-
-  med: JSONFold.DEFAULT.replace({
-    joinNesting: 0,
-  }),
-
-  high: JSONFold.DEFAULT.replace({
-    packArrayItems: 16,
-    packObjItems: 8,
-    packNesting: 4,
-    foldArrayItems: 16,
-    foldObjItems: 8,
-    foldNesting: 4,
-    joinArrayItems: 16,
-    joinObjItems: 8,
-    joinNesting: 2,
-  }),
-
-  max: JSONFold.NONE.replace({
-    width: 255,
-    packArrayItems: MAX_ARRAY_ITEMS,
-    packObjItems: MAX_OBJ_ITEMS,
-    packNesting: MAX_NESTING,
-    foldArrayItems: MAX_ARRAY_ITEMS,
-    foldObjItems: MAX_OBJ_ITEMS,
-    foldNesting: MAX_NESTING,
-    joinArrayItems: MAX_ARRAY_ITEMS,
-    joinObjItems: MAX_OBJ_ITEMS,
-    joinNesting: MAX_NESTING,
-  }),
-
-  pack: JSONFold.NONE.replace({
-    packArrayItems: MAX_ARRAY_ITEMS,
-    packObjItems: MAX_OBJ_ITEMS,
-    packNesting: MAX_NESTING,
-  }),
-
-  fold: JSONFold.NONE.replace({
-    foldArrayItems: MAX_ARRAY_ITEMS,
-    foldObjItems: MAX_OBJ_ITEMS,
-    foldNesting: MAX_NESTING,
-  }),
-
-  join: JSONFold.NONE.replace({
-    foldArrayItems: MAX_ARRAY_ITEMS,
-    foldObjItems: MAX_OBJ_ITEMS,
-    foldNesting: MAX_NESTING,
-    joinArrayItems: MAX_ARRAY_ITEMS,
-    joinObjItems: MAX_OBJ_ITEMS,
-    joinNesting: MAX_NESTING,
-  }),
-});
+const KEY_RE = /^\s*(?:"[^"\\]*"|'[^'\\]*'|[A-Za-z_$][A-Za-z0-9_$]*|)\s*:/;
 
 export class Line {
   constructor({
     indent = 0,
-    text = "",
+    parts = null,
+    length = null,
+    kind = Kind.NONE,
     parentKind = Kind.NONE,
     items = 1,
     leafs = 1,
@@ -148,9 +209,12 @@ export class Line {
     closer = Kind.NONE,
     canJoin = true,
     canPack = true,
+    canGrid = false,
   } = {}) {
     this.indent = indent;
-    this.text = text;
+    this.parts = parts ?? [];
+    this.length = length ?? Line.partsLength(this.parts);
+    this.kind = kind;
     this.parentKind = parentKind;
     this.items = items;
     this.leafs = leafs;
@@ -159,6 +223,13 @@ export class Line {
     this.closer = closer;
     this.canJoin = canJoin;
     this.canPack = canPack;
+    this.canGrid = canGrid;
+    Object.seal(this)
+  }
+
+  static partsLength(parts) {
+    if (!parts.length) return 0;
+    return parts.reduce((sum, part) => sum + part.length + 1, 0) - 1;
   }
 
   static parse(s, parentKind = Kind.NONE) {
@@ -177,7 +248,8 @@ export class Line {
 
     return new Line({
       indent: s.length - stripped.length,
-      text: body,
+      parts: [body],
+      length: body.length,
       parentKind,
       opener,
       closer,
@@ -187,15 +259,17 @@ export class Line {
   }
 
   raw() {
-    return " ".repeat(this.indent) + this.text + "\n";
+    return " ".repeat(this.indent) + this.parts.join(" ") + "\n";
   }
 
   width() {
-    return this.indent + this.text.length;
+    return this.indent + this.length;
   }
 
   joinLine(other) {
-    this.text += " " + other.text;
+    if ( !other.parts.length ) return
+    this.parts.push(...other.parts);
+    this.length += 1 + other.length;
     this.items += other.items;
     this.leafs += other.leafs;
 
@@ -204,6 +278,23 @@ export class Line {
       this.canPack = false;
     }
   }
+
+  setParts(parts) {
+    this.parts = parts;
+    this.length = Line.partsLength(parts);
+  }
+
+  dictSignature() {
+    const signature = [];
+
+    for (const part of this.parts.slice(1, -1)) {
+      const m = KEY_RE.exec(part);
+      if (!m) return null;
+      signature.push(m[0]);
+    }
+
+    return signature.join("\u0000");
+  }
 }
 
 export class Frame {
@@ -211,42 +302,70 @@ export class Frame {
     kind,
     depth,
     lines = [],
+    length = 0,
     packLimit = 0,
     foldLimit = 0,
     joinLimit = 0,
+    gridLimit = 0,
+    gridMinItems = 0,
+
   }) {
     this.kind = kind;
-    this.depth = depth;
-    this.lines = lines;
+    this.depth = depth
+    this.lines = lines
+    this.length = length
+    this.packLimit = packLimit
+    this.foldLimit = foldLimit
+    this.joinLimit = joinLimit
+    this.gridLimit = gridLimit
+    this.gridMinItems = gridMinItems
 
-    this.packLimit = packLimit;
-    this.foldLimit = foldLimit;
-    this.joinLimit = joinLimit;
+    this.contentLines = 0
+    this.items = 0
+    this.leafs = 0
 
-    this.contentLines = 0;
-    this.items = 0;
-    this.leafs = 0;
-
-    this.foldOk = true;
-    this.childNesting = -1;
+    this.foldOk = true
+    this.gridOk = false
+    this.childNesting = -1
+    Object.seal(this)
   }
 }
 
+
+
+/**
+ * Runtime statistics collected by a JSONFoldFilter.
+ *
+ * Values are accumulated as data flows through the formatter.
+ *
+ * @property {number} bytesIn   Number of input characters received.
+ * @property {number} bytesOut  Number of output characters written.
+ * @property {number} linesIn   Number of input lines processed.
+ * @property {number} linesOut  Number of output lines written.
+ */
 export class JSONFoldStats {
   constructor() {
+    /** @type {number} Input character count. */
     this.bytesIn = 0;
+
+    /** @type {number} Output character count. */
     this.bytesOut = 0;
+
+    /** @type {number} Input line count. */
     this.linesIn = 0;
+
+    /** @type {number} Output line count. */
     this.linesOut = 0;
+    Object.seal(this)
   }
 }
 
 function asConfig(compact = "") {
   if (compact === null || compact === false) return null;
-  if (compact instanceof JSONFold) return compact;
-  if (typeof compact === "string") return JSONFold.preset(compact);
-  if (compact && typeof compact === "object") return new JSONFold(compact);
-  return JSONFold.DEFAULT;
+  if (compact instanceof JSONFoldConfig) return compact;
+  if (typeof compact === "string") return JSONFoldConfig.preset(compact);
+  if (compact && typeof compact === "object") return new JSONFoldConfig(compact);
+  return JSONFoldConfig.DEFAULT;
 }
 
 function writeAny(writer, s) {
@@ -267,9 +386,12 @@ function writeAny(writer, s) {
 
 function countNewlines(s) {
   let n = 0;
-  for (let i = 0; i < s.length; i++) {
-    if (s.charCodeAt(i) === 10) n++;
+  let pos = -1;
+
+  while ((pos = s.indexOf("\n", pos + 1)) !== -1) {
+    n++;
   }
+
   return n;
 }
 
@@ -319,12 +441,14 @@ function sortedReplacer(userReplacer) {
 }
 
 export class JSONFoldFilter {
-  constructor(fp, { compact = "" } = {}) {
+  constructor(fp, { config = "", doClose = false } = {}) {
     this.fp = fp;
     this.stats = new JSONFoldStats();
-    this.cfg = asConfig(compact);
+    this.cfg = asConfig(config);
+    this.doClose = doClose
     this.pending = "";
     this.stack = [];
+    Object.seal(this)
   }
 
   write(s) {
@@ -361,20 +485,18 @@ export class JSONFoldFilter {
       return sLen;
     }
 
-    const parts = s.split(/(?<=\n)/);
-    this.stats.linesIn += countNewlines(s);
-
-    if (this.pending) {
-      parts[0] = this.pending + parts[0];
-      this.pending = "";
+    const parts = s.split("\n")
+    if ( this.pending ) {
+      parts[0] = this.pending + parts[0]
+      this.pending = ""
+    }
+    if ( ! s.endsWith("\n")) {
+      this.pending = parts.pop()
     }
 
-    if (parts.length && !parts[parts.length - 1].endsWith("\n")) {
-      this.pending = parts.pop();
-    }
-
+    this.stats.linesIn += parts.length
     for (const part of parts) {
-      this._feed(Line.parse(part.slice(0, -1), this._parentKind()));
+      this._feed(Line.parse(part, this._parentKind()));
     }
 
     return sLen;
@@ -387,6 +509,8 @@ export class JSONFoldFilter {
 
   close() {
     this.finish();
+    if ( this.fp && typeof this.fp.flush === "function") this.fp.flush();
+    if ( this.doClose ) this.fp.close()
   }
 
   finish() {
@@ -421,9 +545,12 @@ export class JSONFoldFilter {
         kind: opener,
         depth: this.stack.length,
         lines: [line],
+        length: line.length,
         packLimit: this._packLimit(opener),
         foldLimit: this._foldLimit(opener),
         joinLimit: this._joinLimit(opener),
+        gridLimit: this._gridLimit(opener),
+        gridMinItems: this._gridMinItems(opener),
       }));
 
       if (line.width() > this.cfg.width) {
@@ -461,7 +588,7 @@ export class JSONFoldFilter {
     }
 
     const frame = this.stack[depth];
-    for (const line of lines) this._addToFrame(frame, line);
+    for (const line of lines) this._addToFrame(frame, line)
   }
 
   _chooseLimit(kind, { defaultValue = 0, listLimit = 0, dictLimit = 0 } = {}) {
@@ -491,31 +618,64 @@ export class JSONFoldFilter {
     });
   }
 
+  _gridLimit(kind) {
+    return this._chooseLimit(kind, {
+      listLimit: this.cfg.gridArrayItems,
+      dictLimit: this.cfg.gridObjItems,
+    });
+  }
+
+  _gridMinItems(kind) {
+    return this._chooseLimit(kind, {
+      listLimit: this.cfg.gridArrayMin,
+      dictLimit: this.cfg.gridObjMin,
+    });
+
+  }
+
   _addToFrame(frame, line) {
+
     if (frame.lines.length) {
-      if (line.canPack && this._tryPack(frame, line)) return;
-      if (line.canJoin && this._tryJoin(frame, line)) return;
+      if (!frame.gridOk) {
+        const prev = frame.lines[frame.lines.length - 1];
+        if (line.canPack && prev.canPack && this._tryPack(frame, prev, line)) return;
+        if (line.canJoin && prev.canJoin && this._tryJoin(frame, prev, line)) return;
+      }
+
+    } else if (!frame.foldOk && !line.canPack && !line.canJoin) {
+      this._writeLine(line);
+      return;
     }
 
     frame.lines.push(line);
+    frame.length += 1 + line.length
+
+    if (frame.foldOk && line.width() > this.cfg.width) {
+      this._markNoFold();
+    }
+
+    if (line.childNesting >= frame.childNesting) {
+      frame.childNesting = line.childNesting + 1;
+    }
 
     if (line.closer === Kind.NONE) {
       frame.contentLines += 1;
       frame.items += line.items;
       frame.leafs += line.leafs;
 
-      if (line.childNesting >= frame.childNesting) {
-        frame.childNesting = line.childNesting + 1;
+      if (frame.foldOk) {
+        if (!this._checkFoldLimits(frame)) this._markNoFold();
       }
 
-      if (frame.foldOk) this._checkFoldLimits(frame);
+      if (frame.gridOk) {
+        if (!line.canGrid) {
+          this._markNoGrid()
+          this._joinFrame(frame)
+        }
+      }
     }
 
-    if (frame.foldOk && line.width() > this.cfg.width) {
-      this._markNoFold();
-    }
-
-    if (!frame.foldOk) {
+    if (!frame.foldOk && !frame.gridOk) {
       this._streamFrame(frame);
     }
   }
@@ -524,7 +684,7 @@ export class JSONFoldFilter {
     return (
       prev.indent === line.indent &&
       prev.items + line.items <= limit &&
-      prev.indent + prev.text.length + 1 + line.text.length <= this.cfg.width
+      prev.indent + prev.length + 1 + line.length <= this.cfg.width
     );
   }
 
@@ -534,24 +694,22 @@ export class JSONFoldFilter {
     frame.items += line.items;
     frame.leafs += line.leafs;
 
-    if (prev.items >= frame.packLimit) prev.canPack = false;
-    if (prev.items >= frame.joinLimit) prev.canJoin = false;
+    if (prev.items >= frame.packLimit || prev.childNesting >= this.cfg.packNesting) prev.canPack = false;
+    if (prev.items >= frame.joinLimit || prev.childNesting >= this.cfg.joinNesting) prev.canJoin = false;
 
-    if (frame.foldOk) this._checkFoldLimits(frame);
+    if (frame.foldOk) {
+      if (!this._checkFoldLimits(frame)) {
+        this._markNoFold();
+        this._streamFrame(frame);
+      }
+    }
   }
 
-  _tryPack(frame, line) {
+  _tryPack(frame, prev, line) {
     if (
       frame.packLimit <= 1 ||
-      !frame.lines.length ||
-      !line.canPack
+      !this._canMerge(prev, line, frame.packLimit)
     ) {
-      return false;
-    }
-
-    const prev = frame.lines[frame.lines.length - 1];
-
-    if (!(prev.canPack && this._canMerge(prev, line, frame.packLimit))) {
       return false;
     }
 
@@ -560,24 +718,10 @@ export class JSONFoldFilter {
     return true;
   }
 
-  _tryJoin(frame, line) {
+  _tryJoin(frame, prev, line) {
     if (
       frame.joinLimit <= 1 ||
-      !frame.lines.length ||
-      !line.canJoin ||
-      line.childNesting >= this.cfg.joinNesting
-    ) {
-      return false;
-    }
-
-    const prev = frame.lines[frame.lines.length - 1];
-
-    if (
-      !(
-        prev.canJoin &&
-        prev.childNesting < this.cfg.joinNesting &&
-        this._canMerge(prev, line, frame.joinLimit)
-      )
+      !this._canMerge(prev, line, frame.joinLimit)
     ) {
       return false;
     }
@@ -586,22 +730,54 @@ export class JSONFoldFilter {
     return true;
   }
 
-  _checkFoldLimits(frame) {
-    if (!frame.foldOk) return;
+  _joinFrame(frame) {
+    const lines = frame.lines;
+    const n = lines.length;
 
-    if (frame.contentLines > 1) {
-      frame.foldOk = false;
+    if (n < 2) {
       return;
+    }
+
+    let prev = lines[0];
+    let writePos = 1;
+
+    for (let readPos = 1; readPos < n; readPos++) {
+      const line = lines[readPos];
+
+      if (
+        prev.canJoin &&
+        line.canJoin &&
+        this._canMerge(prev, line, frame.joinLimit)
+      ) {
+        prev.joinLine(line);
+        prev.canPack = false;
+      } else {
+        if (readPos !== writePos) {
+          lines[writePos] = line;
+        }
+        prev = line;
+        writePos++;
+      }
+    }
+
+    lines.length = writePos;
+    frame.contentLines -= (n - writePos);
+  }
+
+  _checkFoldLimits(frame) {
+    if ( frame.length > this.cfg.width) {
+      return false
     }
 
     if (frame.items > frame.foldLimit) {
-      frame.foldOk = false;
-      return;
+      return false;
     }
 
     if (frame.childNesting >= this.cfg.foldNesting) {
-      frame.foldOk = false;
+      return false;
     }
+
+    return true;
   }
 
   _closeFrame(closer, closingKind) {
@@ -614,11 +790,28 @@ export class JSONFoldFilter {
     frame.lines.push(closer);
 
     if (frame.kind !== closingKind) {
-      frame.foldOk = false;
+      frame.foldOk = false
+      frame.gridOk = false
     }
 
-    const folded = this._tryFold(frame);
-    if (folded !== null) frame.lines = [folded];
+    if (frame.gridOk) {
+      if (this._tryGrid(frame)) {
+        this._markNoGrid();
+      } else {
+        this._markNoGrid();
+        this._joinFrame(frame)
+        frame.foldOk = this._checkFoldLimits(frame)
+      }
+    }
+
+    if (frame.foldOk) {
+      if ( this._tryFold(frame)) {
+        if (this.stack.length && frame.lines[0].canGrid) {
+          const parentFrame = this.stack[this.stack.length - 1];
+          if (parentFrame.contentLines === 0) parentFrame.gridOk = true;
+        }
+      }
+    }
 
     this._emitLines(frame.lines);
     frame.lines.length = 0;
@@ -634,22 +827,89 @@ export class JSONFoldFilter {
     }
 
     const foldedLength =
-      frame.lines.reduce((sum, line) => sum + 1 + line.text.length, 0) - 1;
+      frame.lines.reduce((sum, line) => sum + 1 + line.length, 0) - 1;
 
     if (frame.lines[0].indent + foldedLength > this.cfg.width) {
       return null;
     }
 
-    return new Line({
+    const line = new Line({
       indent: frame.lines[0].indent,
-      text: frame.lines.map(line => line.text).join(" "),
+      parts: frame.lines.flatMap(line => line.parts),
+      kind: frame.kind,
       parentKind: this._parentKind(),
       items: 1,
       leafs: frame.leafs,
       childNesting: Math.max(0, frame.childNesting),
       canPack: false,
-      canJoin: true,
+      canJoin: frame.childNesting < this.cfg.joinNesting,
+      canGrid: this.cfg.gridMaxLines > 0,
     });
+
+    frame.lines = [ line ]
+    return true
+  }
+
+  static _formatParts(parts, widths) {
+    const last = widths.length - 1;
+    return parts.map((part, i) => (
+      "-0123456789".includes(part.slice(0, 1))
+        ? part.padStart(widths[i])
+        : i < last
+          ? part.padEnd(widths[i])
+          : part
+    ));
+  }
+
+  _tryGrid(frame) {
+    if (frame.kind != Kind.LIST ) return false
+
+    const lineCount = frame.lines.length - 2
+    if (
+      lineCount < 2 ||
+      lineCount < this.cfg.gridMinLines ||
+      lineCount > this.cfg.gridMaxLines
+    ) {
+      return false;
+    }
+
+    const lines = frame.lines.slice(1, -1)
+    const firstLine = lines[0];
+    const partCount = firstLine.parts.length;
+
+    if ( partCount< 4 || partCount-2 < frame.gridMinItems)
+      return false
+
+    if (lines.some(line => line.parts.length !== partCount)) {
+      return false;
+    }
+
+    if (firstLine.kind === Kind.DICT) {
+      const dictSignature = firstLine.dictSignature();
+      if (!dictSignature) return false;
+      if (lines.some(line => line.dictSignature() !== dictSignature)) {
+        return false;
+      }
+    }
+
+    const widths = Array.from({ length: partCount }, (_, i) =>
+      Math.max(...lines.map(line => line.parts[i].length))
+    );
+
+    const gridedLength = widths.reduce((sum, width) => sum + 1 + width, 0) - 1;
+    if (frame.lines[0].indent + gridedLength > this.cfg.width) {
+      return false;
+    }
+
+    for (const line of lines) {
+      const newParts = JSONFoldFilter._formatParts(line.parts, widths);
+      line.setParts(newParts);
+      line.canPack = false;
+      line.canJoin = false;
+      line.canGrid = false;
+    }
+
+    return true;
   }
 
   _streamFrame(frame) {
@@ -675,9 +935,11 @@ export class JSONFoldFilter {
     for (const frame of this.stack) {
       frame.foldOk = false;
     }
+  }
 
-    if (this.stack.length) {
-      this._streamFrame(this.stack[this.stack.length - 1]);
+  _markNoGrid() {
+    for (const frame of this.stack) {
+      frame.gridOk = false;
     }
   }
 
@@ -686,68 +948,119 @@ export class JSONFoldFilter {
   }
 }
 
-export function dump(obj, fp, {
-  compact = "",
-  indent = 2,
-  replacer = undefined,
-  sortKeys = false,
-} = {}) {
-  const out =
-    fp instanceof JSONFoldFilter
-      ? fp
-      : new JSONFoldFilter(fp, { compact });
+// Public API - OO
 
-  // const jsonReplacer = sortKeys
-  //   ? sortedReplacer(replacer)
-  //   : replacer;
-  // const text = JSON.stringify(value, jsonReplacer, indent);
+export class JSONFold {
 
-  const value =
-    sortKeys
-      ? sortObjectKeys(obj)
-      : obj;
+  constructor( width=undefined, config=undefined, {
+    doClose = false,
+    indent = 2,
+    gold = true,
+    json = JSON,
+    replacer = undefined,
+    sortKeys = false,
+  } = {} ) 
+  {
+    if ( sortKeys ) replacer = sortedReplacer(replacer)
 
-  const text = JSON.stringify(value, replacer, indent);
-
-  if (text !== undefined) {
-    out.write(text);
-    out.write("\n");
+    this.width  = width
+    this.config = JSONFoldConfig.resolve(config, width)
+    this.json = json
+    this.doClose = doClose
+    this.gold = gold
+    this.indent = indent
+    this.replacer = replacer
+    Object.seal(this)
   }
 
-  out.finish();
+  format(data)
+  {
+    const text = this.json.stringify(data, this.replacer, this.indent)
+    if ( typeof text != "string" ) return text
+
+    let buff = ""
+    const fp = s => { buff += s ; }
+    const out = new JSONFoldFilter(fp, { config: this.config })
+    out.write(text);
+    if ( ! text.endsWith("\n")) out.write("\n")
+    out.close()
+    return buff  
+  }
+
+  write(data, fp)
+  {
+    const text = this.json.stringify(data, this.replacer, this.indent)
+    if ( typeof text != "string" ) return text
+
+    const out = new JSONFoldFilter(fp, { config: this.config })
+    out.write(text);
+    const stats = out.stats
+    out.close()
+    return stats
+  }
+
+  fold(text)
+  {
+    let buff = ""
+    const fp = s => { buff += s ; }
+    const out = new JSONFoldFilter(fp, { config: this.config })
+    out.write(text)
+    out.close()
+    if ( ! text.endsWith("\n")) out.write("\n")
+    return buff  
+  }
+
+  // Public API - Helpers
+
 }
 
+// Public API - Functional
 
-export function dumpi(obj, fp, options = {}) {
-  const out =
-    fp instanceof JSONFoldFilter
-      ? fp
-      : new JSONFoldFilter(fp, {
-          compact: options.compact ?? "",
-        });
-
-  dump(obj, out, options);
-  return out.stats;
+export function create_writer(fp, { width=undefined, config= "", doClose= false} = {})
+{
+  const cfg = JSONFoldConfig.resolve(config, width)
+  return new JSONFoldFilter( fp , { config: cfg, doClose})
 }
 
-export function stringify(obj, options = {}) {
-  let text = "";
+export function write_json(data, fp, width, config = "", ...args)
+{
+  const fmt = new JSONFold(width, config, ...args )
+  const stats = fmt.write(data, fp)
+  return stats
+}
 
-  dump(obj, s => {
-    text += s;
-  }, options);
+export function format_json(data, width, config = "", ...args)
+{
+  const fmt = new JSONFold( width, config, ...args)
+  return fmt.format(data)
+}
+
+export function jsonfold_config(config, width, overrides)
+{
+  return JSONFoldConfig.resolve(config, width, overrides)
+}
+
+export function fold_text(text, width, config = "")
+{
+  const fmt = new JSONFold(width, config)
+  const output = fmt.fold(text)
+  return output
+}
+
+// Compatability API
+
+export function stringify(data, replacer = null, space = null) {
+  let options = {}
+  if ( space && typeof space === "object" && !Array.isArray(space)) {
+    options = { ... space }
+  } else {
+    options.indent = space ?? 2
+  }
+
+  if ( replacer != null ) options.replacer = replacer
+
+  const text = format_json(data, options.width, options.config, options);
 
   return text;
 }
 
-export const dumps = stringify;
-
-export default {
-  JSONFold,
-  JSONFoldFilter,
-  JSONFoldStats,
-  dump,
-  dumpi,
-  stringify,
-  dumps,
-};

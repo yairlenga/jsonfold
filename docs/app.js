@@ -1,4 +1,4 @@
-import { JSONFold, stringify } from "./jsonfold.js";
+import { fold_text } from "./jsonfold.js";
 
 const SAMPLE_JSON = `{
   "name": "jsonfold",
@@ -8,6 +8,43 @@ const SAMPLE_JSON = `{
     3,
     4,
     5
+  ],
+  "products": [
+    {
+      "id": 1,
+      "name": "USB Cable",
+      "price": 9.99,
+      "stock": 124,
+      "category": "Accessories"
+    },
+    {
+      "id": 20,
+      "name": "Wireless Mouse",
+      "price": 29.95,
+      "stock": 8,
+      "category": "Peripherals"
+    },
+    {
+      "id": 305,
+      "name": "Mechanical Keyboard",
+      "price": 129.5,
+      "stock": 42,
+      "category": "Peripherals"
+    },
+    {
+      "id": 4001,
+      "name": "4K Monitor",
+      "price": 399.99,
+      "stock": 3,
+      "category": "Displays"
+    },
+    {
+      "id": 52,
+      "name": "Laptop Stand",
+      "price": 24.5,
+      "stock": 75,
+      "category": "Accessories"
+    }
   ],
   "nested": {
     "a": [
@@ -140,7 +177,6 @@ function updateStats(rawText, prettyText, foldedText) {
             : 0;
 
     const ri = readabilityIndex(folded, pretty)
-    console.log(ri)
 
     stats.textContent =
         `Reduction: ${reduction}% | ` + 
@@ -161,16 +197,8 @@ function format() {
 
         const prettyText = JSON.stringify(obj, null, indent);
 
-        let compact = JSONFold.preset(compactName);
-
-        if (compact) {
-            compact = compact.replace({ width });
-        }
-
-        const foldedText = stringify(obj, {
-            compact,
-            indent,
-        });
+        let foldedText = fold_text(prettyText, width, compactName);
+        console.log(compactName, width)
 
         output.value = foldedText;
 

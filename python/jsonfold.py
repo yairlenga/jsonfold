@@ -234,13 +234,13 @@ class JSONFoldConfig:
 # Commented out next line - trouble with kernprof
 #    _: KW_ONLY
     # Phase 1 – pack scalars N-per-line
-    pack_array_items: int = 8       # max scalars per line inside a list
-    pack_obj_items:   int = 4       # max scalars per line inside a dict
+    pack_array_items: int = 10       # max scalars per line inside a list
+    pack_obj_items:   int = 5       # max scalars per line inside a dict
     pack_nesting:     int = 1       # max container nesting depth for packing
 
     # Phase 2 – fold single-content-line containers onto one line
-    fold_array_items: int = 8       # max items allowed in a folded list
-    fold_obj_items:   int = 4       # max items allowed in a folded dict
+    fold_array_items: int = 10       # max items allowed in a folded list
+    fold_obj_items:   int = 5       # max items allowed in a folded dict
     fold_nesting:     int = 1       # max container nesting depth for folding
 
     # Phase 3 - aligning packed lines
@@ -338,11 +338,11 @@ class JSONFoldConfig:
             ),
 
             "high": replace(base_cfg,
-                pack_array_items = 16,
-                pack_obj_items   = 8,
+                pack_array_items = 20,
+                pack_obj_items   = 10,
                 pack_nesting     = 4,
-                fold_array_items = 16,
-                fold_obj_items   = 8,
+                fold_array_items = 20,
+                fold_obj_items   = 10,
                 fold_nesting     = 4,
                 grid_array_min   = 4,
                 grid_obj_min     = 4,

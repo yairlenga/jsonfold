@@ -1,8 +1,6 @@
 // jsonfold.js
 // Hybrid pretty/compact JSON output for JavaScript.
 
-import { timingSafeEqual } from "node:crypto";
-
 export const Kind = Object.freeze({
   NONE: 0,
   DICT: 1,
@@ -33,11 +31,11 @@ export const MAX_WIDTH = 255 ;
 export class JSONFoldConfig {
   constructor({
     width = DEFAULT_WIDTH,
-    packArrayItems = 8,
-    packObjItems = 4,
+    packArrayItems = 10,
+    packObjItems = 5,
     packNesting = 1,
-    foldArrayItems = 8,
-    foldObjItems = 4,
+    foldArrayItems = 10,
+    foldObjItems = 5,
     foldNesting = 1,
     gridArrayItems = MAX_ARRAY_ITEMS,
     gridObjItems = MAX_OBJ_ITEMS,
@@ -164,11 +162,11 @@ export class JSONFoldConfig {
       classic: base_cfg.replace({gridMaxLines: 0}),
 
       high: base_cfg.replace({
-        packArrayItems: 16,
-        packObjItems: 8,
+        packArrayItems: 20,
+        packObjItems: 10,
         packNesting: 4,
-        foldArrayItems: 16,
-        foldObjItems: 8,
+        foldArrayItems: 20,
+        foldObjItems: 10,
         foldNesting: 4,
 
         gridArrayMin: 4,
