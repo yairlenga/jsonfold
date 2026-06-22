@@ -12,8 +12,9 @@ build:
 
 test:
 	./api_test.js
-	cd ../tests/unit && ./run_tests.sh javascript
-	cd ../tests/samples && ./run_tests.sh javascript
+	cd ../tests/unit && ../run_tests.sh -mjavascript
+	cd ../tests/samples && ../run_tests.sh -mjavascript
+	cd ../tests/future && ../run_tests.sh -mjavascript
 
 package:
 	npm pack

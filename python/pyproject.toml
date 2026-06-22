@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jsonfold"
-version = "0.1.9"
+version = "0.2.0"
 description = "Compact readable JSON formatter"
 readme = "README.md"
 requires-python = ">=3.10"

@@ -1,6 +1,8 @@
 // jsonfold.js
 // Hybrid pretty/compact JSON output for JavaScript.
 
+import { timingSafeEqual } from "node:crypto";
+
 export const Kind = Object.freeze({
   NONE: 0,
   DICT: 1,
@@ -19,7 +21,7 @@ export const MAX_OBJ_ITEMS = 1000;
 export const MAX_NESTING = 10;
 export const MAX_GRID_LINES = 1000;
 export const DEFAULT_WIDTH = 100;
-
+export const MAX_WIDTH = 255 ;
 
 /**
  * Configuration for JSON folding.
@@ -37,28 +39,32 @@ export class JSONFoldConfig {
     foldArrayItems = 8,
     foldObjItems = 4,
     foldNesting = 1,
-    gridArrayItems = 0,
-    gridObjItems = 0,
-    gridMinLines = 0,
-    gridMaxLines = 0,
+    gridArrayItems = MAX_ARRAY_ITEMS,
+    gridObjItems = MAX_OBJ_ITEMS,
+    gridMinLines = 3,
+    gridMaxLines = 100,
+    gridArrayMin = 3,
+    gridObjMin = 3,
     joinArrayItems = 8,
     joinObjItems = 4,
     joinNesting = 1,
   } = {}) {
     this.width = width;
 
-    this.packArrayItems = packArrayItems;
-    this.packObjItems = packObjItems;
-    this.packNesting = packNesting;
+    this.packArrayItems = packArrayItems
+    this.packObjItems = packObjItems
+    this.packNesting = packNesting
 
-    this.foldArrayItems = foldArrayItems;
-    this.foldObjItems = foldObjItems;
-    this.foldNesting = foldNesting;
+    this.foldArrayItems = foldArrayItems
+    this.foldObjItems = foldObjItems
+    this.foldNesting = foldNesting
 
-    this.gridArrayItems = gridArrayItems;
-    this.gridObjItems = gridObjItems;
-    this.gridMinLines = gridMinLines;
-    this.gridMaxLines = gridMaxLines;
+    this.gridArrayItems = gridArrayItems
+    this.gridObjItems = gridObjItems
+    this.gridMinLines = gridMinLines
+    this.gridMaxLines = gridMaxLines
+    this.gridObjMin = gridObjMin
+    this.gridArrayMin = gridArrayMin
 
     this.joinArrayItems = joinArrayItems;
     this.joinObjItems = joinObjItems;
@@ -72,7 +78,7 @@ export class JSONFoldConfig {
   }
 
   static preset(name = "") {
-    if (!Object.prototype.hasOwnProperty.call(JSONFoldConfig.PRESETS, name)) {
+    if (!Object.hasOwn(this.PRESETS, name)) {
       throw new Error(`unknown JSONFold preset: ${name}`);
     }
     return JSONFoldConfig.PRESETS[name];
@@ -89,100 +95,105 @@ export class JSONFoldConfig {
     }
     return cfg
   }
+
+  static setup() {
+    const base_cfg = new this()
+    const none_cfg = new this( {
+      packArrayItems: 0,
+      packObjItems: 0,
+      packNesting: 0,
+      foldArrayItems: 0,
+      foldObjItems: 0,
+      foldNesting: 0,
+      gridArrayItems: 0,
+      gridObjItems: 0,
+      gridMinLines: 0,
+      gridMaxLines: 0,
+      joinArrayItems: 0,
+      joinObjItems: 0,
+      joinNesting: 0,
+    })
+
+    const packMax = {
+      "packArrayItems": MAX_ARRAY_ITEMS,
+      "packObjItems": MAX_OBJ_ITEMS,
+      "packNesting": MAX_NESTING,
+    }
+
+    const foldMax = {
+      "foldArrayItems": MAX_ARRAY_ITEMS,
+      "foldObjItems": MAX_OBJ_ITEMS,
+      "foldNesting": MAX_NESTING,
+    }
+
+    const joinMax = {
+      "joinArrayItems": MAX_ARRAY_ITEMS,
+      "joinObjItems": MAX_OBJ_ITEMS,
+      "joinNesting": MAX_NESTING,
+    }
+
+    const gridMax = {
+      "gridArrayItems": MAX_ARRAY_ITEMS,
+      "gridObjItems": MAX_OBJ_ITEMS,
+      "gridMinLines": 3,
+      "gridMaxLines": MAX_GRID_LINES,
+    }
+
+    this.DEFAULT = base_cfg
+    this.NONE = none_cfg
+
+    this.PRESETS = Object.freeze({
+      off: null,
+
+      default: base_cfg,
+      "": base_cfg,
+
+      none: none_cfg,
+
+      low: base_cfg.replace({
+        foldNesting: 0,
+        joinNesting: 0,
+        gridMaxLines: 0,
+      }),
+
+      med: base_cfg.replace({
+        joinNesting: 0,
+        gridMaxLines: 0,
+      }),
+
+      classic: base_cfg.replace({gridMaxLines: 0}),
+
+      high: base_cfg.replace({
+        packArrayItems: 16,
+        packObjItems: 8,
+        packNesting: 4,
+        foldArrayItems: 16,
+        foldObjItems: 8,
+        foldNesting: 4,
+
+        gridArrayMin: 4,
+        gridObjMin: 4,
+
+        joinArrayItems: 16,
+        joinObjItems: 8,
+        joinNesting: 2,
+      }),
+
+      max: none_cfg.replace({width: MAX_WIDTH, ...packMax, ...foldMax, ...joinMax, gridArrayMin:4, gridObjMin:4}),
+
+      pack: none_cfg.replace({ ...packMax}),
+      fold: none_cfg.replace({ ...foldMax}),
+      grid: none_cfg.replace({ ...packMax, ...foldMax, ...gridMax}),
+      join: none_cfg.replace({ ...foldMax, 
+        joinArrayItems: MAX_ARRAY_ITEMS,
+        joinObjItems: MAX_OBJ_ITEMS,
+        joinNesting: MAX_NESTING,
+      })
+    });
+  }
 }
+JSONFoldConfig.setup()
 
-JSONFoldConfig.NONE = new JSONFoldConfig({
-  packArrayItems: 0,
-  packObjItems: 0,
-  packNesting: 0,
-  foldArrayItems: 0,
-  foldObjItems: 0,
-  foldNesting: 0,
-  gridArrayItems: 0,
-  gridObjItems: 0,
-  gridMinLines: 0,
-  gridMaxLines: 0,
-  joinArrayItems: 0,
-  joinObjItems: 0,
-  joinNesting: 0,
-});
-
-JSONFoldConfig.DEFAULT = new JSONFoldConfig();
-
-JSONFoldConfig.PRESETS = Object.freeze({
-  off: null,
-  "": JSONFoldConfig.DEFAULT,
-  default: JSONFoldConfig.DEFAULT,
-  none: JSONFoldConfig.NONE,
-
-  low: JSONFoldConfig.DEFAULT.replace({
-    foldNesting: 0,
-    joinNesting: 0,
-  }),
-
-  med: JSONFoldConfig.DEFAULT.replace({
-    joinNesting: 0,
-  }),
-
-  high: JSONFoldConfig.DEFAULT.replace({
-    packArrayItems: 16,
-    packObjItems: 8,
-    packNesting: 4,
-    foldArrayItems: 16,
-    foldObjItems: 8,
-    foldNesting: 4,
-    joinArrayItems: 16,
-    joinObjItems: 8,
-    joinNesting: 2,
-  }),
-
-  max: JSONFoldConfig.NONE.replace({
-    width: 255,
-    packArrayItems: MAX_ARRAY_ITEMS,
-    packObjItems: MAX_OBJ_ITEMS,
-    packNesting: MAX_NESTING,
-    foldArrayItems: MAX_ARRAY_ITEMS,
-    foldObjItems: MAX_OBJ_ITEMS,
-    foldNesting: MAX_NESTING,
-    joinArrayItems: MAX_ARRAY_ITEMS,
-    joinObjItems: MAX_OBJ_ITEMS,
-    joinNesting: MAX_NESTING,
-  }),
-
-  grid: JSONFoldConfig.DEFAULT.replace({
-    packArrayItems: MAX_ARRAY_ITEMS,
-    packObjItems: MAX_OBJ_ITEMS,
-    packNesting: MAX_NESTING,
-    foldArrayItems: MAX_ARRAY_ITEMS,
-    foldObjItems: MAX_OBJ_ITEMS,
-    foldNesting: MAX_NESTING,
-    gridArrayItems: MAX_ARRAY_ITEMS,
-    gridObjItems: MAX_OBJ_ITEMS,
-    gridMinLines: 3,
-    gridMaxLines: MAX_GRID_LINES,
-  }),
-
-  pack: JSONFoldConfig.NONE.replace({
-    packArrayItems: MAX_ARRAY_ITEMS,
-    packObjItems: MAX_OBJ_ITEMS,
-    packNesting: MAX_NESTING,
-  }),
-
-  fold: JSONFoldConfig.NONE.replace({
-    foldArrayItems: MAX_ARRAY_ITEMS,
-    foldObjItems: MAX_OBJ_ITEMS,
-    foldNesting: MAX_NESTING,
-  }),
-
-  join: JSONFoldConfig.NONE.replace({
-    foldArrayItems: MAX_ARRAY_ITEMS,
-    foldObjItems: MAX_OBJ_ITEMS,
-    foldNesting: MAX_NESTING,
-    joinArrayItems: MAX_ARRAY_ITEMS,
-    joinObjItems: MAX_OBJ_ITEMS,
-    joinNesting: MAX_NESTING,
-  }),
-});
 
 const KEY_RE = /^\s*(?:"[^"\\]*"|'[^'\\]*'|[A-Za-z_$][A-Za-z0-9_$]*|)\s*:/;
 
@@ -215,6 +226,7 @@ export class Line {
     this.canJoin = canJoin;
     this.canPack = canPack;
     this.canGrid = canGrid;
+    Object.seal(this)
   }
 
   static partsLength(parts) {
@@ -257,7 +269,7 @@ export class Line {
   }
 
   joinLine(other) {
-    if ( other.parts ) return
+    if ( !other.parts.length ) return
     this.parts.push(...other.parts);
     this.length += 1 + other.length;
     this.items += other.items;
@@ -292,27 +304,32 @@ export class Frame {
     kind,
     depth,
     lines = [],
+    length = 0,
     packLimit = 0,
     foldLimit = 0,
     joinLimit = 0,
     gridLimit = 0,
+    gridMinItems = 0,
+
   }) {
     this.kind = kind;
-    this.depth = depth;
-    this.lines = lines;
+    this.depth = depth
+    this.lines = lines
+    this.length = length
+    this.packLimit = packLimit
+    this.foldLimit = foldLimit
+    this.joinLimit = joinLimit
+    this.gridLimit = gridLimit
+    this.gridMinItems = gridMinItems
 
-    this.packLimit = packLimit;
-    this.foldLimit = foldLimit;
-    this.joinLimit = joinLimit;
-    this.gridLimit = gridLimit;
+    this.contentLines = 0
+    this.items = 0
+    this.leafs = 0
 
-    this.contentLines = 0;
-    this.items = 0;
-    this.leafs = 0;
-
-    this.foldOk = true;
-    this.gridOk = false;
-    this.childNesting = -1;
+    this.foldOk = true
+    this.gridOk = false
+    this.childNesting = -1
+    Object.seal(this)
   }
 }
 
@@ -341,6 +358,7 @@ export class JSONFoldStats {
 
     /** @type {number} Output line count. */
     this.linesOut = 0;
+    Object.seal(this)
   }
 }
 
@@ -366,14 +384,6 @@ function writeAny(writer, s) {
   }
 
   throw new TypeError("writer must be a function or an object with write(s)");
-}
-
-function countNewlines1(s) {
-  let n = 0;
-  for (let i = 0; i < s.length; i++) {
-    if (s.charCodeAt(i) === 10) n++;
-  }
-  return n;
 }
 
 function countNewlines(s) {
@@ -440,6 +450,7 @@ export class JSONFoldFilter {
     this.doClose = doClose
     this.pending = "";
     this.stack = [];
+    Object.seal(this)
   }
 
   write(s) {
@@ -478,7 +489,7 @@ export class JSONFoldFilter {
 
     const parts = s.split("\n")
     if ( this.pending ) {
-      parts[0] = s.pending + parts[0]
+      parts[0] = this.pending + parts[0]
       this.pending = ""
     }
     if ( ! s.endsWith("\n")) {
@@ -536,10 +547,12 @@ export class JSONFoldFilter {
         kind: opener,
         depth: this.stack.length,
         lines: [line],
+        length: line.length,
         packLimit: this._packLimit(opener),
         foldLimit: this._foldLimit(opener),
         joinLimit: this._joinLimit(opener),
         gridLimit: this._gridLimit(opener),
+        gridMinItems: this._gridMinItems(opener),
       }));
 
       if (line.width() > this.cfg.width) {
@@ -614,17 +627,30 @@ export class JSONFoldFilter {
     });
   }
 
-  _addToFrame(frame, line, allowPack = true, allowJoin = true) {
-    if (frame.lines.length && !frame.gridOk) {
-      const prev = frame.lines[frame.lines.length - 1];
-      if (allowPack && line.canPack && prev.canPack && this._tryPack(frame, prev, line)) return;
-      if (allowJoin && line.canJoin && prev.canJoin && this._tryJoin(frame, prev, line)) return;
+  _gridMinItems(kind) {
+    return this._chooseLimit(kind, {
+      listLimit: this.cfg.gridArrayMin,
+      dictLimit: this.cfg.gridObjMin,
+    });
+
+  }
+
+  _addToFrame(frame, line) {
+
+    if (frame.lines.length) {
+      if (!frame.gridOk) {
+        const prev = frame.lines[frame.lines.length - 1];
+        if (line.canPack && prev.canPack && this._tryPack(frame, prev, line)) return;
+        if (line.canJoin && prev.canJoin && this._tryJoin(frame, prev, line)) return;
+      }
+
     } else if (!frame.foldOk && !line.canPack && !line.canJoin) {
       this._writeLine(line);
       return;
     }
 
     frame.lines.push(line);
+    frame.length += 1 + line.length
 
     if (frame.foldOk && line.width() > this.cfg.width) {
       this._markNoFold();
@@ -644,7 +670,10 @@ export class JSONFoldFilter {
       }
 
       if (frame.gridOk) {
-        if (!line.canGrid) frame.gridOk = false;
+        if (!line.canGrid) {
+          this._markNoGrid()
+          this._joinFrame(frame)
+        }
       }
     }
 
@@ -703,9 +732,43 @@ export class JSONFoldFilter {
     return true;
   }
 
+  _joinFrame(frame) {
+    const lines = frame.lines;
+    const n = lines.length;
+
+    if (n < 2) {
+      return;
+    }
+
+    let prev = lines[0];
+    let writePos = 1;
+
+    for (let readPos = 1; readPos < n; readPos++) {
+      const line = lines[readPos];
+
+      if (
+        prev.canJoin &&
+        line.canJoin &&
+        this._canMerge(prev, line, frame.joinLimit)
+      ) {
+        prev.joinLine(line);
+        prev.canPack = false;
+      } else {
+        if (readPos !== writePos) {
+          lines[writePos] = line;
+        }
+        prev = line;
+        writePos++;
+      }
+    }
+
+    lines.length = writePos;
+    frame.contentLines -= (n - writePos);
+  }
+
   _checkFoldLimits(frame) {
-    if (frame.contentLines > 1) {
-      return false;
+    if ( frame.length > this.cfg.width) {
+      return false
     }
 
     if (frame.items > frame.foldLimit) {
@@ -729,20 +792,27 @@ export class JSONFoldFilter {
     frame.lines.push(closer);
 
     if (frame.kind !== closingKind) {
-      frame.foldOk = false;
+      frame.foldOk = false
+      frame.gridOk = false
+    }
+
+    if (frame.gridOk) {
+      if (this._tryGrid(frame)) {
+        this._markNoGrid();
+      } else {
+        this._markNoGrid();
+        this._joinFrame(frame)
+        frame.foldOk = this._checkFoldLimits(frame)
+      }
     }
 
     if (frame.foldOk) {
-      const folded = this._tryFold(frame);
-      if (folded !== null) {
-        frame.lines = [folded];
+      if ( this._tryFold(frame)) {
         if (this.stack.length && frame.lines[0].canGrid) {
           const parentFrame = this.stack[this.stack.length - 1];
           if (parentFrame.contentLines === 0) parentFrame.gridOk = true;
         }
       }
-    } else if (frame.gridOk) {
-      if (this._tryGrid(frame)) this._markNoGrid();
     }
 
     this._emitLines(frame.lines);
@@ -765,7 +835,7 @@ export class JSONFoldFilter {
       return null;
     }
 
-    return new Line({
+    const line = new Line({
       indent: frame.lines[0].indent,
       parts: frame.lines.flatMap(line => line.parts),
       kind: frame.kind,
@@ -777,6 +847,9 @@ export class JSONFoldFilter {
       canJoin: frame.childNesting < this.cfg.joinNesting,
       canGrid: this.cfg.gridMaxLines > 0,
     });
+
+    frame.lines = [ line ]
+    return true
   }
 
   static _formatParts(parts, widths) {
@@ -791,18 +864,24 @@ export class JSONFoldFilter {
   }
 
   _tryGrid(frame) {
-    const lineCount = frame.lines.length - 2;
+    if (frame.kind != Kind.LIST ) return false
+
+    const lineCount = frame.lines.length - 2
     if (
-      lineCount < 1 ||
+      lineCount < 2 ||
       lineCount < this.cfg.gridMinLines ||
       lineCount > this.cfg.gridMaxLines
     ) {
       return false;
     }
 
-    const lines = frame.lines.slice(1, -1);
+    const lines = frame.lines.slice(1, -1)
     const firstLine = lines[0];
     const partCount = firstLine.parts.length;
+
+    if ( partCount< 4 || partCount-2 < frame.gridMinItems)
+      return false
+
     if (lines.some(line => line.parts.length !== partCount)) {
       return false;
     }
@@ -893,6 +972,7 @@ export class JSONFold {
     this.gold = gold
     this.indent = indent
     this.replacer = replacer
+    Object.seal(this)
   }
 
   format(data)
