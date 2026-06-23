@@ -215,6 +215,12 @@ import re
 # Configuration
 # ---------------------------------------------------------------------------
 
+try:
+    _profile = profile
+except NameError:
+    def _profile(func):
+        return func
+
 DEFAULT_WIDTH = 100
 MAX_ARRAY_ITEMS = 1000
 MAX_OBJ_ITEMS = 1000
@@ -241,7 +247,7 @@ class JSONFoldConfig:
     # Phase 2 – fold single-content-line containers onto one line
     fold_array_items: int = 10       # max items allowed in a folded list
     fold_obj_items:   int = 5       # max items allowed in a folded dict
-    fold_nesting:     int = 1       # max container nesting depth for folding
+    fold_nesting:     int = 2       # max container nesting depth for folding
 
     # Phase 3 - aligning packed lines
     # Grid limits are top of fold_limits, setting it to MAX imply they will
@@ -351,7 +357,7 @@ class JSONFoldConfig:
                 join_nesting     = 2,
             ),
 
-            "max": replace(base_cfg, width = 255,
+            "max": replace(base_cfg, width = MAX_WIDTH,
                 **pack_max, **fold_max, **join_max,
                 grid_array_min = 4,
                 grid_obj_min = 4,
@@ -405,7 +411,7 @@ KEY_RE = re.compile(
 class Line:
     indent: int
     parts: list[str] | None = field(default_factory=list)
-    parts_length: int | None  = None      # Current length of text/parts
+    parts_length: int | None  = 0      # Current length of text/parts
     kind: Kind = Kind.NONE          # When this is folded line.
     parent_kind: Kind = Kind.NONE   # "dict", "list", or None
     items:  int        = 1      # packed scalar count (>=1)
@@ -419,22 +425,12 @@ class Line:
     can_join: bool = True        # Line is possible candidate for join
     can_grid: bool = False       # Line is possible candidate for grid
 
-    try:
-        profile
-    except NameError:
-        def profile(func):
-            return func
-
     @staticmethod
-    def _parts_length(parts: list[str]) -> int:
+    def _calc_parts_length(parts: list[str]) -> int:
         return sum(len(part)+1 for part in parts)-1        
 
-    def __post_init__(self):
-        if self.parts_length == None:
-            self.parts_length = self._parts_length(self.parts) if len(self.parts) != 1 else len(self.parts[0])
-
     @classmethod
-    @profile
+    @_profile
     def parse(cls, s: str, parent_kind: Kind) -> "Line":
         stripped = s.lstrip()
         body=stripped.rstrip()
@@ -456,6 +452,8 @@ class Line:
             closer=closer,
             can_join=is_body_line,
             can_pack=is_body_line,
+            items = 1 if is_body_line else 0,
+            leafs = 1 if is_body_line else 0,
         )
 
     def raw(self) -> str:
@@ -464,7 +462,14 @@ class Line:
     def width(self) -> int:
         return self.indent + self.parts_length
        
-    def join_line(self, other: Line) -> None:
+    def can_merge(self, other: Line, item_limit: int, width_limit: int) -> bool:
+        return (
+            self.indent == other.indent
+            and self.items + other.items <= item_limit
+            and self.indent + self.parts_length + 1 + other.parts_length <= width_limit
+        )
+
+    def merge_line(self, other: Line) -> None:
         self.parts += other.parts
         if other.parts:
             self.parts_length += 1 + other.parts_length
@@ -476,7 +481,7 @@ class Line:
 
     def set_parts(self, parts: list[str]) -> None:
         self.parts = parts
-        self.parts_length = self._parts_length(self.parts)
+        self.parts_length = self._calc_parts_length(self.parts)
 
     def dict_signature(self) -> str:
         signature = []
@@ -487,6 +492,22 @@ class Line:
             signature.append(m[0])
             
         return tuple(signature) 
+    
+    @staticmethod
+    def _format_parts(parts: list[str], widths: list[int]) -> list[str]:
+        last = len(widths)-1
+        return [
+            (
+                part.rjust(widths[i])
+                if part[:1] in "-0123456789"
+                else part.ljust(widths[i]) if i<last
+                else part
+            ) for i, part in enumerate(parts)
+        ]
+    
+    def apply_grid(self, widths: list[int]) -> None:
+        new_parts = self._format_parts(self.parts, widths)
+        self.set_parts(new_parts)
 
 @dataclass(slots=True)
 class Frame:
@@ -507,6 +528,64 @@ class Frame:
     fold_ok: bool = True
     grid_ok: bool = False
     child_nesting: int = -1
+
+    def update_counts(self, line: Line, bump_content: bool) -> None:
+        if bump_content:
+            self.content_lines += 1
+        self.leafs += line.leafs
+        self.items += line.items    
+        if not line.opener and not line.closer:
+            self.parts_length += line.parts_length
+        if line.child_nesting >= self.child_nesting:
+            self.child_nesting = line.child_nesting+1
+
+    @_profile
+    def check_fold_limits(self, config: JSONFoldConfig) -> bool:
+#        if frame.content_lines > 1:
+#            return False
+        if self.parts_length > config.width:
+            return False
+
+        if self.items > self.fold_limit:
+            return False
+
+        if self.child_nesting >= config.fold_nesting:
+            return False
+
+        return True
+
+    @_profile
+    def join_lines(self, cfg: JSONFoldConfig) -> None:
+        """Apply join compaction to already-buffered lines."""
+
+        lines = self.lines
+        n = len(lines)
+        if n < 2:
+            return
+
+        prev = lines[0]
+        write_pos = 1
+
+        for read_pos in range(1, n):
+            line = lines[read_pos]
+
+            if (
+                prev.can_join
+                and line.can_join
+                and prev.can_merge(line, self.join_limit, cfg.width)
+            ):
+                prev.merge_line(line)
+                prev.can_pack = False
+
+            else:
+                if read_pos != write_pos:
+                    lines[write_pos] = line
+                prev = line
+                write_pos += 1
+
+        del lines[write_pos:]
+        self.content_lines -= (n-write_pos)
+        return    
 
 @dataclass(slots=True)
 class JSONFoldStats:
@@ -541,13 +620,8 @@ class JSONFoldWriter:
         self.do_close = do_close
 
     # ------------------------------------------------------------------ I/O
-    try:
-        profile
-    except NameError:
-        def profile(func):
-            return func
 
-    @profile
+    @_profile
     def write(self, s: str) -> int:
         s_len = len(s)
         self.stats.bytes_in += s_len
@@ -595,6 +669,8 @@ class JSONFoldWriter:
         self.fp.flush()
 
     def close(self) -> None:
+        self.finish()
+        self.fp.flush()
         if self.do_close:
             self.fp.close()
 
@@ -609,7 +685,6 @@ class JSONFoldWriter:
             for line in frame.lines:
                 self._write_line(line)
         self.stack.clear()
-
 
     def __enter__(self) -> "JSONFoldWriter":
         return self
@@ -631,7 +706,7 @@ class JSONFoldWriter:
         self._write_str(line.raw())
 
     # ------------------------------------------------------------ core feed
-    @profile
+    @_profile
     def _feed(self, line: Line) -> None:
         opener = line.opener
         if opener:
@@ -665,7 +740,7 @@ class JSONFoldWriter:
         else:
             self._write_line(line)
 
-    @profile
+    @_profile
     def _emit_lines(self, lines: list[Line], depth: int | None = None) -> None:
         if not lines:
             return
@@ -718,7 +793,7 @@ class JSONFoldWriter:
 
     # --------------------------------------------------------- phase 1: pack
 
-    @profile
+    @_profile
     def _add_to_frame(self, frame: Frame, line: Line) -> None:
 
         # pack/join relevant only if lines exists and grid not enabled
@@ -747,44 +822,29 @@ class JSONFoldWriter:
 
         # Add as new line
         frame.lines.append(line)
-        frame.parts_length += 1 + line.parts_length
+        frame.update_counts(line, True)
 
         if frame.fold_ok and line.width() > self.cfg.width:
             self._mark_no_fold()
 
-        if line.child_nesting >= frame.child_nesting:
-            frame.child_nesting = line.child_nesting+1
-
         if not line.closer:
-            frame.content_lines += 1
-            frame.leafs += line.leafs
-            frame.items += line.items
 
             if frame.fold_ok:
-                if not self._check_fold_limits(frame):
+                if not frame.check_fold_limits(self.cfg):
                     self._mark_no_fold()
 
             if frame.grid_ok:
                 if not line.can_grid:
                     self._mark_no_grid()
-                    self._join_frame(frame)
+                    frame.join_lines(self.cfg)
 
         if not frame.fold_ok and not frame.grid_ok:
             self._stream_frame(frame)
         return
 
-
-    @profile
-    def _can_merge(self, prev: Line, line: Line, limit: int) -> bool:
-        return (
-            prev.indent == line.indent
-            and prev.items + line.items <= limit
-            and prev.indent + prev.parts_length + 1 + line.parts_length <= self.cfg.width
-        )
-
-    @profile
+    @_profile
     def _merge_into_frame(self, frame: Frame, prev: Line, line: Line) -> None:
-        prev.join_line(line)
+        prev.merge_line(line)
 
         if prev.items >= frame.pack_limit or prev.child_nesting >= self.cfg.pack_nesting:
             prev.can_pack = False
@@ -792,22 +852,20 @@ class JSONFoldWriter:
         if prev.items >= frame.join_limit or prev.child_nesting >= self.cfg.join_nesting:
             prev.can_join = False
 
-#        frame.content_lines += 1
-        frame.items += line.items
-        frame.leafs += line.leafs
+        frame.update_counts(line, False)
 
         if frame.fold_ok:
-            if not self._check_fold_limits(frame):
+            if not frame.check_fold_limits(self.cfg):
                 self._mark_no_fold()
                 self._stream_frame(frame)
         return
 
-    @profile
+    @_profile
     def _try_pack(self, frame: Frame, prev: Line, line: Line) -> bool:
-        if ( frame.pack_limit <= 1 or
-#            line.child_nesting >= self.cfg.pack_nesting or
-#            prev.child_nesting >= self.cfg.pack_nesting or
-            not self._can_merge(prev, line, frame.pack_limit)):
+        if (
+            frame.pack_limit <= 1 or
+            not prev.can_merge(line, frame.pack_limit, self.cfg.width)
+            ):
             return False
 
         self._merge_into_frame(frame, prev, line)
@@ -816,71 +874,20 @@ class JSONFoldWriter:
 
         return True
     
-    @profile
-    def _try_join(self, frame: Frame, prev, line: Line) -> bool:        
+    @_profile
+    def _try_join(self, frame: Frame, prev: Line, line: Line) -> bool:        
         if (
             frame.join_limit <= 1 or
-#            line.child_nesting >= self.cfg.join_nesting or
-#            prev.child_nesting >= self.cfg.join_nesting or
-            not self._can_merge(prev, line, frame.join_limit)
+            not prev.can_merge(line, frame.join_limit, self.cfg.width)
         ):
             return False
 
         self._merge_into_frame(frame, prev, line)
         return True
 
-
-    @profile
-    def _join_frame(self, frame: Frame) -> None:
-        """Apply join compaction to already-buffered lines."""
-
-        lines = frame.lines
-        n = len(lines)
-        if n < 2:
-            return
-
-        prev = lines[0]
-        write_pos = 1
-
-        for read_pos in range(1, n):
-            line = lines[read_pos]
-
-            if (
-                prev.can_join
-                and line.can_join
-                and self._can_merge(prev, line, frame.join_limit)
-            ):
-                prev.join_line(line)
-                prev.can_pack = False
-
-            else:
-                if read_pos != write_pos:
-                    lines[write_pos] = line
-                prev = line
-                write_pos += 1
-
-        del lines[write_pos:]
-        frame.content_lines -= (n-write_pos)
-    # --------------------------------------------------------- frame tracking
-
-    @profile
-    def _check_fold_limits(self, frame: Frame) -> bool:
-#        if frame.content_lines > 1:
-#            return False
-        if frame.parts_length > self.cfg.width:
-            return False
-
-        if frame.items > frame.fold_limit:
-            return False
-
-        if frame.child_nesting >= self.cfg.fold_nesting:
-            return False
-
-        return True
-
     # --------------------------------------------------------- phase 2: fold
 
-    @profile
+    @_profile
     def _close_frame(self, closer: Line, closing_kind: Kind) -> None:
         if not self.stack:
             self._write_line(closer)
@@ -902,8 +909,8 @@ class JSONFoldWriter:
                 self._mark_no_grid()
             else:
                 self._mark_no_grid()
-                self._join_frame(frame)
-                frame.fold_ok = self._check_fold_limits(frame)
+                frame.join_lines(self.cfg)
+                frame.fold_ok = frame.check_fold_limits(self.cfg)
 
         if frame.fold_ok:
             if self._try_fold(frame):
@@ -924,7 +931,7 @@ class JSONFoldWriter:
     # To a single line:
     #   { "a" : "b" }
     # which is placed into the frame
-    @profile
+    @_profile
     def _try_fold(self, frame: Frame) -> bool:
         
         if (not frame.fold_ok or
@@ -939,13 +946,12 @@ class JSONFoldWriter:
         if first_line.indent + folded_length > self.cfg.width:
             return False
 
-#        parts = [part for part in line.parts for line in frame.lines]
-        parts = [part for line in frame.lines for part in line.parts]
-        
+        parts = [part for line in frame.lines for part in line.parts]       
 
         line = Line(
             indent=first_line.indent,
             parts = parts,
+            parts_length = folded_length,
             kind = frame.kind,
             parent_kind=self._parent_kind(),
             items=1,
@@ -953,24 +959,12 @@ class JSONFoldWriter:
             child_nesting=frame.child_nesting,
             can_pack=False,
             can_join=frame.child_nesting < self.cfg.join_nesting,
-            can_grid=self.cfg.grid_max_lines > 0,
+            can_grid=self.cfg.grid_max_lines > 0 and frame.items <= frame.grid_limit,
         )
         frame.lines = [ line ]
         return True
 
-    @staticmethod
-    def _format_parts(parts: list[str], widths: list[int]) -> list[str]:
-        last = len(widths)-1
-        return [
-            (
-                part.rjust(widths[i])
-                if part[:1] in "-0123456789"
-                else part.ljust(widths[i]) if i<last
-                else part
-            ) for i, part in enumerate(parts)
-        ]
-
-    @profile
+    @_profile
     def _try_grid(self, frame: Frame) -> bool:
         # currently, we only grid list of Dict or List of List.
         if frame.kind != Kind.LIST:
@@ -1014,8 +1008,7 @@ class JSONFoldWriter:
 
         # Rebuild combined text from the parts, adjusting for width
         for line in lines:
-            new_parts = self._format_parts(line.parts, widths)
-            line.set_parts(new_parts)
+            line.apply_grid(widths)
             line.can_pack = False
             line.can_join = False
             line.can_grid = False
@@ -1023,7 +1016,7 @@ class JSONFoldWriter:
         return True
 
     # --------------------------------------------------------- streaming
-    @profile
+    @_profile
     def _stream_frame(self, frame: Frame) -> None:
         lines = frame.lines
         if not lines:
@@ -1039,7 +1032,7 @@ class JSONFoldWriter:
             lines.append(last)
 
     # --------------------------------------------------------- misc helpers
-    @profile
+    @_profile
     def _mark_no_fold(self) -> None:
         for frame in self.stack:
             frame.fold_ok = False
