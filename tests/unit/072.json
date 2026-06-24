@@ -3,16 +3,15 @@
     "test": "none preset",
     "version": 1
   },
-  "would_pack": [
-    10,
-    20,
-    30,
-    40
-  ],
   "would_fold": {
     "name": "alpha",
     "ok": true
   },
+  "would_grid": [
+    { "id": 1,   "name": "alpha",   "qty": 12,   "size": "Medium" },
+    { "id": 20,  "name": "beta",    "qty": 3000, "size": "Large"  },
+    { "id": 300, "name": "Charlie", "qty": 4,    "size": "Tiny"   }
+  ],
   "would_join": [
     [
       1,
@@ -26,5 +25,11 @@
       5,
       6
     ]
+  ],
+  "would_pack": [
+    10,
+    20,
+    30,
+    40
   ]
 }
