@@ -36,7 +36,7 @@ export class JSONFoldConfig {
     packNesting = 1,
     foldArrayItems = 10,
     foldObjItems = 5,
-    foldNesting = 1,
+    foldNesting = 2,
     gridArrayItems = MAX_ARRAY_ITEMS,
     gridObjItems = MAX_OBJ_ITEMS,
     gridMinLines = 3,
