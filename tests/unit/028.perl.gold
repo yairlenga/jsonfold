@@ -1,0 +1,1 @@
+{ "config": { "enabled": true, "ports": [ 80, 443 ] } }

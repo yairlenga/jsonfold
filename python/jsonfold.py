@@ -747,8 +747,6 @@ class JSONFoldWriter:
             frame.add_line(line)
             self.stack.append(frame)
 
-            if line.width > self.cfg.width:
-                self._mark_no_fold()
             return
 
         # Handle unexpected data outside any open frame

@@ -1,7 +1,5 @@
 {
-  "logging": {
-    "level": "info", "outputs": [ "stdout", "file" ]
-  },
+  "logging": { "level": "info", "outputs": [ "stdout", "file" ] },
   "service": {
     "enabled": true, "name": "gateway", "ports": [ 80, 443, 8443 ],
     "regions": {
