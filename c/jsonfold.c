@@ -12,6 +12,9 @@
 #define JSONFOLD_MAX_OBJ_ITEMS   1000
 #define JSONFOLD_MAX_NESTING     10
 #define JSONFOLD_DEFAULT_WIDTH   100
+#define JSONFOLD_MAX_GRID_LINES  1000
+
+#define PART_VEC_INLINE_ITEMS    8
 
 // count_t is integer which will never be negative. index, sizes, byte counts.
 typedef int count_t ;
@@ -22,50 +25,78 @@ typedef enum jsonfold_kind {
     JSONFOLD_KIND_LIST = 2
 } jsonfold_kind, JFKind ;
 
+typedef enum jsonfold_align {
+    JSONFOLD_ALIGN_NONE = 0,
+    JSONFOLD_ALIGN_LEFT = 1,
+    JSONFOLD_ALIGN_CENTER = 2,
+    JSONFOLD_ALIGN_RIGHT = 3,
+} JFAlign ;
+
+typedef struct line_part {
+    count_t off ;
+    count_t len ;
+    count_t width ;
+    JFAlign align:2 ;    
+} *JFPart ;
+
+typedef struct part_vec {
+    bool is_dynamic:1 ;
+    count_t n ;
+    count_t cap ;
+    int len ;            // Length of parts
+    JFPart v ;
+    struct line_part inline_parts[PART_VEC_INLINE_ITEMS] ;
+} *JFPartVec ;
+
 typedef struct line {
     int indent;
     char *text;
-    count_t len;
-    jsonfold_kind parent_kind;
-    int items;
-    int leafs;
-    int child_nesting;
+    count_t text_len;
+    struct part_vec parts ;
+    jsonfold_kind kind;
+    count_t items;
+    count_t leafs;
+    count_t child_nesting;
     jsonfold_kind opener;
     jsonfold_kind closer;
     bool can_join:1;
     bool can_pack:1;
+    bool can_grid:1;
 } *JFLine ;
 
 typedef struct line_vec {
     JFLine v;
-    int n;
-    int cap;
+    count_t n;
+    count_t cap;
 } *JFLineVec;
 
 typedef struct frame {
     jsonfold_kind kind;
-    int depth;
+    count_t depth;
     struct line_vec lines;
-    int pack_limit;
-    int fold_limit;
-    int join_limit;
-    int content_lines;
-    int items;
-    int leafs;
-    int fold_ok;
-    int child_nesting;
+    count_t pack_limit;
+    count_t fold_limit;
+    count_t join_limit;
+    count_t grid_limit;
+    count_t grid_min_items;
+    count_t content_lines;
+    count_t items;
+    count_t leafs;
+    count_t child_nesting;
+    bool fold_ok:1;
+    bool can_grid:1 ;
 } *JFFrame;
 
 typedef struct frame_vec {
     JFFrame v;
-    int n;
-    int cap;
+    count_t n;
+    count_t cap;
 } *JFFrameVec;
 
 struct char_vec {
     char *v ;
-    int n ;
-    int cap ;
+    count_t n ;
+    count_t cap ;
 };
 
 struct jsonfold_writer {
@@ -88,6 +119,15 @@ static inline bool str_eq(const char *s1, const char *s2)
     return strcmp(s1, s2) == 0 ;
 }
 
+static char *str_ndup(const char *s, count_t len)
+{
+    char *copy = malloc(len+1) ;
+    if ( !copy ) return copy ;
+    memcpy(copy, s, len) ;
+    copy[len] = 0 ;
+    return copy ;
+}
+
 static count_t count_newlines(const char *s, int len) {
     int n = 0;
     for (int i=0;i<len;i++) if (s[i] == '\n') n++;
@@ -105,6 +145,7 @@ void *vec_resize(void *vec, count_t old_count, count_t new_count, count_t sz)
     return vec ;
 }
 
+
 ////////// JSONFOLD_CONFIG
 
 // width = 0 indicate no formatting at all.
@@ -119,25 +160,50 @@ static const struct jsonfold_config CFG_NONE = {
 
 static const struct jsonfold_config CFG_DEFAULT = {
     .width            = JSONFOLD_DEFAULT_WIDTH,
-    .pack_array_items = 8,
-    .pack_obj_items   = 4,
+    .pack_array_items = 10,
+    .pack_obj_items   = 5,
     .pack_nesting     = 1,
-    .fold_array_items = 8,
-    .fold_obj_items   = 4,
-    .fold_nesting     = 1,
+    .fold_array_items = 10,
+    .fold_obj_items   = 5,
+    .fold_nesting     = 2,
+
+    .grid_array_items = JSONFOLD_MAX_ARRAY_ITEMS,
+    .grid_obj_items   = JSONFOLD_MAX_OBJ_ITEMS,
+    .grid_min_lines   = 3,
+    .grid_max_lines   = 100,
+    .grid_array_min   = 3,
+    .grid_obj_min     = 3,
+
     .join_array_items = 8,
     .join_obj_items   = 4,
     .join_nesting     = 1,
 };
 
+static const struct jsonfold_config CFG_CLASSIC = {
+    .width            = JSONFOLD_DEFAULT_WIDTH,
+    .pack_array_items = 10,
+    .pack_obj_items   = 5,
+    .pack_nesting     = 1,
+    .fold_array_items = 10,
+    .fold_obj_items   = 5,
+    .fold_nesting     = 2,
+
+    .join_array_items = 8,
+    .join_obj_items   = 4,
+    .join_nesting     = 1,
+};
+
+
 static const struct jsonfold_config CFG_LOW = {
     .width            = JSONFOLD_DEFAULT_WIDTH,
-    .pack_array_items = 8,
-    .pack_obj_items   = 4,
+    .pack_array_items = 10,
+    .pack_obj_items   = 5,
     .pack_nesting     = 1,
     .fold_array_items = 8,
     .fold_obj_items   = 4,
     .fold_nesting     = 0,
+
+
     .join_array_items = 8,
     .join_obj_items   = 4,
     .join_nesting     = 0,
@@ -145,12 +211,12 @@ static const struct jsonfold_config CFG_LOW = {
 
 static const struct jsonfold_config CFG_MED = {
     .width            = JSONFOLD_DEFAULT_WIDTH,
-    .pack_array_items = 8,
-    .pack_obj_items   = 4,
+    .pack_array_items = 10,
+    .pack_obj_items   = 5,
     .pack_nesting     = 1,
-    .fold_array_items = 8,
-    .fold_obj_items   = 4,
-    .fold_nesting     = 1,
+    .fold_array_items = 10,
+    .fold_obj_items   = 5,
+    .fold_nesting     = 2,
     .join_array_items = 8,
     .join_obj_items   = 4,
     .join_nesting     = 0,
@@ -164,6 +230,14 @@ static const struct jsonfold_config CFG_HIGH = {
     .fold_array_items = 16,
     .fold_obj_items   = 8,
     .fold_nesting     = 4,
+
+    .grid_array_items = JSONFOLD_MAX_ARRAY_ITEMS,
+    .grid_obj_items   = JSONFOLD_MAX_OBJ_ITEMS,
+    .grid_min_lines   = 3,
+    .grid_max_lines   = 100,
+    .grid_array_min   = 3,
+    .grid_obj_min     = 3,
+
     .join_array_items = 16,
     .join_obj_items   = 8,
     .join_nesting     = 2,
@@ -177,6 +251,15 @@ static const struct jsonfold_config CFG_MAX = {
     .fold_array_items = JSONFOLD_MAX_ARRAY_ITEMS,
     .fold_obj_items   = JSONFOLD_MAX_OBJ_ITEMS,
     .fold_nesting     = JSONFOLD_MAX_NESTING,
+
+    .grid_array_items = JSONFOLD_MAX_ARRAY_ITEMS,
+    .grid_obj_items   = JSONFOLD_MAX_OBJ_ITEMS,
+    .grid_min_lines   = 3,
+    .grid_max_lines   = JSONFOLD_MAX_GRID_LINES,
+    .grid_array_min   = 3,
+    .grid_obj_min     = 3,
+
+
     .join_array_items = JSONFOLD_MAX_ARRAY_ITEMS,
     .join_obj_items   = JSONFOLD_MAX_OBJ_ITEMS,
     .join_nesting     = JSONFOLD_MAX_NESTING,
@@ -213,6 +296,7 @@ static struct { const char *name; JFConfig config ; } presets [] = {
     { "none", &CFG_NONE },
     { "low", &CFG_LOW },
     { "med", &CFG_MED },
+    { "classic", &CFG_CLASSIC },
     { "high", &CFG_HIGH },
     { "max", &CFG_MAX },
     { "pack", &CFG_PACK },
@@ -251,6 +335,71 @@ static inline JFConfig writer_config(JFWriter w)
     return w->cfg.width ? &w->cfg : NULL ;
 }
 
+////////// JSONFOLD part vec
+
+static void part_vec_init(JFPartVec v)
+{
+    *v = (struct part_vec) {} ;
+    v->cap = PART_VEC_INLINE_ITEMS;
+}
+
+static void part_vec_free(JFPartVec pv)
+{
+    if (pv->is_dynamic ) {
+        free(pv->v) ;
+    } ;
+    *pv = (struct part_vec) {} ;
+}
+
+static JFPart part_vec_item(JFPartVec pv, int pos)
+{
+    return pv->is_dynamic ? &pv->v[pos] : &pv->inline_parts[pos] ;
+}
+
+static JFPart part_vec_reserve(JFPartVec pv)
+{
+	int pos = pv->n++;
+
+    if ( pos < pv->cap ) return part_vec_item(pv, pos) ;
+
+    int new_cap = pv->cap ? pv->cap * 2 : PART_VEC_INLINE_ITEMS;
+    pv->v = vec_resize(pv->v, pv->cap, new_cap, sizeof(*pv->v)) ;
+    pv->cap = new_cap ;
+    if ( ! pv->is_dynamic ) {
+        memcpy(pv->v, pv->inline_parts, PART_VEC_INLINE_ITEMS*sizeof(*pv->v)) ;
+        pv->is_dynamic = true ;
+    }
+	return &pv->v[pos];
+}
+
+__attribute__((unused))
+static JFPart part_vec_append(JFPartVec v, count_t off, count_t len)
+{
+	JFPart p = part_vec_reserve(v);
+
+	*p = (struct line_part) {
+		.off = off,
+		.len = len,
+	};
+
+	v->len += len;
+	if (v->n > 1)
+		v->len++;
+
+	return p;
+}
+
+static void part_vec_concat(JFPartVec dest, JFPartVec src, int offset)
+{
+    for (int ip=0 ; ip < src->n ; ip++ ) {
+        JFPart part = part_vec_reserve(dest) ;
+        *part = *part_vec_item(src, ip) ;
+        part->off = offset + part->off ;
+    } ;
+    if ( dest->len ) dest->len++ ;
+    dest->len += src->len ;
+}
+
 ////////// JSONFOLD Line
 
 static const struct line EMPTY_LINE = {0} ;
@@ -264,30 +413,28 @@ static jsonfold_kind closing_kind(const char *s, count_t len) {
 }
 
 static count_t line_width(const JFLine l) {
-    return l->indent + l->len;
+    return l->indent + l->parts.len ;
 }
 
-static struct line line_parse(const char *s, count_t len, jsonfold_kind parent_kind) {
+static struct line line_parse(const char *s, count_t len) {
     count_t start = 0, end = len;
     while (start < len && (s[start] == ' ' || s[start] == '\t')) start++;
     while (end > start && (s[end-1] == ' ' || s[end-1] == '\t' || s[end-1] == '\r')) end--;
     count_t body_len = end - start;
 
-    char *body = (char *)malloc(body_len + 1);
-    memcpy(body, s + start, body_len);
-    body[body_len] = 0;
+    char *body = str_ndup(s+start, body_len) ;
 
     jsonfold_kind opener = JSONFOLD_KIND_NONE;
     if (body_len && body[body_len-1] == '{') opener = JSONFOLD_KIND_DICT;
     else if (body_len && body[body_len-1] == '[') opener = JSONFOLD_KIND_LIST;
     jsonfold_kind closer = closing_kind(body, body_len);
-    int is_body = parent_kind != JSONFOLD_KIND_NONE && opener == JSONFOLD_KIND_NONE && closer == JSONFOLD_KIND_NONE;
+    int is_body = opener == JSONFOLD_KIND_NONE && closer == JSONFOLD_KIND_NONE;
 
     struct line out = (struct line){
         .indent = (int)start,
         .text = body,
-        .len = body_len,
-        .parent_kind = parent_kind,
+        .text_len = body_len,
+        .kind = JSONFOLD_KIND_NONE,
         .items = 1,
         .leafs = 1,
         .child_nesting = -1,
@@ -296,33 +443,68 @@ static struct line line_parse(const char *s, count_t len, jsonfold_kind parent_k
         .can_join = is_body,
         .can_pack = is_body,
     };
+    part_vec_init(&out.parts) ;
+    part_vec_append(&out.parts, 0, body_len) ;
     return out ;
 }
 
 static void line_free(JFLine l) {
     free(l->text);
+    l->text = NULL ;
+    part_vec_free(&l->parts) ;
     *l = EMPTY_LINE ;
 }
 
 static bool lines_can_merge(JFConfig cfg, const JFLine prev, const JFLine  ln, int limit) {
     return prev->indent == ln->indent &&
         prev->items + ln->items <= limit &&
-        prev->indent + prev->len + 1 + ln->len <= cfg->width;
+        prev->indent + prev->parts.len + 1 + ln->parts.len <= cfg->width;
 }
 
 static void line_merge(JFLine dst, const JFLine src) {
-    char *p = (char *)realloc(dst->text, dst->len + 1 + src->len + 1);
+    char *p = (char *)realloc(dst->text, dst->text_len + 1 + src->text_len + 1);
     dst->text = p;
-    dst->text[dst->len++] = ' ';
-    memcpy(dst->text + dst->len, src->text, src->len + 1);
-    dst->len += src->len;
+    dst->text[dst->text_len++] = ' ';
+    int new_off = dst->text_len ;
+    memcpy(dst->text + new_off, src->text, src->text_len + 1);
+    dst->text_len += src->text_len;
     dst->items += src->items;
     dst->leafs += src->leafs;
     if (src->child_nesting > dst->child_nesting) {
         dst->child_nesting = src->child_nesting;
-        dst->can_pack = 0;
+        dst->can_pack = false;
     }
+    part_vec_concat(&dst->parts, &src->parts, new_off) ;
+
     return ;
+}
+
+__attribute__((unused))
+static void line_join(JFLine dst, const JFLine src) {
+    int old_len = dst->text_len ;
+    int total = old_len + (old_len ? 1 : 0) + src->text_len ;
+	char *p = realloc(dst->text, total + 1);
+	dst->text = p;
+
+	if (old_len) dst->text[dst->text_len++] = ' ';
+	count_t new_off = dst->text_len;
+
+	memcpy(dst->text + dst->text_len, src->text, src->text_len + 1);
+	dst->text_len += src->text_len;
+
+	JFPartVec src_parts = &src->parts ;
+	for (int i = 0 ; i < src->parts.n ; i++) {
+        JFPart part = part_vec_item(src_parts, i) ;
+		part_vec_append(&dst->parts, new_off + part->off, part->len);
+	}
+
+	dst->items += src->items;
+	dst->leafs += src->leafs;
+
+	if (src->child_nesting > dst->child_nesting) {
+		dst->child_nesting = src->child_nesting;
+		dst->can_pack = 0;
+	}
 }
 
 ////////// JSONFOLD Line Vector
@@ -369,7 +551,7 @@ static struct line line_vec_pop(JFLineVec lv) {
 static count_t folded_frame_len(JFFrame f)
 {
     count_t total = 0;
-    for (count_t i=0;i<f->lines.n;i++) total += f->lines.v[i].len ;
+    for (count_t i=0;i<f->lines.n;i++) total += f->lines.v[i].text_len ;
     return total + f->lines.n - 1 ;
 }
 
@@ -381,19 +563,13 @@ static void frame_free(JFFrame f) {
 static struct line make_folded_line(JFFrame f) {
     count_t total = folded_frame_len(f) ;
     char *text = (char *)malloc(total + 1);
-    count_t pos = 0;
-    for (count_t i=0;i<f->lines.n;i++) {
-        if (i) text[pos++] = ' ';
-        memcpy(text + pos, f->lines.v[i].text, f->lines.v[i].len);
-        pos += f->lines.v[i].len;
-    }
-    text[pos] = 0;
+
     JFLine first = &f->lines.v[0] ;
     struct line ln = (struct line){
-        .indent=f->lines.v[0].indent,
+        .indent=first->indent,
         .text=text,
-        .len=pos,
-        .parent_kind=first->parent_kind,
+        .text_len=total,
+        .kind=f->kind,
         .items=1,
         .leafs=f->leafs,
         .child_nesting=f->child_nesting,
@@ -401,6 +577,21 @@ static struct line make_folded_line(JFFrame f) {
         .closer=JSONFOLD_KIND_NONE,
         .can_join=1,
         .can_pack=0};
+
+    part_vec_init(&ln.parts) ;
+
+    count_t pos = 0;
+    for (count_t i=0;i<f->lines.n;i++) {
+        JFLine line = &f->lines.v[i] ;
+        if (i) text[pos++] = ' ';
+        memcpy(text + pos, f->lines.v[i].text,line->text_len);
+        // Copy the parts, then add offset based on where
+        // the text is placed into the target buffer
+        part_vec_concat(&ln.parts, &line->parts, pos) ;
+        pos += f->lines.v[i].text_len;
+    }
+    text[pos] = 0;
+
     return ln ;
 }
 
@@ -430,10 +621,6 @@ static JFFrame  frame_vec_reserve(JFFrameVec vec) {
 
 ////////// JSONFOLD Writer
 
-static jsonfold_kind parent_kind(JFWriter w) {
-    return w->stack.n ? w->stack.v[w->stack.n - 1].kind : JSONFOLD_KIND_NONE;
-}
-
 static count_t choose_limit(jsonfold_kind kind, int list_limit, int dict_limit) {
     return kind == JSONFOLD_KIND_LIST ? list_limit : kind == JSONFOLD_KIND_DICT ? dict_limit : 0;
 }
@@ -447,10 +634,14 @@ static bool write_string(JFWriter w, const char *s, count_t len) {
 }
 
 static bool write_line(JFWriter w, const JFLine l) {
-    for (int i=0;i<l->indent;i++) {
-        if (!write_string(w, " ", 1) ) return false ;
+    for (int ip=0 ; ip < l->parts.n ; ip++ ) {
+        int spaces = ip ? 1 : l->indent ;
+        for (int i=0;i<spaces;i++) {
+            if (!write_string(w, " ", 1) ) return false ;
+        }
+        JFPart p = part_vec_item(&l->parts, ip) ;
+        if ( !write_string(w, l->text+p->off, p->len)) return false ;
     }
-    if ( !write_string(w, l->text, l->len)) return false ;
     if ( !write_string(w, "\n", 1)) return false ;
     return true ;
 }
@@ -467,7 +658,7 @@ static bool stream_frame(JFWriter w, JFFrame f);
 
 static void mark_no_fold(JFWriter w) {
     for (count_t i=0;i<w->stack.n;i++)
-        w->stack.v[i].fold_ok = 0;
+        w->stack.v[i].fold_ok = false;
 
 }
 
@@ -489,10 +680,10 @@ static void merge_into_frame(JFWriter w, JFFrame f, JFLine prev, const JFLine ln
     line_free(ln) ;
 
     if (prev->items >= f->pack_limit ) {
-        prev->can_pack = 0;
+        prev->can_pack = false;
     }
     if (prev->items >= f->join_limit) {
-        prev->can_join = 0;
+        prev->can_join = false;
     }
 
     if (f->fold_ok ) {
@@ -515,7 +706,7 @@ static bool try_pack(JFWriter w, JFFrame f, JFLine ln) {
 
     merge_into_frame(w, f, prev, ln) ;
     if (!prev->can_pack) {
-        prev->can_join = 0 ;
+        prev->can_join = false ;
     }
     return true ;
 }
@@ -647,7 +838,7 @@ static void close_frame(JFWriter w, JFLine closer, jsonfold_kind closing_kind) {
     w->stack.v[pos] = (struct frame) { 0 } ;
 
     closer = line_vec_append(&f.lines, closer) ;
-    if (f.kind != closing_kind) f.fold_ok = 0;
+    if (f.kind != closing_kind) f.fold_ok = false;
 
     try_fold(w, &f) ;
     emit_lines(w, &f.lines, f.depth-1);
@@ -666,7 +857,7 @@ static void feed(JFWriter w, JFLine ln) {
             .pack_limit = choose_limit(ln->opener, cfg->pack_array_items, cfg->pack_obj_items),
             .fold_limit = choose_limit(ln->opener, cfg->fold_array_items, cfg->fold_obj_items),
             .join_limit = choose_limit(ln->opener, cfg->join_array_items, cfg->join_obj_items),
-            .fold_ok = 1,
+            .fold_ok = true,
             .child_nesting = -1,
         } ;
 
@@ -681,8 +872,8 @@ static void feed(JFWriter w, JFLine ln) {
 
     if (w->stack.n) {
         JFFrame f = &w->stack.v[w->stack.n - 1];
-        if (ln->items >= f->pack_limit) ln->can_pack = 0;
-        if (ln->items >= f->join_limit) ln->can_join = 0;
+        if (ln->items >= f->pack_limit) ln->can_pack = false;
+        if (ln->items >= f->join_limit) ln->can_join = false;
     }
     emit_line(w, ln);
 }
@@ -713,7 +904,7 @@ static void finish_writer(JFWriter w)
     JFConfig cfg = writer_config(w);
     if ( w->pending_len ) {
         if ( cfg ) {
-            struct line ln = line_parse(w->pending, w->pending_len, parent_kind(w)) ;
+            struct line ln = line_parse(w->pending, w->pending_len) ;
             w->pending_len = 0;
             feed(w, &ln) ;
         } else {
@@ -751,7 +942,7 @@ bool jsonfold_write(JFWriter w, const char *buf, size_t len) {
         void *p = memchr(w->pending + start, '\n', w->pending_len - start);
         if (!p) break;
         count_t nl = (char *)p - w->pending;
-        struct line ln = line_parse(w->pending + start, nl - start, parent_kind(w)) ;
+        struct line ln = line_parse(w->pending + start, nl - start) ;
         feed(w, &ln) ;
         start = nl + 1;
     }

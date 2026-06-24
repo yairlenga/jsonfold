@@ -24,6 +24,15 @@ enum {
     OPT_FOLD_OBJ_ITEMS,
     OPT_FOLD_NESTING,
 
+    OPT_GRID_ITEMS,
+    OPT_GRID_ARRAY_ITEMS,
+    OPT_GRID_OBJ_ITEMS,
+    OPT_GRID_NESTING,
+    OPT_GRID_ARRAY_MIN,
+    OPT_GRID_OBJ_MIN,
+    OPT_GRID_MIN_LINES,
+    OPT_GRID_MAX_LINES,
+
     OPT_JOIN_ITEMS,
     OPT_JOIN_ARRAY_ITEMS,
     OPT_JOIN_OBJ_ITEMS,
@@ -47,6 +56,16 @@ typedef struct {
     int fold_array_items;
     int fold_obj_items;
     int fold_nesting;
+
+    int grid_items ;
+    int grid_array_items;
+    int grid_obj_items;
+
+    int grid_min_lines;
+    int grid_max_lines;
+
+    int grid_array_min;
+    int grid_obj_min;
 
     int join_items;
     int join_array_items;
@@ -185,6 +204,13 @@ static void parse_args(int argc, char **argv, Options *opts)
         { "fold-obj-items",   required_argument, NULL, OPT_FOLD_OBJ_ITEMS },
         { "fold-nesting",     required_argument, NULL, OPT_FOLD_NESTING },
 
+        { "grid-items",       required_argument, NULL, OPT_GRID_ITEMS },
+        { "grid-array-items", required_argument, NULL, OPT_GRID_ARRAY_ITEMS },
+        { "grid-obj-items",   required_argument, NULL, OPT_GRID_OBJ_ITEMS },
+        { "grid-nesting",     required_argument, NULL, OPT_GRID_NESTING },
+        { "grid-array-min",   required_argument, NULL, OPT_GRID_ARRAY_MIN },
+        { "grid-obj-min",     required_argument, NULL, OPT_GRID_OBJ_MIN },
+
         { "join-items",       required_argument, NULL, OPT_JOIN_ITEMS },
         { "join-array-items", required_argument, NULL, OPT_JOIN_ARRAY_ITEMS },
         { "join-obj-items",   required_argument, NULL, OPT_JOIN_OBJ_ITEMS },
@@ -254,6 +280,28 @@ static void parse_args(int argc, char **argv, Options *opts)
             opts->fold_nesting = parse_int_or_die("--fold-nesting", optarg);
             break;
 
+        case OPT_GRID_ITEMS:
+            opts->grid_items = parse_int_or_die("--grid-items", optarg);
+            break;
+        case OPT_GRID_MIN_LINES:
+            opts->grid_min_lines = parse_int_or_die("--grid-min-lines", optarg);
+            break;
+        case OPT_GRID_MAX_LINES:
+            opts->grid_max_lines = parse_int_or_die("--grid-max-lines", optarg);
+            break;
+        case OPT_GRID_ARRAY_ITEMS:
+            opts->grid_array_items = parse_int_or_die("--grid-array-items", optarg);
+            break;
+        case OPT_GRID_OBJ_ITEMS:
+            opts->grid_obj_items = parse_int_or_die("--grid-obj-items", optarg);
+            break;
+        case OPT_GRID_ARRAY_MIN:
+            opts->grid_obj_items = parse_int_or_die("--grid-array-items", optarg);
+            break;
+        case OPT_GRID_OBJ_MIN:
+            opts->grid_obj_items = parse_int_or_die("--grid-obj-items", optarg);
+            break;
+
         case OPT_JOIN_ITEMS:
             opts->join_items = parse_int_or_die("--join-items", optarg);
             break;
@@ -306,6 +354,25 @@ static void apply_options(struct jsonfold_config *cfg, const Options *opts)
         cfg->fold_obj_items = opts->fold_obj_items;
     if (opts->fold_nesting >= 0)
         cfg->fold_nesting = opts->fold_nesting;
+
+    if (opts->grid_items >= 0) {
+        cfg->grid_array_items = opts->grid_items;
+        cfg->grid_obj_items = opts->grid_items;
+    }
+    if (opts->grid_array_items >= 0)
+        cfg->grid_array_items = opts->grid_array_items;
+    if (opts->grid_obj_items >= 0)
+        cfg->grid_obj_items = opts->grid_obj_items;
+
+    if (opts->grid_min_lines >= 0)
+        cfg->grid_min_lines = opts->grid_min_lines;
+    if (opts->grid_max_lines >= 0)
+        cfg->grid_max_lines = opts->grid_max_lines;
+
+    if (opts->grid_array_min >= 0)
+        cfg->grid_array_min = opts->grid_array_min;
+    if (opts->grid_obj_min >= 0)
+        cfg->grid_obj_min = opts->grid_obj_min;
 
     if (opts->join_items >= 0) {
         cfg->join_array_items = opts->join_items;

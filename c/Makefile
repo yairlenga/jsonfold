@@ -24,8 +24,8 @@ benchmark: benchmark.exe
 run-test:
 	./jsonfold.exe --demo
 	./benchmark.exe
-	cd ../tests/unit && ./run_tests.sh python
-	cd ../tests/samples && ./run_tests.sh python
+	cd ../tests/unit && ../run_tests.sh -mc
+	cd ../tests/samples && ../run_tests.sh -mc
 
 
 test: jsonfold.exe

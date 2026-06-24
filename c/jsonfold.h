@@ -19,15 +19,32 @@ extern "C" {
 
 struct jsonfold_config {
     int width;
+
+    /* Phase 1 - pack */
     int pack_array_items;
     int pack_obj_items;
     int pack_nesting;
+
+    /* Phase 2 - fold */
     int fold_array_items;
     int fold_obj_items;
     int fold_nesting;
+
+    /* Phase 3 - grid */
+    int grid_array_items;
+    int grid_obj_items;
+
+    int grid_min_lines;
+    int grid_max_lines;
+
+    int grid_array_min;
+    int grid_obj_min;
+
+    /* Phase 4 - join */
     int join_array_items;
     int join_obj_items;
     int join_nesting;
+
 } ;
 
 // Immultable config object

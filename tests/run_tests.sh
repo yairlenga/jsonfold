@@ -52,7 +52,7 @@ do
             echo "FAIL $label" >&2
         fi
     else
-        echo "SKIP $base: no $base.gold"
+        echo "SKIP $base: no $base.gold" >&2
     fi
 done
 

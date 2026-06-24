@@ -1,0 +1,5 @@
+{
+  "meta": { "test": "implicit default", "version": 1 }, "small_values": [ 1, 2, 3, 4 ],
+  "small_object": { "a": 1, "b": 2, "c": 3 },
+  "too_wide": [ "abcdefghijklmnopqrstuvwxyz0123456789", "short", "tail" ]
+}
