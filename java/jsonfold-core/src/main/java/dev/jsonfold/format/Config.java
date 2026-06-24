@@ -15,11 +15,12 @@ import java.util.Map;
  */
 public class Config {
 
-    public static final int MAX_ARRAY_ITEMS = 1000;
-    public static final int MAX_OBJ_ITEMS = 1000;
-    public static final int MAX_NESTING = 10;
-    public static final int MAX_GRID_LINES = 1000 ;
-    public static final int DEFAULT_WIDTH = 100;
+    private static final int MAX_ARRAY_ITEMS = 1000;
+    private static final int MAX_OBJ_ITEMS = 1000;
+    private static final int MAX_NESTING = 10;
+    private static final int MAX_GRID_LINES = 1000 ;
+    private static final int DEFAULT_WIDTH = 100;
+    private static final int MAX_WIDTH = 255;
 
     public static final String PRESET_DEFAULT = "default" ;
     public static final String PRESET_NONE = "none" ;
@@ -55,13 +56,13 @@ public class Config {
         if ( isDefault ) {
             width = DEFAULT_WIDTH;
 
-            packArrayItems = 8;
-            packObjItems = 4;
-            packNesting = 1;
+            packArrayItems = 10;
+            packObjItems = 5;
+            packNesting = 2;
 
-            foldArrayItems = 8;
-            foldObjItems = 4;
-            foldNesting = 1;
+            foldArrayItems = 10;
+            foldObjItems = 5;
+            foldNesting = 2;
 
             joinArrayItems = 8;
             joinObjItems = 4;
@@ -324,12 +325,12 @@ public class Config {
     private static Config createHigh() {
         Config cfg = createDefault();
 
-        cfg.packArrayItems = 16;
-        cfg.packObjItems = 8;
+        cfg.packArrayItems = 20;
+        cfg.packObjItems = 10;
         cfg.packNesting = 4;
 
-        cfg.foldArrayItems = 16;
-        cfg.foldObjItems = 8;
+        cfg.foldArrayItems = 20;
+        cfg.foldObjItems = 10;
         cfg.foldNesting = 4;
 
         cfg.joinArrayItems = 16;
@@ -342,7 +343,7 @@ public class Config {
     private static Config createMax() {
         Config cfg = createNone();
 
-        cfg.width = 255 ;
+        cfg.width = MAX_WIDTH ;
         cfg.packArrayItems = MAX_ARRAY_ITEMS;
         cfg.packObjItems = MAX_OBJ_ITEMS;
         cfg.packNesting = MAX_NESTING;

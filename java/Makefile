@@ -18,8 +18,8 @@ build:
 	mvn package
 
 test:
-	cd ../tests/unit && ./run_tests.sh java
-	cd ../tests/samples && ./run_tests.sh java
+	cd ../tests/unit && ../run_tests.sh -mjava
+	cd ../tests/samples && ../run_tests.sh -mjava
 
 benchmark:
 	./run.sh dev.jsonfold.format.Benchmark | tee bench.out
