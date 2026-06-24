@@ -134,7 +134,7 @@ class JSONFoldWriterTest {
                 "abcdefghijk1": "lmnopqrstuvwxyz1",
                 "abcdefghijk2": "lmnopqrstuvwxyz2"
               }
-            }
+            } 
             """;
 
         String expected = """

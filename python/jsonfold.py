@@ -358,7 +358,7 @@ class JSONFoldConfig:
             ),
 
             "max": replace(base_cfg, width = MAX_WIDTH,
-                **pack_max, **fold_max, **join_max,
+                **pack_max, **fold_max, **join_max, **grid_max,
                 grid_array_min = 4,
                 grid_obj_min = 4,
                 ),
@@ -546,8 +546,6 @@ class Frame:
 
     @_profile
     def check_fold_limits(self, config: JSONFoldConfig) -> bool:
-#        if frame.content_lines > 1:
-#            return False
         if self.parts_length > config.width:
             return False
 
@@ -575,7 +573,8 @@ class Frame:
             can_join=self.child_nesting < cfg.join_nesting,
             can_grid=cfg.grid_max_lines > 0 and self.items <= self.grid_limit,
         )
-        self.lines = [ line ]
+        self.lines.clear()
+        self.lines.append(line)
 
     @_profile
     def join_lines(self, cfg: JSONFoldConfig) -> None:
@@ -747,6 +746,9 @@ class JSONFoldWriter:
             )
             frame.add_line(line)
             self.stack.append(frame)
+
+            if line.width > self.cfg.width:
+                self._mark_no_fold()
             return
 
         # Handle unexpected data outside any open frame
@@ -928,10 +930,6 @@ class JSONFoldWriter:
 
         # Frame is removed stack.
         frame = self.stack.pop()
-
-
-#       Need to handle mismatch between closing and opening.
-#        if frame.kind != closing_kind: ...
 
         if frame.grid_ok:
             if self._try_grid(frame):

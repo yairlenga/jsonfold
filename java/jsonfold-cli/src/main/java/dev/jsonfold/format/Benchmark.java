@@ -41,22 +41,22 @@ public final class Benchmark {
     private static final List<String> DEFAULT_TESTS = List.of(
             "base.dump.plain",
             "base.dump.pretty",
-            "jsonfold.dump.off",
-            "jsonfold.dump.none",
-            "jsonfold.dump.default",
-            "jsonfold.dump.low",
-            "jsonfold.dump.med",
-            "jsonfold.dump.high",
-            "jsonfold.dump.max",
-            "jsonfold.dump.pack",
-            "jsonfold.dump.fold",
-            "jsonfold.dump.join",
+            "jf.dump.off",
+            "jf.dump.none",
+            "jf.dump.default",
+            "jf.dump.low",
+            "jf.dump.med",
+            "jf.dump.high",
+            "jf.dump.max",
+            "jf.dump.pack",
+            "jf.dump.fold",
+            "jf.dump.join",
             "base.dumps.plain",
             "base.dumps.pretty",
-            "jsonfold.dumps.none",
-            "jsonfold.dumps.default",
-            "jsonfold.dumps.high",
-            "jsonfold.dumps.max"
+            "jf.dumps.none",
+            "jf.dumps.default",
+            "jf.dumps.high",
+            "jf.dumps.max"
     );
 
     static private ObjectMapper createMapper() {
@@ -196,6 +196,19 @@ public final class Benchmark {
             for (int j = 0; j < 5; j++) {
                 values.add(i + j);
             }
+
+            ArrayNode pairs = r.putArray("pairs");
+            ArrayNode p0 = pairs.addArray();
+            p0.add(i);
+            p0.add(i + 1);
+
+            ArrayNode p1 = p0.addArray();
+            p1.add(i + 2);
+            p1.add(i + 3);
+
+            ArrayNode p2 = p0.addArray();
+            p2.add(i + 4);
+            p2.add(i + 5);
         }
 
         return root;
@@ -255,7 +268,7 @@ public final class Benchmark {
 
     private static void runJsonFoldCase(String name, ObjectNode data, OutputStream out) throws Exception {
         String[] parts = name.split("\\.");
-        if (parts.length != 3 || !parts[0].equals("jsonfold")) {
+        if (parts.length != 3 || !parts[0].equals("jf")) {
             throw new IllegalArgumentException("unknown benchmark case: " + name);
         }
 

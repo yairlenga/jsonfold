@@ -25,23 +25,22 @@ import java.util.regex.Pattern;
 final class Line {
 
     /** Leading indentation width in spaces. */
-    int indent;
+    final int indent;
 
+    /** For folded lines - the line kind */
     Kind kind = Kind.NONE ;
+
     List<String> parts = new ArrayList<>() ;
-    int length = 0 ;
+    int partsLength = 0 ;
 
     /** Line text without leading indentation or trailing newline. */
 //    String text;
 
-    /** Container kind of the parent frame, or {@link Kind#NONE}. */
-    Kind parentKind;
-
     /** Logical item count represented by this line. */
-    int items = 1;
+    int items ;
 
     /** Number of scalar leaf values represented by this line. */
-    int leafs = 1;
+    int leafs ;
 
     /**
      * Maximum folded child nesting represented by this line.
@@ -63,78 +62,8 @@ final class Line {
     /** Whether this line may be joined with another line. */
     boolean canJoin;
 
+    /** Whether this line may participate in a grid. */   
     boolean canGrid;
-
-    private Line() {
-    }
-
-
-    /**
-     * Parse one pretty-printed JSON line.
-     *
-     * @param s          line text without trailing newline
-     * @param parentKind parent container kind
-     * @return parsed line metadata
-     */
-    static Line parse(String s, Kind parentKind) {
-        Line line = new Line();
-
-        int start = 0;
-        while (start < s.length() && Character.isWhitespace(s.charAt(start))) {
-            start++;
-        }
-
-        String body = rstrip(s.substring(start));
-
-        line.indent = start;
-        line.parts.add(body);
-        line.length = body.length();
-        line.parentKind = parentKind;
-
-        if (body.endsWith("{")) {
-            line.opener = Kind.DICT;
-        } else if (body.endsWith("[")) {
-            line.opener = Kind.LIST;
-        }
-
-        line.closer = closingKind(body);
-
-        boolean isBodyLine = parentKind != Kind.NONE
-                && line.opener == Kind.NONE
-                && line.closer == Kind.NONE;
-
-        line.canPack = isBodyLine;
-        line.canJoin = isBodyLine;
-
-        return line;
-    }
-
-    /**
-     * Return this line as output text.
-     *
-     * @return indentation, line text, and trailing newline
-     */
-    String raw() {
-        return " ".repeat(indent) + String.join(" ", parts) + "\n";
-    }
-
-    /**
-     * Return the line text.
-     *
-     * @return indentation, line text, and trailing newline
-     */
-    String text() {
-        return String.join(" ", parts) ;
-    }
-
-    /**
-     * Return physical output width.
-     *
-     * @return indentation plus text length
-     */
-    int width() {
-        return indent + length;
-    }
 
     static int partsLength(List<String> parts) {
         if (parts.isEmpty()) {
@@ -152,7 +81,74 @@ final class Line {
 
     void setParts(List<String> parts) {
         this.parts = parts;
-        this.length = partsLength(parts);
+        this.partsLength = partsLength(parts);
+    }
+
+    Line(int indent) {
+        this.indent = indent;
+    }
+
+    /**
+     * Parse one pretty-printed JSON line.
+     *
+     * @param s          line text without trailing newline
+     * @return parsed line metadata
+     */
+    static Line parse(String s) {
+
+        int start = 0;
+        while (start < s.length() && Character.isWhitespace(s.charAt(start))) {
+            start++;
+        }
+
+        String body = rstrip(s.substring(start));
+
+        Line line = new Line(start) ;
+        line.parts.add(body) ;
+        line.partsLength = body.length() ;
+
+        if (body.endsWith("{")) {
+            line.opener = Kind.DICT;
+        } else if (body.endsWith("[")) {
+            line.opener = Kind.LIST;
+        }
+
+        line.closer = closingKind(body);
+
+        boolean isBodyLine = line.opener == Kind.NONE && line.closer == Kind.NONE;
+
+        line.canPack = isBodyLine;
+        line.canJoin = isBodyLine;
+        line.leafs = isBodyLine ? 1 : 0 ;
+        line.items = isBodyLine ? 1 : 0 ;
+
+        return line;
+    }
+
+    /**
+     * Return this line as output text.
+     *
+     * @return indentation, line text, and trailing newline
+     */
+    String raw() {
+        return " ".repeat(indent) + String.join(" ", parts) + "\n";
+    }
+
+    /**
+     * Return physical output width.
+     *
+     * @return indentation plus text length
+     */
+    int width() {
+        return indent + partsLength;
+    }
+
+    boolean canMerge(Line other, int itemLimit, int widthLimit) {
+        return (
+            this.indent == other.indent
+            && this.items + other.items <= itemLimit
+            && this.indent + this.partsLength + 1 + other.partsLength <= widthLimit
+        );
     }
 
     /**
@@ -163,10 +159,10 @@ final class Line {
      *
      * @param other line to append
      */
-    void merge(Line other) {
+    void mergeLine(Line other) {
         if ( other.parts.isEmpty() ) return ;
         this.parts.addAll(other.parts) ;
-        this.length += 1 + other.length;
+        this.partsLength += 1 + other.partsLength;
         items += other.items;
         leafs += other.leafs;
 
@@ -192,42 +188,7 @@ final class Line {
         return s.substring(0, end);
     }
 
-    /**
-     * Create a folded line from opener, body, and closer lines.
-     */
-    static Line fold(
-            List<Line> lines,
-            Kind kind,
-            Kind parentKind,
-            int leafs,
-            int childNesting) {
 
-        List<String> parts = new ArrayList<>();
-        int length = -1 ;
-        for (Line line: lines) {
-            parts.addAll(line.parts) ;
-            length += 1+line.length ;
-        };
-
-        Line line = new Line();
-        line.parts = parts ;
-        line.length = length ;
-
-        Line first = lines.get(0);
-        line.kind = kind ;
-        line.indent = first.indent;
-
-        line.parentKind = parentKind;
-        line.items = 1;
-        line.leafs = leafs;
-        line.childNesting = childNesting;
-        line.opener = Kind.NONE;
-        line.closer = Kind.NONE;
-        line.canPack = false;
-        line.canJoin = true;
-
-        return line;
-    }
 
     private static final Pattern KEY_RE = Pattern.compile(
             "^\\s*(?:\"[^\"\\\\]*\"|'[^'\\\\]*'|[A-Za-z_$][A-Za-z0-9_$]*)\\s*:"
@@ -245,6 +206,29 @@ final class Line {
         }
 
         return signature;
+    }
+
+    private static List<String> formatParts(List<String> parts, int[] widths) {
+        ArrayList<String> out = new ArrayList<>(parts.size());
+        int last = widths.length - 1;
+
+        for (int i = 0; i < parts.size(); i++) {
+            String part = parts.get(i);
+            if (!part.isEmpty() && "-0123456789".indexOf(part.charAt(0)) >= 0) {
+                out.add(" ".repeat(widths[i] - part.length()) + part);
+            } else if (i < last) {
+                out.add(part + " ".repeat(widths[i] - part.length()));
+            } else {
+                out.add(part);
+            }
+        }
+
+        return out;
+    }
+
+    void applyGrid(int[] widths) {
+        List<String> new_parts = formatParts(parts, widths) ;
+        setParts(new_parts);
     }
 
 }

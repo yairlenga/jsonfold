@@ -14,11 +14,17 @@ final class Frame {
     /** Container type. */
     final Kind kind;
 
+    /** Indentation (leading spaces) */
+    final int indent ;
+
     /** Stack depth of this frame. */
     final int depth;
 
     /** Buffered lines belonging to the frame. */
     final List<Line> lines = new ArrayList<>();
+
+    /** Total length of parts in lines */
+    int partsLength;
 
     /** Packing item limit. */
     final int packLimit;
@@ -31,6 +37,9 @@ final class Frame {
 
     /** Grid item Limit */
     final int gridLimit ;
+
+    /** Grid Min Items */
+    final int gridMinItems ;
 
     /** Number of content lines. */
     int contentLines;
@@ -51,19 +60,23 @@ final class Frame {
     boolean gridOk = false;
 
     Frame(
-            Kind kind,
-            int depth,
-            int packLimit,
-            int foldLimit,
-            int joinLimit,
-            int gridLimit) {
+        Kind kind,
+        int indent,
+        int depth,
+        int packLimit,
+        int foldLimit,
+        int joinLimit,
+        int gridLimit,
+        int gridMinItems) {
 
         this.kind = kind;
+        this.indent = indent;
         this.depth = depth;
         this.packLimit = packLimit;
         this.foldLimit = foldLimit;
         this.joinLimit = joinLimit;
         this.gridLimit = gridLimit;
+        this.gridMinItems = gridMinItems;
     }
 
     /**
@@ -84,28 +97,115 @@ final class Frame {
                 : lines.get(lines.size() - 1);
     }
 
-    void addLine(Line line) {
-        lines.add(line);
+    void updateStats(Line line) {
+        leafs += line.leafs;
+        items += line.items;
+        partsLength += line.partsLength + (partsLength > 0 ? 1 : 0);
 
         if (line.childNesting >= childNesting) {
             childNesting = line.childNesting + 1;
         }
+    }
 
-        if (line.closer != Kind.NONE) {
+    void addLine(Line line) {
+        lines.add(line);
+        if (line.opener == Kind.NONE && line.closer == Kind.NONE) {
+            contentLines++;
+        }
+        updateStats(line);
+    }
+
+
+
+    void mergeLine(Line prev, Line line) {
+        prev.mergeLine(line);
+        updateStats(line);
+    }
+
+    boolean checkFoldLimits(Config cfg) {
+        if (partsLength > cfg.width) {
+            return false;
+        }
+
+        if (items > foldLimit) {
+            return false;
+        }
+
+        if (childNesting >= cfg.foldNesting) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Create a folded line from opener, body, and closer lines.
+     */
+    void foldLines(Config config) {
+
+        List<String> parts = new ArrayList<>();
+        for (Line line: lines) {
+            parts.addAll(line.parts) ;
+        };
+
+
+        Line first = lines.get(0);
+
+        Line line = new Line(first.indent);
+        line.setParts(parts);
+        line.kind = kind ;
+
+        line.items = 1;
+        line.leafs = leafs;
+        line.childNesting = childNesting;
+        line.opener = Kind.NONE;
+        line.closer = Kind.NONE;
+
+        line.canJoin = childNesting < config.joinNesting;
+        line.canGrid = config.gridMaxLines > 0 && items <= gridLimit;
+
+        lines.clear();
+        lines.add(line) ;
+    }
+
+    void joinLines(Config cfg) {
+        int n = lines.size();
+        if (n < 2) {
             return;
         }
 
-        contentLines++;
-        items += line.items;
-        leafs += line.leafs;
+        Line prev = lines.get(0);
+        int writePos = 1;
+
+        for (int readPos = 1; readPos < n; readPos++) {
+            Line line = lines.get(readPos);
+
+            if (prev.canJoin
+                    && line.canJoin
+                    && prev.canMerge(line, joinLimit, cfg.width)) {
+
+                prev.mergeLine(line);
+                prev.canPack = false;
+
+            } else {
+                if (readPos != writePos) {
+                    lines.set(writePos, line);
+                }
+
+                prev = line;
+                writePos++;
+            }
+        }
+
+        while (lines.size() > writePos) {
+            lines.remove(lines.size() - 1);
+        }
+
+        contentLines -= (n - writePos);
     }
 
-    void mergeLine(Line prev, Line line) {
-        prev.merge(line);
 
-        items += line.items;
-        leafs += line.leafs;
-    }
+
 
     @Override
     public String toString() {

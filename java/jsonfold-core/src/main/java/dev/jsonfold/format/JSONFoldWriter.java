@@ -105,7 +105,7 @@ public final class JSONFoldWriter extends Writer {
             }
 
             String part = pending.substring(start, nl);
-            feed(Line.parse(part, parentKind()));
+            feed(Line.parse(part));
             start = nl + 1;
         }
     }
@@ -118,7 +118,7 @@ public final class JSONFoldWriter extends Writer {
      */
     public void finish() throws IOException {
         if (!pending.isEmpty()) {
-            feed(Line.parse(pending.toString(), parentKind()));
+            feed(Line.parse(pending.toString()));
             pending.setLength(0);
             if ( cfg == null ) fp.write("\n") ;
         }
@@ -156,13 +156,16 @@ public final class JSONFoldWriter extends Writer {
         if (line.opener != Kind.NONE) {
             Frame frame = new Frame(
                     line.opener,
+                    line.indent,
                     stack.size(),
                     packLimit(line.opener),
                     foldLimit(line.opener),
                     joinLimit(line.opener),
-                    gridLimit(line.opener));
+                    gridLimit(line.opener),
+                    gridMinItems(line.opener)
+                );
 
-            frame.lines.add(line);
+            frame.addLine(line);
             stack.add(frame);
 
             if (line.width() > cfg.width) {
@@ -171,23 +174,24 @@ public final class JSONFoldWriter extends Writer {
             return;
         }
 
+        // Handle Bad JSON - data outside any frame
+        if ( stack.isEmpty()) {
+            writeLine(line);
+            return ;
+        }
+
+        Frame frame = stack.get(stack.size() - 1) ;
+
         if (line.closer != Kind.NONE) {
-            closeFrame(line, line.closer);
+            frame.addLine(line);
+            closeFrame();
             return;
         }
 
-        emitLine(line);
-    }
+        if ( line.items >= frame.packLimit ) line.canPack = false ;
+        if ( line.items >= frame.joinLimit ) line.canJoin = false ;
 
-    /**
-     * Emit a line either to the current frame or to the final writer.
-     */
-    private void emitLine(Line line) throws IOException {
-        if (stack.isEmpty()) {
-            writeLine(line);
-        } else {
-            addToFrame(stack.get(stack.size() - 1), line);
-        }
+        addToFrame(frame, line) ;
     }
 
     /**
@@ -217,12 +221,13 @@ public final class JSONFoldWriter extends Writer {
         }
 
         if (line.closer == Kind.NONE ) {
-            if ( frame.foldOk && !checkFoldLimits(frame)) {
+            if ( frame.foldOk && !frame.checkFoldLimits(cfg)) {
                 markNoFold();
             }
 
             if ( frame.gridOk && !line.canGrid ) {
                 markNoGrid();
+                frame.joinLines(cfg);
             }
         }
 
@@ -267,7 +272,7 @@ public final class JSONFoldWriter extends Writer {
     private boolean canMerge(Line prev, Line line, int limit) {
         return prev.indent == line.indent
                 && prev.items + line.items <= limit
-                && prev.indent + prev.length + 1 + line.length <= cfg.width;
+                && prev.indent + prev.partsLength + 1 + line.partsLength <= cfg.width;
     }
 
     /**
@@ -286,7 +291,7 @@ public final class JSONFoldWriter extends Writer {
         }
 
         if (frame.foldOk) {
-            if ( !checkFoldLimits(frame) ) {
+            if ( !frame.checkFoldLimits(cfg) ) {
                 markNoFold();
                 streamFrame(frame) ;
             }
@@ -294,38 +299,19 @@ public final class JSONFoldWriter extends Writer {
     }
 
     /**
-     * Check whether a frame can still be folded.
-     */
-    private boolean checkFoldLimits(Frame frame) {
-        if (frame.contentLines > 1) {
-            return false ;
-        }
-
-        if (frame.items > frame.foldLimit) {
-            return false ;
-        }
-
-        if (frame.childNesting >= cfg.foldNesting) {
-            return false ;
-        }
-
-        return true ;
-    }
-
-    /**
      * Close the current frame and emit either folded or original lines.
      */
-    private void closeFrame(Line closer, Kind closingKind) throws IOException {
-        if (stack.isEmpty()) {
-            writeLine(closer);
-            return;
-        }
-
+    private void closeFrame() throws IOException {
         Frame frame = stack.remove(stack.size() - 1);
-        frame.lines.add(closer);
 
-        if (frame.kind != closingKind) {
-            frame.foldOk = false;
+        if ( frame.gridOk ) {
+            if ( tryGrid(frame) ) {
+                markNoGrid();
+            } else {
+                markNoGrid();
+                frame.joinLines(cfg);
+                frame.foldOk = frame.checkFoldLimits(cfg) ;
+            }
         }
 
         if (frame.foldOk) {
@@ -337,10 +323,6 @@ public final class JSONFoldWriter extends Writer {
                     }
                 }
             }
-        } else if (frame.gridOk) {
-            if (tryGrid(frame)) {
-                markNoGrid();
-            }
         }
 
         emitLines(frame.lines, null);
@@ -351,46 +333,30 @@ public final class JSONFoldWriter extends Writer {
      * Try folding a complete frame into one line.
      */
     private boolean tryFold(Frame frame) {
-        if (!frame.foldOk || frame.contentLines != 1 || frame.lines.size() != 3) {
+        if (!frame.foldOk ||
+                frame.contentLines != 1 ||
+                frame.lines.size() != 3 ||
+                frame.indent + frame.partsLength > cfg.width) {
             return false;
         }
 
-        int foldedLength = -1;
-        for (Line line : frame.lines) {
-            foldedLength += 1 + line.length;
-        }
-
-        Line first = frame.lines.get(0);
-        if (first.indent + foldedLength > cfg.width) {
-            return false;
-        }
-       
-        Line folded = Line.fold(
-                frame.lines,
-                frame.kind,
-                parentKind(),
-                frame.leafs,
-                frame.childNesting);
-
-        folded.canPack=false ;
-        folded.canJoin=frame.childNesting < cfg.joinNesting ;
-        folded.canGrid=cfg.gridMaxLines > 0 ;
-
-        frame.lines.clear();
-        frame.lines.add(folded);
- 
-        return true ;
+        frame.foldLines(cfg);
+        return true;
     }
 
     private boolean tryGrid(Frame frame) {
         int lineCount = frame.lines.size() - 2;
-        if (lineCount < 1 || lineCount < cfg.gridMinLines || lineCount > cfg.gridMaxLines) {
+        if (lineCount < 2 || lineCount < cfg.gridMinLines || lineCount > cfg.gridMaxLines) {
             return false;
         }
 
         List<Line> lines = frame.lines.subList(1, frame.lines.size() - 1);
         Line first = lines.get(0);
         int partCount = first.parts.size();
+    
+        if ( partCount < 4 || partCount-2 < frame.gridMinItems) {
+            return false ;
+        }
 
         for (Line line : lines) {
             if (line.parts.size() != partCount) return false;
@@ -419,7 +385,7 @@ public final class JSONFoldWriter extends Writer {
         }
 
         for (Line line : lines) {
-            line.setParts(formatParts(line.parts, widths));
+            line.applyGrid(widths);
             line.canPack = false;
             line.canJoin = false;
             line.canGrid = false;
@@ -428,23 +394,6 @@ public final class JSONFoldWriter extends Writer {
         return true;
     }
     
-    private static List<String> formatParts(List<String> parts, int[] widths) {
-        ArrayList<String> out = new ArrayList<>(parts.size());
-        int last = widths.length - 1;
-
-        for (int i = 0; i < parts.size(); i++) {
-            String part = parts.get(i);
-            if (!part.isEmpty() && "-0123456789".indexOf(part.charAt(0)) >= 0) {
-                out.add(" ".repeat(widths[i] - part.length()) + part);
-            } else if (i < last) {
-                out.add(part + " ".repeat(widths[i] - part.length()));
-            } else {
-                out.add(part);
-            }
-        }
-
-        return out;
-    }
     /**
      * Stream buffered lines from a frame once folding is impossible.
      *
@@ -528,15 +477,6 @@ public final class JSONFoldWriter extends Writer {
         stats.addLinesOut(countNewlines(s));
     }
 
-    /**
-     * Return the current parent container kind.
-     */
-    private Kind parentKind() {
-        return stack.isEmpty()
-                ? Kind.NONE
-                : stack.get(stack.size() - 1).kind;
-    }
-
     private int packLimit(Kind kind) {
         return chooseLimit(kind, cfg.packArrayItems, cfg.packObjItems);
     }
@@ -551,6 +491,10 @@ public final class JSONFoldWriter extends Writer {
 
     private int gridLimit(Kind kind) {
         return chooseLimit(kind, cfg.gridArrayItems, cfg.gridObjItems);
+    }
+
+    private int gridMinItems(Kind kind) {
+        return chooseLimit(kind, cfg.gridArrayMin, cfg.gridObjMin);
     }
 
     private static int chooseLimit(Kind kind, int listLimit, int dictLimit) {
