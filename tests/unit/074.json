@@ -1,0 +1,31 @@
+{
+  "meta": {
+    "test": "empty nested containers",
+    "version": 1
+  },
+  "empty_candidates": {
+    "users": [],
+    "settings": {},
+    "groups": [
+      [],
+      {}
+    ]
+  },
+  "normal_candidate": {
+    "ids": [
+      1,
+      2,
+      3
+    ],
+    "enabled": true
+  },
+  "non_empty_negative": [
+    {
+      "name": "long-item-name-that-keeps-context-realistic",
+      "roles": [
+        "admin",
+        "developer"
+      ]
+    }
+  ]
+}

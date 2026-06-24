@@ -1,0 +1,3 @@
+# Fold width exact candidate
+# category: extra
+--compact=fold --width=40

@@ -1,0 +1,3 @@
+# Pack object item limit split
+# category: extra
+--compact=pack --pack-obj-items=2

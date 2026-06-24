@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "test": "object pack limit split",
+    "version": 1
+  },
+  "target": {
+    "settings": {
+      "a": 1,
+      "b": 2,
+      "c": 3
+    }
+  },
+  "positive_sibling": {
+    "flags": {
+      "ok": true,
+      "dry_run": false
+    }
+  },
+  "negative_sibling": {
+    "too_many": {
+      "a": 1,
+      "b": 2,
+      "c": 3,
+      "d": 4
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "meta": {
+    "test": "wide key width",
+    "version": 1
+  },
+  "target": {
+    "averyveryveryverylongkeyname": [
+      1, 2, 3
+    ]
+  },
+  "positive_sibling": {
+    "short": [ 1, 2, 3 ]
+  },
+  "negative_sibling": {
+    "another_extremely_long_property_name": {
+      "value": "abcdefghijklmnopqrstuvwxyz"
+    }
+  }
+}

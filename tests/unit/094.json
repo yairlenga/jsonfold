@@ -1,0 +1,48 @@
+{
+  "meta": {
+    "test": "join nesting allowed",
+    "version": 1
+  },
+  "target": {
+    "groups": [
+      [
+        [
+          1
+        ]
+      ],
+      [
+        [
+          2
+        ]
+      ]
+    ]
+  },
+  "positive_sibling": {
+    "pairs": [
+      [
+        3
+      ],
+      [
+        4
+      ]
+    ]
+  },
+  "negative_sibling": {
+    "deeper": [
+      [
+        [
+          [
+            5
+          ]
+        ]
+      ],
+      [
+        [
+          [
+            6
+          ]
+        ]
+      ]
+    ]
+  }
+}

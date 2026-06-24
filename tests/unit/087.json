@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "test": "join width overflow",
+    "version": 1
+  },
+  "target": {
+    "matrix": [
+      [
+        1,
+        2
+      ],
+      [
+        3,
+        4
+      ]
+    ]
+  },
+  "positive_sibling": {
+    "pairs": [
+      [
+        5
+      ],
+      [
+        6
+      ]
+    ]
+  },
+  "negative_sibling": {
+    "wide_pairs": [
+      [
+        "abcdefghijklmnop"
+      ],
+      [
+        "qrstuvwxyz"
+      ]
+    ]
+  }
+}

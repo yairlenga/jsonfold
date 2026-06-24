@@ -1,0 +1,33 @@
+{
+  "meta": {
+    "test": "scientific notation",
+    "version": 1
+  },
+  "target": {
+    "readings": [
+      1000000.0,
+      2e-05,
+      3000000000.0
+    ]
+  },
+  "positive_sibling": {
+    "thresholds": [
+      0.1,
+      0.2,
+      0.3
+    ]
+  },
+  "negative_sibling": {
+    "records": [
+      {
+        "value": 1000000.0
+      },
+      {
+        "value": 2e-05
+      },
+      {
+        "value": 3000000000.0
+      }
+    ]
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "meta": {
+    "test": "pack width exact",
+    "version": 1
+  },
+  "target": {
+    "numbers": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ]
+  },
+  "positive_sibling": {
+    "small": [
+      7,
+      8,
+      9
+    ]
+  },
+  "negative_sibling": {
+    "wide": [
+      "abcdefghijklmno",
+      "pqrstuvwxyz",
+      "tail"
+    ]
+  }
+}

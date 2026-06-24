@@ -20,6 +20,7 @@ build:
 test:
 	cd ../tests/unit && ../run_tests.sh -mjava
 	cd ../tests/samples && ../run_tests.sh -mjava
+	cd ../tests/future && ../run_tests.sh -mjava
 
 benchmark:
 	./run.sh dev.jsonfold.format.Benchmark | tee bench.out

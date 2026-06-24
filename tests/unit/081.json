@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "test": "wide scalar packing",
+    "version": 1
+  },
+  "target": {
+    "labels": [
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "b",
+      "c"
+    ]
+  },
+  "positive_sibling": {
+    "codes": [
+      "aa",
+      "bb",
+      "cc"
+    ]
+  },
+  "negative_sibling": {
+    "messages": [
+      "long-message-111111111111111111",
+      "long-message-222222222222222222",
+      "tail"
+    ]
+  }
+}

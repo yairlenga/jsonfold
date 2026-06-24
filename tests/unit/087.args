@@ -1,0 +1,3 @@
+# Join width overflow candidate
+# category: extra
+--compact=join --width=39

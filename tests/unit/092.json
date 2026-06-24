@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "test": "object fold exact limit",
+    "version": 1
+  },
+  "target": {
+    "settings": {
+      "a": 1,
+      "b": 2,
+      "c": 3
+    }
+  },
+  "positive_sibling": {
+    "status": {
+      "ok": true
+    }
+  },
+  "negative_sibling": {
+    "too_many": {
+      "a": 1,
+      "b": 2,
+      "c": 3,
+      "d": 4
+    }
+  }
+}

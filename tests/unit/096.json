@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "test": "low preset",
+    "version": 1
+  },
+  "target": {
+    "users": [
+      {
+        "id": 1
+      },
+      {
+        "id": 2
+      }
+    ]
+  },
+  "positive_sibling": {
+    "ids": [
+      1,
+      2,
+      3,
+      4
+    ]
+  },
+  "negative_sibling": {
+    "nested": {
+      "roles": [
+        "admin",
+        "dev"
+      ]
+    }
+  }
+}

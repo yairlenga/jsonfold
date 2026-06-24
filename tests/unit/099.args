@@ -1,0 +1,3 @@
+# Sort keys nested objects
+# category: extra
+--compact=high --sort-keys

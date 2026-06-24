@@ -1,0 +1,37 @@
+{
+  "meta": {
+    "test": "high nesting",
+    "version": 1
+  },
+  "target": {
+    "matrix": [
+      [
+        1,
+        2
+      ],
+      [
+        3,
+        4
+      ]
+    ]
+  },
+  "positive_sibling": {
+    "profile": {
+      "id": 1,
+      "ok": true
+    }
+  },
+  "negative_sibling": {
+    "very_deep": [
+      [
+        [
+          [
+            [
+              "x"
+            ]
+          ]
+        ]
+      ]
+    ]
+  }
+}

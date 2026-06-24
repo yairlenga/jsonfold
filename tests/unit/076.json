@@ -1,0 +1,22 @@
+{
+  "meta": {
+    "test": "single field object",
+    "version": 1
+  },
+  "target": {
+    "user": {
+      "id": 7
+    }
+  },
+  "positive_sibling": {
+    "limits": {
+      "min": 1,
+      "max": 9
+    }
+  },
+  "negative_sibling": {
+    "description": {
+      "text": "this field contains a long sentence that should resist folding at normal width"
+    }
+  }
+}

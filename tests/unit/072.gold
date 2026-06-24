@@ -1,0 +1,30 @@
+{
+  "meta": {
+    "test": "none preset",
+    "version": 1
+  },
+  "would_pack": [
+    10,
+    20,
+    30,
+    40
+  ],
+  "would_fold": {
+    "name": "alpha",
+    "ok": true
+  },
+  "would_join": [
+    [
+      1,
+      2
+    ],
+    [
+      3,
+      4
+    ],
+    [
+      5,
+      6
+    ]
+  ]
+}

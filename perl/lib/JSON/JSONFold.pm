@@ -139,9 +139,9 @@ sub create_writer {
 # Helper for Function/OO interface methods
 
 sub _config {
-    my ($preset, $width, %overrides) = @_ ;
-    $overrides{width} = $width if $width ;
-    return JSON::JSONFold::Config::config($preset, %overrides) ;
+	my ($preset, $width, %overrides) = @_ ;
+	$overrides{width} = $width if defined $width ;
+	return JSON::JSONFold::Config::config($preset, %overrides) ;
 }
 
 sub _stream {
@@ -1075,10 +1075,7 @@ sub parse_options {
         'indent=i'   => \$opt{indent},
         'sort-keys!' => \$opt{sort_keys},
 
-        'width=i'            => \$opt{width},
-    ) or die "Try --help\n";
-
-    return \%opt;
+	return \%opt ;
 }
 
 sub usage {

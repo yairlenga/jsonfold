@@ -1,0 +1,3 @@
+# Join nesting blocked
+# category: extra
+--compact=join --join-nesting=1

@@ -1,0 +1,21 @@
+{
+  "meta": {
+    "test": "array pack exact limit", "version": 1
+  },
+  "target": {
+    "ids": [
+      1, 2, 3, 4, 5, 6
+    ]
+  },
+  "positive_sibling": {
+    "small": [
+      10, 20, 30
+    ]
+  },
+  "negative_sibling": {
+    "too_many": [
+      1, 2, 3, 4, 5, 6,
+      7
+    ]
+  }
+}

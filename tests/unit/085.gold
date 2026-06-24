@@ -1,0 +1,23 @@
+{
+  "meta": {
+    "test": "fold width overflow",
+    "version": 1
+  },
+  "target": {
+    "ids": [
+      1,
+      2,
+      3,
+      4
+    ]
+  },
+  "positive_sibling": {
+    "status": { "ok": true }
+  },
+  "negative_sibling": {
+    "long": [
+      "abcdefghijklmnopqrstuvwxyz",
+      "tail"
+    ]
+  }
+}

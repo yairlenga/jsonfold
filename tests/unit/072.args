@@ -1,0 +1,3 @@
+# None preset disables all compaction
+# category: extra
+--compact=none
