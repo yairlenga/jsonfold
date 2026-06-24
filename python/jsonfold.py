@@ -40,7 +40,7 @@ Public API
     write_json(obj, fp, width, config="", indent=2, **json_options) -> JSONFoldStats
         Serialize obj to fp and return formatting statistics.
 
-    filter_stream(fp, width, config="") -> JSONFoldWriter
+    create_writer(fp, width, config="") -> JSONFoldWriter
         Wrap a text stream with a JSONFold formatting filter.
 
 Compatibility API
@@ -177,7 +177,7 @@ Example - Using jsonfold API:
 
     # Format existing JSON string.
     json_in = ... # Pretty-printed JSON
-    with jsonfold.filter_stream(sys.stdout, width=120, config="max") as out
+    with jsonfold.create_writer(sys.stdout, width=120, config="max") as out
         print(json_in, out)      
 
 Streaming behavior
@@ -207,7 +207,7 @@ from __future__ import annotations
 import io
 import json
 import sys
-from dataclasses import dataclass, KW_ONLY, replace, field
+from dataclasses import dataclass, replace, field
 from typing import Any, TextIO, ClassVar
 from enum import IntEnum, auto
 import re
@@ -237,7 +237,7 @@ class JSONFoldConfig:
     subject to the configured width limit.
     """
     width: int = DEFAULT_WIDTH
-# Commented out next line - trouble with kernprof
+# Commented out next line - trouble with kernprof, will need import from_classes.
 #    _: KW_ONLY
     # Phase 1 – pack scalars N-per-line
     pack_array_items: int = 10       # max scalars per line inside a list
@@ -410,10 +410,9 @@ KEY_RE = re.compile(
 @dataclass(slots=True)
 class Line:
     indent: int
-    parts: list[str] | None = field(default_factory=list)
-    parts_length: int | None  = 0      # Current length of text/parts
+    parts: list[str] = field(default_factory=list)
+    parts_length: int = 0           # Current length of text/parts
     kind: Kind = Kind.NONE          # When this is folded line.
-    parent_kind: Kind = Kind.NONE   # "dict", "list", or None
     items:  int        = 1      # packed scalar count (>=1)
     leafs: int         = 1      # Total leaf items
     # nesting of the deepest folded child within this line (-1 = scalar)
@@ -431,7 +430,7 @@ class Line:
 
     @classmethod
     @_profile
-    def parse(cls, s: str, parent_kind: Kind) -> "Line":
+    def parse(cls, s: str) -> "Line":
         stripped = s.lstrip()
         body=stripped.rstrip()
         opener= (
@@ -441,13 +440,12 @@ class Line:
         )
         closer=_CLOSING_KIND.get(body, Kind.NONE)
 
-        is_body_line = bool(parent_kind and not opener and not closer)
+        is_body_line = bool(not opener and not closer)
 
         return cls(
             indent=len(s) - len(stripped),
             parts = [body],
             parts_length = len(body),
-            parent_kind=parent_kind,
             opener=opener,
             closer=closer,
             can_join=is_body_line,
@@ -511,8 +509,9 @@ class Line:
 
 @dataclass(slots=True)
 class Frame:
-    kind: Kind
-    depth: int
+    kind: Kind = Kind.NONE
+    indent: int = 0
+    depth: int = 0
     lines: list[Line] = field(default_factory=list)
     parts_length: int = 0                  # Total length of parts
     pack_limit: int = 0
@@ -529,15 +528,21 @@ class Frame:
     grid_ok: bool = False
     child_nesting: int = -1
 
-    def update_counts(self, line: Line, bump_content: bool) -> None:
-        if bump_content:
-            self.content_lines += 1
+    @_profile
+    def update_stats(self, line) -> None:
         self.leafs += line.leafs
         self.items += line.items    
-        if not line.opener and not line.closer:
-            self.parts_length += line.parts_length
+        self.parts_length += line.parts_length + (1 if self.parts_length else 0)
         if line.child_nesting >= self.child_nesting:
             self.child_nesting = line.child_nesting+1
+
+    @_profile
+    def add_line(self, line: Line) -> None:
+        self.lines.append(line)
+        if not line.opener and not line.closer:
+            self.content_lines += 1
+        self.update_stats(line)
+        return
 
     @_profile
     def check_fold_limits(self, config: JSONFoldConfig) -> bool:
@@ -553,6 +558,24 @@ class Frame:
             return False
 
         return True
+    
+    @_profile
+    def fold_lines(self, cfg: JSONFoldConfig) -> None:
+        parts = [part for line in self.lines for part in line.parts]       
+
+        line = Line(
+            indent=self.indent,
+            parts = parts,
+            parts_length = self.parts_length,
+            kind = self.kind,
+            items=1,
+            leafs=self.leafs,
+            child_nesting=self.child_nesting,
+            can_pack=False,
+            can_join=self.child_nesting < cfg.join_nesting,
+            can_grid=cfg.grid_max_lines > 0 and self.items <= self.grid_limit,
+        )
+        self.lines = [ line ]
 
     @_profile
     def join_lines(self, cfg: JSONFoldConfig) -> None:
@@ -643,7 +666,7 @@ class JSONFoldWriter:
             self.stats.lines_in += 1
             s2 = self.pending + s[:nl_pos]
             self.pending = s[nl_pos+1:]
-            line = Line.parse(s2, self._parent_kind())
+            line = Line.parse(s2)
             self._feed(line)
 
             return s_len
@@ -660,7 +683,7 @@ class JSONFoldWriter:
             self.pending = parts.pop()
 
         for part in parts:
-            self._feed(Line.parse(part[:-1], self._parent_kind()))
+            self._feed(Line.parse(part[:-1]))
 
         return s_len
 
@@ -676,7 +699,7 @@ class JSONFoldWriter:
 
     def finish(self) -> None:
         if self.pending:
-            self._feed(Line.parse(self.pending, self._parent_kind()))
+            self._feed(Line.parse(self.pending))
             self.pending = ""
 
         # Should not happen with valid json.dump output.
@@ -698,47 +721,61 @@ class JSONFoldWriter:
 
     def _write_str(self, s: str):
         bytes = self.fp.write(s)
-        self.stats.lines_out += 1
         self.stats.bytes_out += bytes
         return bytes
 
     def _write_line(self, line: Line):
+        self.stats.lines_out += 1
         self._write_str(line.raw())
 
     # ------------------------------------------------------------ core feed
     @_profile
     def _feed(self, line: Line) -> None:
+
+        # Opening lines
         opener = line.opener
         if opener:
-            self.stack.append(Frame(
+            frame = Frame(
                 kind=opener,
+                indent=line.indent,
                 depth=len(self.stack),
-                lines=[line],
-                parts_length = line.parts_length,
                 pack_limit=self._pack_limit(opener),
                 fold_limit=self._fold_limit(opener),
                 join_limit=self._join_limit(opener),
                 grid_limit=self._grid_limit(opener),
                 grid_min_items=self._grid_min_items(opener),
-                )
             )
+            frame.add_line(line)
+            self.stack.append(frame)
             return
 
+        # Handle unexpected data outside any open frame
+        # Should not get here for valid JSON
+        if not self.stack:
+            self._write_line(line)
+            return
+
+        frame = self.stack[-1]
+        # closing lines
         closer = line.closer
         if closer:
-            self._close_frame(line, closer)
+            # Handle unexpected mismatch between opener and closer
+            # Should not get here for valid JSON
+            if frame.kind != closer:
+                frame.fold_ok = False
+                frame.grid_ok = False
+
+            frame.add_line(line)
+            self._close_frame()
             return
 
+        # Body lines
         # Fast body single line emit
-        if self.stack:
-            frame = self.stack[-1]
-            if line.items >= frame.pack_limit:
-               line.can_pack = False
-            if line.items >= frame.join_limit:
-                line.can_join = False
-            self._add_to_frame(frame, line)
-        else:
-            self._write_line(line)
+        if line.items >= frame.pack_limit:
+            line.can_pack = False
+        if line.items >= frame.join_limit:
+            line.can_join = False
+        self._add_to_frame(frame, line)
 
     @_profile
     def _emit_lines(self, lines: list[Line], depth: int | None = None) -> None:
@@ -821,8 +858,7 @@ class JSONFoldWriter:
             return
 
         # Add as new line
-        frame.lines.append(line)
-        frame.update_counts(line, True)
+        frame.add_line(line)
 
         if frame.fold_ok and line.width() > self.cfg.width:
             self._mark_no_fold()
@@ -852,7 +888,7 @@ class JSONFoldWriter:
         if prev.items >= frame.join_limit or prev.child_nesting >= self.cfg.join_nesting:
             prev.can_join = False
 
-        frame.update_counts(line, False)
+        frame.update_stats(line)
 
         if frame.fold_ok:
             if not frame.check_fold_limits(self.cfg):
@@ -888,18 +924,11 @@ class JSONFoldWriter:
     # --------------------------------------------------------- phase 2: fold
 
     @_profile
-    def _close_frame(self, closer: Line, closing_kind: Kind) -> None:
-        if not self.stack:
-            self._write_line(closer)
-            return
+    def _close_frame(self) -> None:
 
         # Frame is removed stack.
         frame = self.stack.pop()
-        frame.lines.append(closer)
 
-        if frame.kind != closing_kind:
-            frame.fold_ok = False
-            frame.grid_ok = False
 
 #       Need to handle mismatch between closing and opening.
 #        if frame.kind != closing_kind: ...
@@ -936,32 +965,12 @@ class JSONFoldWriter:
         
         if (not frame.fold_ok or
             frame.content_lines != 1 or
-            len(frame.lines) != 3 
+            len(frame.lines) != 3 or
+            frame.indent + frame.parts_length > self.cfg.width
         ):
             return False
 
-        folded_length = sum(1 + line.parts_length for line in frame.lines) - 1
-        first_line = frame.lines[0]
-
-        if first_line.indent + folded_length > self.cfg.width:
-            return False
-
-        parts = [part for line in frame.lines for part in line.parts]       
-
-        line = Line(
-            indent=first_line.indent,
-            parts = parts,
-            parts_length = folded_length,
-            kind = frame.kind,
-            parent_kind=self._parent_kind(),
-            items=1,
-            leafs=frame.leafs,
-            child_nesting=frame.child_nesting,
-            can_pack=False,
-            can_join=frame.child_nesting < self.cfg.join_nesting,
-            can_grid=self.cfg.grid_max_lines > 0 and frame.items <= frame.grid_limit,
-        )
-        frame.lines = [ line ]
+        frame.fold_lines(self.cfg)
         return True
 
     @_profile
@@ -1041,8 +1050,6 @@ class JSONFoldWriter:
         for frame in self.stack:
             frame.grid_ok = False
 
-    def _parent_kind(self) -> Kind:
-        return self.stack[-1].kind if self.stack else Kind.NONE
 # ---------------------------------------------------------------------------
 # Public helpers
 # ---------------------------------------------------------------------------
