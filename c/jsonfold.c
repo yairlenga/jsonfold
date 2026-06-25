@@ -224,19 +224,19 @@ static const struct jsonfold_config CFG_MED = {
 
 static const struct jsonfold_config CFG_HIGH = {
     .width            = JSONFOLD_DEFAULT_WIDTH,
-    .pack_array_items = 16,
-    .pack_obj_items   = 8,
+    .pack_array_items = 20,
+    .pack_obj_items   = 10,
     .pack_nesting     = 4,
-    .fold_array_items = 16,
-    .fold_obj_items   = 8,
+    .fold_array_items = 20,
+    .fold_obj_items   = 10,
     .fold_nesting     = 4,
 
     .grid_array_items = JSONFOLD_MAX_ARRAY_ITEMS,
     .grid_obj_items   = JSONFOLD_MAX_OBJ_ITEMS,
-    .grid_min_lines   = 3,
+    .grid_min_lines   = 4,
     .grid_max_lines   = 100,
-    .grid_array_min   = 3,
-    .grid_obj_min     = 3,
+    .grid_array_min   = 4,
+    .grid_obj_min     = 4,
 
     .join_array_items = 16,
     .join_obj_items   = 8,
@@ -289,6 +289,23 @@ static const struct jsonfold_config CFG_JOIN = {
     .join_nesting     = JSONFOLD_MAX_NESTING,
 };
 
+static const struct jsonfold_config CFG_GRID = {
+    .width            = JSONFOLD_DEFAULT_WIDTH,
+    .pack_array_items = JSONFOLD_MAX_ARRAY_ITEMS,
+    .pack_obj_items   = JSONFOLD_MAX_OBJ_ITEMS,
+    .pack_nesting     = JSONFOLD_MAX_NESTING,
+    .fold_array_items = JSONFOLD_MAX_ARRAY_ITEMS,
+    .fold_obj_items   = JSONFOLD_MAX_OBJ_ITEMS,
+    .fold_nesting     = JSONFOLD_MAX_NESTING,
+
+    .grid_array_items = JSONFOLD_MAX_ARRAY_ITEMS,
+    .grid_obj_items   = JSONFOLD_MAX_OBJ_ITEMS,
+    .grid_min_lines   = 3,
+    .grid_max_lines   = JSONFOLD_MAX_GRID_LINES,
+    .grid_array_min   = 3,
+    .grid_obj_min     = 3,
+};
+
 static struct { const char *name; JFConfig config ; } presets [] = {
     { "default", &CFG_DEFAULT },
     { "", &CFG_DEFAULT },
@@ -302,6 +319,7 @@ static struct { const char *name; JFConfig config ; } presets [] = {
     { "pack", &CFG_PACK },
     { "fold", &CFG_FOLD },
     { "join", &CFG_JOIN },
+    { "grid", &CFG_GRID },
     { NULL, NULL },
 } ;
 
@@ -576,7 +594,8 @@ static struct line make_folded_line(JFFrame f) {
         .opener=JSONFOLD_KIND_NONE,
         .closer=JSONFOLD_KIND_NONE,
         .can_join=1,
-        .can_pack=0};
+        .can_pack=0,
+        .can_grid=(f->grid_limit > 0 && f->items <= f->grid_limit)};
 
     part_vec_init(&ln.parts) ;
 
@@ -633,14 +652,27 @@ static bool write_string(JFWriter w, const char *s, count_t len) {
     return true ;
 }
 
+static bool write_spaces(JFWriter w, count_t n)
+{
+    for (count_t i=0 ; i<n ; i++ ) {
+        if (!write_string(w, " ", 1) ) return false ;
+    }
+    return true ;
+}
+
 static bool write_line(JFWriter w, const JFLine l) {
+    if ( !write_spaces(w, l->indent) ) return false ;
+
     for (int ip=0 ; ip < l->parts.n ; ip++ ) {
-        int spaces = ip ? 1 : l->indent ;
-        for (int i=0;i<spaces;i++) {
-            if (!write_string(w, " ", 1) ) return false ;
-        }
-        JFPart p = part_vec_item(&l->parts, ip) ;
-        if ( !write_string(w, l->text+p->off, p->len)) return false ;
+        if (ip && !write_string(w, " ", 1)) return false ;
+
+        JFPart p = part_vec_item((JFPartVec)&l->parts, ip) ;
+        count_t width = p->width ? p->width : p->len ;
+        count_t pad = width > p->len ? width - p->len : 0 ;
+
+        if (p->align == JSONFOLD_ALIGN_RIGHT && !write_spaces(w, pad)) return false ;
+        if (!write_string(w, l->text+p->off, p->len)) return false ;
+        if (p->align != JSONFOLD_ALIGN_RIGHT && !write_spaces(w, pad)) return false ;
     }
     if ( !write_string(w, "\n", 1)) return false ;
     return true ;
@@ -660,6 +692,144 @@ static void mark_no_fold(JFWriter w) {
     for (count_t i=0;i<w->stack.n;i++)
         w->stack.v[i].fold_ok = false;
 
+}
+
+static void mark_no_grid(JFWriter w) {
+    for (count_t i=0;i<w->stack.n;i++)
+        w->stack.v[i].can_grid = false;
+}
+
+static bool line_part_is_number(JFLine line, JFPart part)
+{
+    char c = line->text[part->off] ;
+    return c == '-' || (c >= '0' && c <= '9') ;
+}
+
+static void line_apply_grid(JFLine line, count_t *widths, int part_count)
+{
+    for (int i=0 ; i<part_count ; i++ ) {
+        JFPart part = part_vec_item(&line->parts, i) ;
+        part->width = widths[i] ;
+        if (line_part_is_number(line, part)) {
+            part->align = JSONFOLD_ALIGN_RIGHT ;
+        } else if (i + 1 < part_count) {
+            part->align = JSONFOLD_ALIGN_LEFT ;
+        } else {
+            part->width = 0 ;
+            part->align = JSONFOLD_ALIGN_NONE ;
+        }
+    }
+    line->parts.len = 0 ;
+    for (int i=0 ; i<line->parts.n ; i++ ) {
+        JFPart part = part_vec_item(&line->parts, i) ;
+        line->parts.len += part->width ? part->width : part->len ;
+    }
+    if (line->parts.n > 1) line->parts.len += line->parts.n - 1 ;
+    line->can_pack = false ;
+    line->can_join = false ;
+    line->can_grid = false ;
+}
+
+static bool line_dict_signature_equal(JFLine a, JFLine b)
+{
+    if (a->parts.n != b->parts.n) return false ;
+
+    for (int i=1 ; i<a->parts.n-1 ; i++ ) {
+        JFPart pa = part_vec_item(&a->parts, i) ;
+        JFPart pb = part_vec_item(&b->parts, i) ;
+        char *sa = a->text + pa->off ;
+        char *sb = b->text + pb->off ;
+        count_t ia = 0, ib = 0 ;
+
+        while (ia < pa->len && (sa[ia] == ' ' || sa[ia] == '\t')) ia++ ;
+        while (ib < pb->len && (sb[ib] == ' ' || sb[ib] == '\t')) ib++ ;
+
+        count_t start_a = ia, start_b = ib ;
+        while (ia < pa->len && sa[ia] != ':') ia++ ;
+        while (ib < pb->len && sb[ib] != ':') ib++ ;
+        if (ia >= pa->len || ib >= pb->len) return false ;
+
+        count_t la = ia - start_a + 1 ;
+        count_t lb = ib - start_b + 1 ;
+        if (la != lb || memcmp(sa+start_a, sb+start_b, la)) return false ;
+    }
+    return true ;
+}
+
+static void frame_join_lines(JFWriter w, JFFrame f)
+{
+    if (f->lines.n < 2) return ;
+
+    JFConfig cfg = writer_config(w) ;
+    JFLine prev = &f->lines.v[0] ;
+    count_t write_pos = 1 ;
+
+    for (count_t read_pos=1 ; read_pos<f->lines.n ; read_pos++ ) {
+        JFLine line = &f->lines.v[read_pos] ;
+        if (prev->can_join && line->can_join && lines_can_merge(cfg, prev, line, f->join_limit)) {
+            line_merge(prev, line) ;
+            prev->can_pack = false ;
+            line_free(line) ;
+        } else {
+            if (read_pos != write_pos) {
+                f->lines.v[write_pos] = f->lines.v[read_pos] ;
+                f->lines.v[read_pos] = EMPTY_LINE ;
+            }
+            prev = &f->lines.v[write_pos] ;
+            write_pos++ ;
+        }
+    }
+    f->content_lines -= f->lines.n - write_pos ;
+    f->lines.n = write_pos ;
+}
+
+static bool try_grid(JFWriter w, JFFrame f)
+{
+    JFConfig cfg = writer_config(w) ;
+
+    if (f->kind != JSONFOLD_KIND_LIST) return false ;
+    if (f->lines.n < 4) return false ;
+
+    count_t line_count = f->lines.n - 2 ;
+    if (line_count < 2 || line_count < cfg->grid_min_lines || line_count > cfg->grid_max_lines)
+        return false ;
+
+    JFLine first = &f->lines.v[1] ;
+    int part_count = first->parts.n ;
+    if (part_count < 4 || part_count - 2 < f->grid_min_items) return false ;
+
+    for (count_t i=1 ; i<f->lines.n-1 ; i++ ) {
+        JFLine line = &f->lines.v[i] ;
+        if (!line->can_grid || line->parts.n != part_count) return false ;
+        if (first->kind == JSONFOLD_KIND_DICT && !line_dict_signature_equal(first, line)) return false ;
+    }
+
+    count_t *widths = calloc(part_count, sizeof(*widths)) ;
+    if (!widths) return false ;
+
+    for (count_t i=1 ; i<f->lines.n-1 ; i++ ) {
+        JFLine line = &f->lines.v[i] ;
+        for (int ip=0 ; ip<part_count ; ip++ ) {
+            JFPart part = part_vec_item(&line->parts, ip) ;
+            if (part->len > widths[ip]) widths[ip] = part->len ;
+        }
+    }
+
+    count_t grided_len = 0 ;
+    for (int ip=0 ; ip<part_count ; ip++ ) grided_len += widths[ip] ;
+    grided_len += part_count - 1 ;
+
+    if (f->lines.v[0].indent + grided_len > cfg->width) {
+        free(widths) ;
+        return false ;
+    }
+
+    for (count_t i=1 ; i<f->lines.n-1 ; i++ ) {
+        line_apply_grid(&f->lines.v[i], widths, part_count) ;
+    }
+
+    free(widths) ;
+    return true ;
 }
 
 static bool frame_can_fold(JFFrame f, JFConfig cfg) {
@@ -732,15 +902,17 @@ static void add_to_frame(JFWriter w, JFFrame f, JFLine line) {
 
     if (f->lines.n) {
 //        line *prev = &f->lines.v[f->lines.n-1] ;
-        if ( line->can_pack &&
-            // prev->can_pack &&
-            try_pack(w, f, line) )
-            return ;
-    
-        if ( line->can_join &&
-            // prev->can_join &&
-            try_join(w, f, line) )
-            return ;
+        if (!f->can_grid) {
+            if ( line->can_pack &&
+                // prev->can_pack &&
+                try_pack(w, f, line) )
+                return ;
+        
+            if ( line->can_join &&
+                // prev->can_join &&
+                try_join(w, f, line) )
+                return ;
+        }
 
     } else if (!f->fold_ok && !line->can_pack && !line->can_join) {
         write_line(w, line);
@@ -762,8 +934,12 @@ static void add_to_frame(JFWriter w, JFFrame f, JFLine line) {
         if (f->fold_ok && !frame_can_fold(f, cfg)) {
             mark_no_fold(w) ;
         }
+        if (f->can_grid && !line->can_grid) {
+            mark_no_grid(w) ;
+            frame_join_lines(w, f) ;
+        }
     }
-    if (!f->fold_ok) {
+    if (!f->fold_ok && !f->can_grid) {
         stream_frame(w, f);
     }
     return ;
@@ -838,9 +1014,28 @@ static void close_frame(JFWriter w, JFLine closer, jsonfold_kind closing_kind) {
     w->stack.v[pos] = (struct frame) { 0 } ;
 
     closer = line_vec_append(&f.lines, closer) ;
-    if (f.kind != closing_kind) f.fold_ok = false;
+    if (f.kind != closing_kind) {
+        f.fold_ok = false;
+        f.can_grid = false;
+    }
 
-    try_fold(w, &f) ;
+    if (f.can_grid) {
+        if (try_grid(w, &f)) {
+            mark_no_grid(w) ;
+        } else {
+            mark_no_grid(w) ;
+            frame_join_lines(w, &f) ;
+            f.fold_ok = frame_can_fold(&f, writer_config(w)) ;
+        }
+    }
+
+    if (try_fold(w, &f)) {
+        if (w->stack.n && f.lines.n && f.lines.v[0].can_grid) {
+            JFFrame parent = &w->stack.v[w->stack.n - 1] ;
+            if (parent->content_lines == 0) parent->can_grid = true ;
+        }
+    }
+
     emit_lines(w, &f.lines, f.depth-1);
     frame_free(&f);
 }
@@ -857,6 +1052,8 @@ static void feed(JFWriter w, JFLine ln) {
             .pack_limit = choose_limit(ln->opener, cfg->pack_array_items, cfg->pack_obj_items),
             .fold_limit = choose_limit(ln->opener, cfg->fold_array_items, cfg->fold_obj_items),
             .join_limit = choose_limit(ln->opener, cfg->join_array_items, cfg->join_obj_items),
+            .grid_limit = choose_limit(ln->opener, cfg->grid_array_items, cfg->grid_obj_items),
+            .grid_min_items = choose_limit(ln->opener, cfg->grid_array_min, cfg->grid_obj_min),
             .fold_ok = true,
             .child_nesting = -1,
         } ;

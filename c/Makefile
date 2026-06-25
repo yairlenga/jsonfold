@@ -26,6 +26,7 @@ run-test:
 	./benchmark.exe
 	cd ../tests/unit && ../run_tests.sh -mc
 	cd ../tests/samples && ../run_tests.sh -mc
+	cd ../tests/future && ../run_tests.sh -mc
 
 
 test: jsonfold.exe

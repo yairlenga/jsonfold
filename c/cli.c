@@ -174,6 +174,14 @@ static void options_init(Options *opts)
     opts->fold_obj_items = -1;
     opts->fold_nesting = -1;
 
+    opts->grid_items = -1,
+    opts->grid_max_lines = -1,
+    opts->grid_min_lines = -1,
+    opts->grid_array_items = -1,
+    opts->grid_array_min = -1,
+    opts->grid_obj_items = -1,
+    opts->grid_obj_min = -1,
+
     opts->join_items = -1;
     opts->join_array_items = -1;
     opts->join_obj_items = -1;
@@ -432,6 +440,7 @@ void jsonfold_show_config(FILE *fp, JFConfig cfg)
         "width=%d"
         ", pack=(array=%d/obj=%d, nesting=%d), "
         ", fold=(array=%d/obj=%d, nesting=%d), "
+        ", grid=(lines=%d-%d,array=%d-%d,obj=%d-%d), "
         ", join=(array=%d/obj=%d, nesting=%d)"
         ")\n",
         cfg->width,
@@ -443,6 +452,13 @@ void jsonfold_show_config(FILE *fp, JFConfig cfg)
         cfg->fold_array_items,
         cfg->fold_obj_items,
         cfg->fold_nesting,
+
+        cfg->grid_min_lines,
+        cfg->grid_max_lines,
+        cfg->grid_array_min,
+        cfg->grid_array_items,
+        cfg->grid_obj_min,
+        cfg->grid_obj_items,
 
         cfg->join_array_items,
         cfg->join_obj_items,

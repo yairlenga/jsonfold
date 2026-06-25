@@ -16,6 +16,8 @@ extern "C" {
 #define JSONFOLD_MED      "med"
 #define JSONFOLD_HIGH     "high"
 #define JSONFOLD_MAX      "max"
+#define JSONFOLD_GRID     "grid"
+#define JSONFOLD_CLASSIC  "classic"
 
 struct jsonfold_config {
     int width;
