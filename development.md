@@ -16,6 +16,7 @@
 - jsonfold_config(cfg="default", width=None, **overrides) -> cfg
 - fold_text(text, $width, $config) => $text
 - jsonfold_config(base, width, overrides) -> config
+- print_folded(fp, text, width, config)
 
 # Implementation Specific
 

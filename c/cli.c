@@ -438,9 +438,9 @@ void jsonfold_show_config(FILE *fp, JFConfig cfg)
     fprintf(fp,
         "JSONFold(config): "
         "width=%d"
-        ", pack=(array=%d/obj=%d, nesting=%d), "
-        ", fold=(array=%d/obj=%d, nesting=%d), "
-        ", grid=(lines=%d-%d,array=%d-%d,obj=%d-%d), "
+        ", pack=(array=%d/obj=%d, nesting=%d)"
+        ", fold=(array=%d/obj=%d, nesting=%d)"
+        ", grid=(lines=%d-%d,array=%d-%d,obj=%d-%d)"
         ", join=(array=%d/obj=%d, nesting=%d)"
         ")\n",
         cfg->width,

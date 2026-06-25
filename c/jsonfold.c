@@ -392,7 +392,6 @@ static JFPart part_vec_reserve(JFPartVec pv)
 	return &pv->v[pos];
 }
 
-__attribute__((unused))
 static JFPart part_vec_append(JFPartVec v, count_t off, count_t len)
 {
 	JFPart p = part_vec_reserve(v);
@@ -499,34 +498,6 @@ static void line_merge(JFLine dst, const JFLine src) {
     return ;
 }
 
-__attribute__((unused))
-static void line_join(JFLine dst, const JFLine src) {
-    int old_len = dst->text_len ;
-    int total = old_len + (old_len ? 1 : 0) + src->text_len ;
-	char *p = realloc(dst->text, total + 1);
-	dst->text = p;
-
-	if (old_len) dst->text[dst->text_len++] = ' ';
-	count_t new_off = dst->text_len;
-
-	memcpy(dst->text + dst->text_len, src->text, src->text_len + 1);
-	dst->text_len += src->text_len;
-
-	JFPartVec src_parts = &src->parts ;
-	for (int i = 0 ; i < src->parts.n ; i++) {
-        JFPart part = part_vec_item(src_parts, i) ;
-		part_vec_append(&dst->parts, new_off + part->off, part->len);
-	}
-
-	dst->items += src->items;
-	dst->leafs += src->leafs;
-
-	if (src->child_nesting > dst->child_nesting) {
-		dst->child_nesting = src->child_nesting;
-		dst->can_pack = 0;
-	}
-}
-
 ////////// JSONFOLD Line Vector
 
 static void line_vec_clear(JFLineVec lv) { 
@@ -564,6 +535,57 @@ static struct line line_vec_pop(JFLineVec lv) {
     struct line ln = *p_last ;
     *p_last = EMPTY_LINE ;
     return ln;
+}
+
+static bool line_dict_signature_equal(JFLine a, JFLine b)
+{
+    if (a->parts.n != b->parts.n) return false ;
+
+    for (int i=1 ; i<a->parts.n-1 ; i++ ) {
+        JFPart pa = part_vec_item(&a->parts, i) ;
+        JFPart pb = part_vec_item(&b->parts, i) ;
+        char *sa = a->text + pa->off ;
+        char *sb = b->text + pb->off ;
+        count_t ia = 0, ib = 0 ;
+
+        while (ia < pa->len && (sa[ia] == ' ' || sa[ia] == '\t')) ia++ ;
+        while (ib < pb->len && (sb[ib] == ' ' || sb[ib] == '\t')) ib++ ;
+
+        count_t start_a = ia, start_b = ib ;
+        while (ia < pa->len && sa[ia] != ':') ia++ ;
+        while (ib < pb->len && sb[ib] != ':') ib++ ;
+        if (ia >= pa->len || ib >= pb->len) return false ;
+
+        count_t la = ia - start_a + 1 ;
+        count_t lb = ib - start_b + 1 ;
+        if (la != lb || memcmp(sa+start_a, sb+start_b, la)) return false ;
+    }
+    return true ;
+}
+
+static void line_apply_grid(JFLine line, count_t *widths, int part_count)
+{
+    for (int i=0 ; i<part_count ; i++ ) {
+        JFPart part = part_vec_item(&line->parts, i) ;
+        part->width = widths[i] ;
+        if (line_part_is_number(line, part)) {
+            part->align = JSONFOLD_ALIGN_RIGHT ;
+        } else if (i + 1 < part_count) {
+            part->align = JSONFOLD_ALIGN_LEFT ;
+        } else {
+            part->width = 0 ;
+            part->align = JSONFOLD_ALIGN_NONE ;
+        }
+    }
+    line->parts.len = 0 ;
+    for (int i=0 ; i<line->parts.n ; i++ ) {
+        JFPart part = part_vec_item(&line->parts, i) ;
+        line->parts.len += part->width ? part->width : part->len ;
+    }
+    if (line->parts.n > 1) line->parts.len += line->parts.n - 1 ;
+    line->can_pack = false ;
+    line->can_join = false ;
+    line->can_grid = false ;
 }
 
 ////////// JSONFOLD frame Methods
@@ -608,30 +630,6 @@ static bool frame_check_fold_limits(JFFrame f, JFConfig cfg)
     if (f->child_nesting >= cfg->fold_nesting) return false;
     return true;
 }
-
-
-__attribute__((unused))
-static void frame_recalc(JFFrame f)
-{
-    f->content_lines = 0;
-    f->items = 0;
-    f->leafs = 0;
-    f->parts_len = 0;
-    f->child_nesting = -1;
-
-    for (count_t i = 0; i < f->lines.n; i++) {
-        JFLine line = &f->lines.v[i];
-
-        if (line->opener == JSONFOLD_KIND_NONE &&
-            line->closer == JSONFOLD_KIND_NONE) {
-            f->content_lines++;
-        }
-
-        frame_update_stats(f, line);
-    }
-}
-
-
 
 static count_t folded_frame_len(JFFrame f)
 {
@@ -682,7 +680,7 @@ static void frame_fold(JFFrame f)
 
     struct line folded = make_folded_line(f) ;
     line_vec_clear(&f->lines);
-    frame_add_line(f, &folded) ;
+    line_vec_append(&f->lines, &folded) ;
 } ;
 
 static void frame_join_lines(JFFrame f, JFConfig cfg)
@@ -795,56 +793,7 @@ static bool line_part_is_number(JFLine line, JFPart part)
     return c == '-' || (c >= '0' && c <= '9') ;
 }
 
-static void line_apply_grid(JFLine line, count_t *widths, int part_count)
-{
-    for (int i=0 ; i<part_count ; i++ ) {
-        JFPart part = part_vec_item(&line->parts, i) ;
-        part->width = widths[i] ;
-        if (line_part_is_number(line, part)) {
-            part->align = JSONFOLD_ALIGN_RIGHT ;
-        } else if (i + 1 < part_count) {
-            part->align = JSONFOLD_ALIGN_LEFT ;
-        } else {
-            part->width = 0 ;
-            part->align = JSONFOLD_ALIGN_NONE ;
-        }
-    }
-    line->parts.len = 0 ;
-    for (int i=0 ; i<line->parts.n ; i++ ) {
-        JFPart part = part_vec_item(&line->parts, i) ;
-        line->parts.len += part->width ? part->width : part->len ;
-    }
-    if (line->parts.n > 1) line->parts.len += line->parts.n - 1 ;
-    line->can_pack = false ;
-    line->can_join = false ;
-    line->can_grid = false ;
-}
 
-static bool line_dict_signature_equal(JFLine a, JFLine b)
-{
-    if (a->parts.n != b->parts.n) return false ;
-
-    for (int i=1 ; i<a->parts.n-1 ; i++ ) {
-        JFPart pa = part_vec_item(&a->parts, i) ;
-        JFPart pb = part_vec_item(&b->parts, i) ;
-        char *sa = a->text + pa->off ;
-        char *sb = b->text + pb->off ;
-        count_t ia = 0, ib = 0 ;
-
-        while (ia < pa->len && (sa[ia] == ' ' || sa[ia] == '\t')) ia++ ;
-        while (ib < pb->len && (sb[ib] == ' ' || sb[ib] == '\t')) ib++ ;
-
-        count_t start_a = ia, start_b = ib ;
-        while (ia < pa->len && sa[ia] != ':') ia++ ;
-        while (ib < pb->len && sb[ib] != ':') ib++ ;
-        if (ia >= pa->len || ib >= pb->len) return false ;
-
-        count_t la = ia - start_a + 1 ;
-        count_t lb = ib - start_b + 1 ;
-        if (la != lb || memcmp(sa+start_a, sb+start_b, la)) return false ;
-    }
-    return true ;
-}
 
 static bool try_grid(JFWriter w, JFFrame f)
 {
@@ -1028,7 +977,7 @@ static bool stream_frame(JFWriter w, JFFrame f) {
         has_keep = true;
     }
     emit_lines(w, &f->lines, f->depth - 1) ;
-    if (has_keep) frame_add_line(f, &keep) ;
+    if (has_keep) line_vec_append(&f->lines, &keep) ;
     return true ;
 }
 
@@ -1192,7 +1141,7 @@ bool jsonfold_write(JFWriter w, const char *buf, size_t len) {
         w->pending[w->pending_len] = 0;
     }
     if (w->pending_len > cfg->width) mark_no_fold(w);
-    return (ptrdiff_t)len;
+    return true;
 }
 
 bool jsonfold_flush(JFWriter w)
@@ -1200,9 +1149,10 @@ bool jsonfold_flush(JFWriter w)
     return write_string(w, NULL, 0) ;
 }
 
-
 bool jsonfold_finish(JFWriter w) {
     finish_writer(w) ;
+    // Signal to flush buffers, if needed.
+    write_string(w, NULL, 0) ;
     return w->error == 0 ;
 }
 

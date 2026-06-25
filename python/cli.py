@@ -185,7 +185,10 @@ def main(argv: list[str] | None = None) -> int:
     if width is None:
         if sys.stdout.isatty():
             import shutil
-            width = shutil.get_terminal_size(fallback=(24,80)).columns
+            columns = shutil.get_terminal_size(fallback=(0,0)).columns
+            if columns:
+                width = columns
+                overrides["width"] = width
 
     cfg = jsonfold_config(args.compact, **overrides)
         
