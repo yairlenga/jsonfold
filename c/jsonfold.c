@@ -233,7 +233,7 @@ static const struct jsonfold_config CFG_HIGH = {
 
     .grid_array_items = JSONFOLD_MAX_ARRAY_ITEMS,
     .grid_obj_items   = JSONFOLD_MAX_OBJ_ITEMS,
-    .grid_min_lines   = 4,
+    .grid_min_lines   = 3,
     .grid_max_lines   = 100,
     .grid_array_min   = 4,
     .grid_obj_min     = 4,
@@ -256,8 +256,8 @@ static const struct jsonfold_config CFG_MAX = {
     .grid_obj_items   = JSONFOLD_MAX_OBJ_ITEMS,
     .grid_min_lines   = 3,
     .grid_max_lines   = JSONFOLD_MAX_GRID_LINES,
-    .grid_array_min   = 3,
-    .grid_obj_min     = 3,
+    .grid_array_min   = 4,
+    .grid_obj_min     = 4,
 
 
     .join_array_items = JSONFOLD_MAX_ARRAY_ITEMS,
