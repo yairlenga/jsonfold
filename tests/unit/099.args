@@ -1,3 +1,4 @@
 # Sort keys nested objects
 # category: extra
+# Note: C does not sort args, therefore different layout
 --compact=high --sort-keys
