@@ -5,19 +5,43 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch Program",
+            "name": "C CLI",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/c/jsonfold.exe",
+            "args": [ "--verbose", "--input=tests/unit/028.json", "--compact=high" ],
+            "stopAtEntry": true,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "JavaScript CLI",
             "program": "${workspaceFolder}/javascript/cli.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
             ],
             "type": "node",
-            "args": [ "--input=javascript/small.json"]
+            "args": [ "--input=tests/misc/webdemo.json", "--width=100", "-v"]
         },
         {
             "type": "perl",
             "request": "launch",
-            "name": "Perl-jsonfold",
+            "name": "Perl jsonfold",
             "cwd": "${workspaceFolder}/perl",
             "program": "${workspaceFolder}/perl/lib/JSON/JSONFold.pm",
             "stopOnEntry": false,
@@ -27,7 +51,7 @@
         {
             "type": "perl",
             "request": "launch",
-            "name": "Perl-CLI",
+            "name": "Perl CLI",
             "cwd": "${workspaceFolder}/perl",
             "program": "${workspaceFolder}/perl/script/jsonfold.pl",
             "stopOnEntry": true,
@@ -36,7 +60,7 @@
         {
             "type": "perl",
             "request": "launch",
-            "name": "Perl-Benchmark",
+            "name": "Perl Benchmark",
             "cwd": "${workspaceFolder}/perl",
             "program": "${workspaceFolder}/perl/script/benchmark.pl",
             "stopOnEntry": true,
@@ -57,7 +81,7 @@
             "request": "launch",
             "mainClass": "dev.jsonfold.format.Main",
             "projectName": "jsonfold-cli",
-            "args": [ "--input=tests/future/110.json", "--compact=grid", "--width=120", "--indent=2"]
+            "args": [ "--input=tests/unit/024.json", "--compact=max", "--width=80"]
         },
         {
             "type": "java",
@@ -76,7 +100,7 @@
             "args": ""
         },
         {
-            "name": "python benchmark",
+            "name": "Python Benchmark",
             "type": "debugpy",
             "request": "launch",
             "program": "python/benchmark.py",
@@ -84,21 +108,21 @@
         },
 
         {
-            "name": "Python jsonfold ",
+            "name": "Python CLI",
             "type": "debugpy",
             "request": "launch",
-            "program": "python/jsonfold.py",
+            "program": "python/cli.py",
             "args": [
-                "-v", "--input=python/sample.json", "--compact=grid"
+                "-v", "--input=tests/unit/023.json", "--width=30", "--compact=join"
             ]
         },
         {
-            "name": "Python jsonfold CLI",
+            "name": "Python Unit Test",
             "type": "debugpy",
             "request": "launch",
-            "program": "python/jsonfold_cli.py",
+            "program": "python/cli.py",
             "args": [
-                "--input=geo.json", "-v", "--join-nesting=1"
+                "--input=tests/future/109.json", "-v", "--compact=max", "--join-obj-items=5"
             ]
         },
         {

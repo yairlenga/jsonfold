@@ -77,7 +77,7 @@ export async function main(argv = process.argv.slice(2)) {
     }
   }
 
-  cfg = cfg.replace(overrides);
+  cfg = cfg?.replace(overrides);
 
   if (args.verbose) {
     console.error("Config:", JSON.stringify(cfg) );

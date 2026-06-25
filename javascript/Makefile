@@ -8,7 +8,7 @@ setup:
 	npm install
 
 build:
-	npm build --if-present
+	npm run build --if-present
 
 test:
 	./api_test.js

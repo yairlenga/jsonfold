@@ -21,6 +21,7 @@ read_args() {
 
 passed=0
 failed=0
+skipped=0
 
 [ "$*" ] || set -- *.args
 
@@ -35,6 +36,12 @@ do
 
     if [ -f "$gold" -a -f "$json" ] ; then
         label=$base
+	if [ -f "$base.$mode.skip" ] ; then
+	    echo "SKIP $label ($mode)"
+            skipped=$((skipped+1))
+	    continue
+	fi
+
         ARGS=$(read_args "$arg")
 	if [ "$mode" -a -f "$base.$mode.gold" ] ; then
 	    gold="$base.$mode.gold"
@@ -52,9 +59,9 @@ do
             echo "FAIL $label" >&2
         fi
     else
-        echo "SKIP $base: no $base.gold" >&2
+        echo "UNKNWON $base: no $base.gold" >&2
     fi
 done
 
-echo "Passed: $passed, failed: $failed" >&2
+echo "Passed: $passed, failed: $failed, skiped: $skipped" >&2
 [ $failed = 0 ]

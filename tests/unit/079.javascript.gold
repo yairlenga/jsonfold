@@ -1,0 +1,8 @@
+{
+  "meta": { "test": "scientific notation", "version": 1 },
+  "target": { "readings": [ 1000000, 0.00002, 3000000000 ] },
+  "positive_sibling": { "thresholds": [ 0.1, 0.2, 0.3 ] },
+  "negative_sibling": {
+    "records": [ { "value": 1000000 }, { "value": 0.00002 }, { "value": 3000000000 } ]
+  }
+}
