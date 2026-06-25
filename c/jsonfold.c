@@ -563,6 +563,12 @@ static bool line_dict_signature_equal(JFLine a, JFLine b)
     return true ;
 }
 
+static bool line_part_is_number(JFLine line, JFPart part)
+{
+    char c = line->text[part->off] ;
+    return c == '-' || (c >= '0' && c <= '9') ;
+}
+
 static void line_apply_grid(JFLine line, count_t *widths, int part_count)
 {
     for (int i=0 ; i<part_count ; i++ ) {
@@ -786,13 +792,6 @@ static void mark_no_grid(JFWriter w) {
     for (count_t i=0;i<w->stack.n;i++)
         w->stack.v[i].can_grid = false;
 }
-
-static bool line_part_is_number(JFLine line, JFPart part)
-{
-    char c = line->text[part->off] ;
-    return c == '-' || (c >= '0' && c <= '9') ;
-}
-
 
 
 static bool try_grid(JFWriter w, JFFrame f)

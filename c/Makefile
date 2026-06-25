@@ -1,4 +1,4 @@
-default: all
+default: build
 
 CC = gcc -std=c2x
 CFLAGS = -Wall -W
@@ -13,7 +13,7 @@ config:
 
 setup:
 
-all: generated.exe jsonfold.exe benchmark.exe
+build: generated.exe jsonfold.exe benchmark.exe
 
 clean:
 	rm -f *.o *.exe

@@ -5,6 +5,16 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Node cli",
+            "program": "${workspaceFolder}/javascript/cli.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "args": [ "--verbose", "--input=tests/unit/071.json", "--compact=off" ],
+            "type": "node"
+        },
+        {
             "name": "C CLI",
             "type": "cppdbg",
             "request": "launch",
@@ -81,7 +91,7 @@
             "request": "launch",
             "mainClass": "dev.jsonfold.format.Main",
             "projectName": "jsonfold-cli",
-            "args": [ "--input=tests/unit/024.json", "--compact=max", "--width=80"]
+            "args": [ "--input=tests/unit/074.json", "--compact=high", "--width=100"]
         },
         {
             "type": "java",
@@ -113,7 +123,7 @@
             "request": "launch",
             "program": "python/cli.py",
             "args": [
-                "-v", "--input=tests/unit/023.json", "--width=30", "--compact=join"
+                "-v", "--input=tests/unit/071.json", "--compact=off"
             ]
         },
         {
