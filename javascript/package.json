@@ -1,13 +1,29 @@
 {
   "name": "@jsonfold/core",
   "type": "module",
-  "version": "0.1.7",
+  "version": "0.2.0",
   "description": "Compact readable JSON formatter",
   "main": "jsonfold.js",
+  "files": [
+    "jsonfold.js",
+    "cli.js",
+    "README.md"
+  ],
   "license": "MIT",
   "bin": {
-    "jsonfold": "./cli.js"
+    "jsonfold": "cli.js"
   },
-  "dependencies": {
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "homepage": "https://jsonfold.dev/",
+  "author": "Yair Lenga <yair.lenga@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ylenga/jsonfold.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ylenga/jsonfold/issues"
   }
 }

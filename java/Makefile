@@ -9,9 +9,11 @@ realclean:
 
 config:
 
+VERSION := $(shell cat ../VERSION)
 setup:
 	mkdir -vp ${MODULES:%=jsonfold-%/src/main/resources}
 	mkdir -vp ${MODULES:%=jsonfold-%/src/test/resources}
+	mvn versions:set -DnewVersion=$(VERSION) -DgenerateBackupPoms=false
 
 	# include validate, compile, test and pacakge
 build:
@@ -32,5 +34,13 @@ verify:
 	mvn verify -P release -Dgpg.skip=true
 
 publish:
-	export GPG=$$(tty) mvn deploy -P relesae
+	GPG_TTY=$$(tty) mvn deploy -P release -DskipTests
 
+world:
+	make realclean
+	make setup
+	make build
+	make test
+	make benchmark
+	make package
+	make verify

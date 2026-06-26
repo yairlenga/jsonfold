@@ -9,7 +9,7 @@ version = "0.2.0"
 description = "Compact readable JSON formatter"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
 authors = [
   { name = "Yair Lenga" }
 ]
@@ -18,4 +18,4 @@ authors = [
 jsonfold = "cli:main"
 
 [tool.setuptools]
-py-modules = ["jsonfold", "jsonfold_cli"]
+py-modules = ["jsonfold", "cli"]

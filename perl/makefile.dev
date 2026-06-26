@@ -1,0 +1,70 @@
+default: build
+
+M := $(MAKE) -f $(firstword $(MAKEFILE_LIST))
+
+config:
+
+VERSION := $(shell cat ../VERSION)
+setup:
+	@echo "Updating lib/JSON/JSONFOLD.pm to $(VERSION)"
+	sed -i -E "s/^(version *= *')[^']*(')/\1$(VERSION)\2/" lib/JSON/JSONFold.pm
+	V=$$(perl -Ilib -e 'use JSON::JSONFold ; print $$JSON::JSONFold::VERSION ;') ; [ "$$V" = "$(VERSION)" ]
+	perl Makefile.PL
+
+build:
+	$(MAKE)
+
+.PHONY: %.t
+
+run-test:
+	$(MAKE) test
+	perl ./script/jsonfold.pl --demo
+	perl ./script/benchmark.pl 10
+	cd ../tests/unit && ../run_tests.sh -mperl
+	cd ../tests/samples && ../run_tests.sh -mperl
+	cd ../tests/future && ../run_tests.sh -mperl
+
+test:
+	$M run-test > test.log
+
+PACKAGE=JSON-JSONFold-$(VERSION).tar.gz
+
+package:
+	mkdir -p dist
+	rm -f $(PACKAGE)
+	make dist
+	mv $(PACKAGE) dist/
+
+T=tmp
+run-verify:
+	rm -rf $T
+	make disttest DISTVNAME=$T
+	cd $T && perl ./script/jsonfold.pl --demo
+	cd $T && perl ./script/benchmark.pl 10
+
+verify:
+	$M run-verify > verify.log
+	wc verify.log
+	echo "Passed: $@"
+
+publish:
+	cpan-upload dist/JSON-JSONFold-$(VERSION).tar.gz
+
+
+benchmark:
+	./run_benchmark.sh $(BENCHMARK_ARGS)
+
+clean:
+	[ -f Makefile ] && $(MAKE) clean || true
+
+realclean: clean
+	rm -f $T
+
+world:
+	$M realclean
+	$M setup
+	$M build
+	$M test
+	$M benchmark
+	$M package
+	$M verify

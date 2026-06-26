@@ -6,10 +6,10 @@ config:
 	sudo apt install pipx
 	pipx install twine
 
-
+VERSION := $(shell cat ../VERSION)
 setup:
-	# pip3 install build
-	# pip3 install twine
+	@echo "Updating pyproject.toml to $(VERSION)"
+	sed -i -E 's/^(version *= *")[^"]*(")/\1$(VERSION)\2/' pyproject.toml
 
 build:
 	$(PYTHON) -m py_compile jsonfold.py
@@ -31,9 +31,9 @@ test:
 	$(MAKE) run-test > test.log
 
 package:
-	rm -rf dist
+	rm -f dist/jsonfold-$(VERSION)[.-]*
 	$(PYTHON) -m build
-	twine check dist/*
+	twine check dist/jsonfold-$(VERSION)[.-]*
 
 T=tmp
 setup-verify:
@@ -47,7 +47,7 @@ run-verify:
 	mkdir -p $R
 	cd $R && python3 -S -c 'import runpy ; import os ; runpy.run_path("${CURDIR}/api_test.py", run_name="__main__")'
 	cd $R && python3 -S -m runpy jsonfold --demo
-	cd $R && python3 -S -m runpy jsonfold_cli --demo
+	cd $R && python3 -S -m runpy cli --demo
 	cd $R && python3 -S -c 'import runpy ; import os ; runpy.run_path("${CURDIR}/benchmark.py", run_name="__main__")' 10
 
 verify:
@@ -57,8 +57,7 @@ verify:
 	echo "Passed: $@"
 
 publish:
-	echo twine upload dist/*
-
+	twine upload dist/jsonfold-$(VERSION)[.-]*
 
 benchmark:
 	./run_benchmark.sh
@@ -70,3 +69,11 @@ realclean: clean
 	rm -f *.out  *.prof *.lprof *.cover
 	rm -rf __pycache__ .pytest_cache .mypy_cache .coverage htmlcov .venv
 
+world:
+	make realclean
+	make setup
+	make build
+	make test
+	make benchmark
+	make package
+	make verify
