@@ -205,7 +205,7 @@ public final class JacksonMain {
 
             Options use --name=value form only:
                   --input=file.json
-                  --compact=default|none|low|med|high|max|pack|fold|join
+                  --compact=default|none|low|med|classic|high|max|pack|fold|gird|join
                   --width=N
                   --indent=2
 
