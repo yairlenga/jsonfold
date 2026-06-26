@@ -169,6 +169,49 @@ public final class JacksonJSONFold extends JSONFold implements JFFormatter {
         }
 
         /**
+         * Write object end marker.
+         *
+         * @param g JSON generator
+         * @param nrOfEntries number of object entries
+         * @throws IOException if writing fails
+         */
+        @Override
+        public void writeEndObject(JsonGenerator g, int nrOfEntries)
+                throws IOException {
+            if (nrOfEntries == 0) {
+                if (!_objectIndenter.isInline()) {
+                    --_nesting;
+                }
+                g.writeRaw('}');
+                return;
+            }
+
+            super.writeEndObject(g, nrOfEntries);
+        }
+
+        /**
+         * Write array end marker.
+         *
+         * @param g JSON generator
+         * @param nrOfValues number of array values
+         * @throws IOException if writing fails
+         */
+        @Override
+        public void writeEndArray(JsonGenerator g, int nrOfValues)
+                throws IOException {
+
+            if (nrOfValues == 0) {
+                if (!_objectIndenter.isInline()) {
+                    --_nesting;
+                }
+                g.writeRaw(']');
+                return;
+            }
+
+            super.writeEndArray(g, nrOfValues);
+        }
+
+        /**
          * Create a reusable pretty-printer instance.
          *
          * @return copied pretty-printer instance

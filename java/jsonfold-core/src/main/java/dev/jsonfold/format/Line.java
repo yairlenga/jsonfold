@@ -94,11 +94,6 @@ final class Line {
      * @param s          line text without trailing newline
      * @return parsed line metadata
      */
-    static final String EMPTY_OBJECT = "{ }" ;
-    static final String EMPTY_OBJECT1 = "{ }," ;
-    static final String EMPTY_LIST = "[ ]" ;
-    static final String EMPTY_LIST1 = "[ ]," ;
-
     static Line parse(String s) {
 
         int start = 0;
@@ -109,26 +104,16 @@ final class Line {
         String body = rstrip(s.substring(start));
 
         Line line = new Line(start) ;
+        line.parts.add(body) ;
+        line.partsLength = body.length() ;
 
         if (body.endsWith("{")) {
             line.opener = Kind.DICT;
         } else if (body.endsWith("[")) {
             line.opener = Kind.LIST;
-        } else if (body.endsWith(EMPTY_OBJECT)) {
-            body = body.substring(0, body.length()-EMPTY_OBJECT.length()) + "{}" ;
-        } else if (body.endsWith(EMPTY_OBJECT1)) {
-            body = body.substring(0, body.length()-EMPTY_OBJECT1.length()) + "{}," ;
-        } else if (body.endsWith(EMPTY_LIST)) {
-            body = body.substring(0, body.length()-EMPTY_LIST.length()) + "[]" ;
-        } else if (body.endsWith(EMPTY_LIST1)){
-            body = body.substring(0, body.length()-EMPTY_LIST1.length()) + "[]," ;
-        } else {
-            line.closer = closingKind(body);
         }
 
-        line.parts.add(body) ;
-        line.partsLength = body.length() ;
-
+        line.closer = closingKind(body);
 
         boolean isBodyLine = line.opener == Kind.NONE && line.closer == Kind.NONE;
 
