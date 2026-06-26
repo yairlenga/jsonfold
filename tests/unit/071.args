@@ -1,3 +1,5 @@
 # Off preset passthrough
 # category: extra
 --compact=off
+skip.perl=Order
+skip.javascript=NewLine

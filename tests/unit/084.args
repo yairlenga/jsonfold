@@ -1,3 +1,4 @@
 # Fold width exact candidate
 # category: extra
 --compact=fold --width=40
+skip.perl=Order

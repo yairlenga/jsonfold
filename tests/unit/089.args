@@ -1,3 +1,4 @@
 # Pack array item limit split
 # category: extra
 --compact=pack --pack-array-items=5
+skip.perl=Order

@@ -14,9 +14,8 @@ esac
 echo "Using: JSONFOLD=${JSONFOLD?No JSONFOLD}"
 
 read_args() {
-    # Strip blank lines and comments from .args files.
-    # This keeps .args human-readable while preserving shell execution.
-    sed -e 's/[[:space:]]*#.*$//' -e '/^[[:space:]]*$/d' "$1"
+    # print every line that starts with '--' or lines with args=...
+    sed -n -e '/^--/p' -e 's/^args=//p' "$1"
 }
 
 passed=0
@@ -33,11 +32,13 @@ do
     gold="$base.gold"
     json="$base.json"
     out="$base.out"
+    args="$base.args"
 
-    if [ -f "$gold" -a -f "$json" ] ; then
+    if [ -f "$args" -a -f "$gold" -a -f "$json" ] ; then
         label=$base
-	if [ -f "$base.$mode.skip" ] ; then
-	    echo "SKIP $label ($mode)"
+	skip=$(grep "^skip.$mode=" $args || true)
+	if [ "$skip" ] ; then
+	    echo "SKIP $label ($mode): ${skip#*=}"
             skipped=$((skipped+1))
 	    continue
 	fi
@@ -52,14 +53,14 @@ do
 
         if diff -u "$gold" "$out"
         then
-            echo "PASS $label"
+            echo "OK $label"
             passed=$((passed+1))
         else
             failed=$((failed+1))
             echo "FAIL $label" >&2
         fi
     else
-        echo "UNKNWON $base: no $base.gold" >&2
+        echo "UNKNWON test: $arg" >&2
     fi
 done
 

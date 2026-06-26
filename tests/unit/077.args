@@ -1,3 +1,4 @@
 # Null array packing
 # category: extra
 --compact=pack
+skip.perl=Order

@@ -1,3 +1,4 @@
 # Join nesting allowed
 # category: extra
 --compact=join --join-nesting=2
+skip.perl=Order

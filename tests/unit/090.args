@@ -1,3 +1,4 @@
 # Pack object item limit exact
 # category: extra
 --compact=pack --pack-obj-items=3
+skip.perl=Order

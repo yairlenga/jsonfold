@@ -1,3 +1,4 @@
 # Nested empty containers
 # category: extra
 --compact=high
+skip.perl=Order

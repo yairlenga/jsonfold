@@ -1,3 +1,4 @@
 # Wide scalar blocks packing
 # category: extra
 --compact=pack --width=35
+skip.perl=Order

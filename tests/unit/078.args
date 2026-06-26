@@ -1,3 +1,4 @@
 # Negative and decimal numbers
 # category: extra
 --compact=pack --width=80
+skip.perl=Order

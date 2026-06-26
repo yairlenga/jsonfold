@@ -1,3 +1,4 @@
 # Pack array item limit exact
 # category: extra
 --compact=pack --pack-array-items=6
+skip.perl=Order

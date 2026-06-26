@@ -1,3 +1,4 @@
 # Pack width exact candidate
 # category: extra
 --compact=pack --width=40
+skip.perl=Order

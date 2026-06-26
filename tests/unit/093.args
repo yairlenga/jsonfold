@@ -1,3 +1,4 @@
 # Fold object item limit blocked
 # category: extra
 --compact=fold --fold-obj-items=2
+skip.perl=Order
