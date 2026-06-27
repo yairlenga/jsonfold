@@ -1,0 +1,10 @@
+{
+  "logging": { "level": "info", "outputs": [ "stdout", "file" ] },
+  "service": {
+    "enabled": true, "name": "gateway", "ports": [ 80, 443, 8443 ],
+    "regions": {
+      "eu-west": { "debug": true, "replicas": 2 },
+      "us-east": { "debug": false, "replicas": 3 }
+    }
+  }
+}

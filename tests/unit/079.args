@@ -2,3 +2,4 @@
 # category: extra
 --compact=high
 skip.perl=Order
+skip.go=Order

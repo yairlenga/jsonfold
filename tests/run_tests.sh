@@ -9,6 +9,7 @@ case "${1-}" in
 	-mjavascript | -mjs | -mnode ) shift ; mode=javascript ; JSONFOLD="node --expose-gc $root/javascript/cli.js" ;;
 	-mperl | -mpl ) shift ; mode=perl ; JSONFOLD="perl $root/perl/script/jsonfold.pl" ;;
 	-mc) shift ; mode=c ; JSONFOLD="$root/c/jsonfold.exe" ;;
+	-mgo) shift ; mode=go ; JSONFOLD="$root/go/jsonfold-cli" ;;
 esac
 
 echo "Using: JSONFOLD=${JSONFOLD?No JSONFOLD}"

@@ -2,3 +2,4 @@
 # category: extra
 --compact=join --width=40
 skip.perl=Order
+skip.go=Order
