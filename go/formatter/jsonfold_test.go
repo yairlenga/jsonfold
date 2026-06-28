@@ -36,11 +36,8 @@ func TestFoldTextBasic(t *testing.T) {
 }
 
 func TestPresetOff(t *testing.T) {
-	_, enabled, err := PresetConfig("off")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if enabled {
+	config := JsonfoldConfig("off")
+	if config.Width > 0 {
 		t.Fatal("off preset should return enabled=false")
 	}
 }

@@ -22,8 +22,10 @@ func createStream(fp io.Writer, cfg Config, opt *Options) (*Writer, error) {
 
 // Serialization Options
 type Options struct {
-	Indent  int
-	DoClose bool
+	Indent    int
+	DoClose   bool
+	Prefix    string // NYI
+	IndentStr string // NYI
 }
 
 var defaultOptions = &Options{Indent: 2}
@@ -39,6 +41,16 @@ func encodeJSON(fp io.Writer, data any, opt *Options) error {
 		enc.SetIndent("", "  ")
 	}
 	return enc.Encode(data)
+}
+
+func JsonfoldConfig(preset string) Config {
+	cfg, _, _ := presetConfig(preset)
+	return cfg
+}
+
+func CreateWriter(fp io.WriteCloser, width int, cfg Config) (*Writer, error) {
+	setupConfig(&cfg, width, nil)
+	return createStream(fp, cfg, nil)
 }
 
 func FormatJSON(data any, width int, cfg Config, opt *Options) (string, error) {

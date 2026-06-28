@@ -63,7 +63,7 @@ func NoneConfig() Config {
 	return Config{Width: DefaultWidth}
 }
 
-func PresetConfig(name string) (Config, bool, error) {
+func presetConfig(name string) (Config, bool, error) {
 	base := DefaultConfig()
 	none := NoneConfig()
 
@@ -169,7 +169,7 @@ func ConfigWithWidth(config Config, width int) Config {
 }
 
 func PresetConfigWithWidth(name string, width int) (Config, bool, error) {
-	cfg, enabled, err := PresetConfig(name)
+	cfg, enabled, err := presetConfig(name)
 	if err != nil || !enabled {
 		return cfg, enabled, err
 	}
