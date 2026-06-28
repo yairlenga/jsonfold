@@ -3,6 +3,7 @@ package jsonfold
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"strings"
 )
@@ -50,9 +51,20 @@ func encodeJSON(fp io.Writer, data any, opt *Options) error {
 	return enc.Encode(data)
 }
 
+func LookupConfig(preset string) (Config, error) {
+	config, ok := findPreset(preset)
+	if !ok {
+		return defaultConfig, fmt.Errorf("unknown JSONFold preset: %s", preset)
+	}
+	return config, nil
+}
+
 func JsonfoldConfig(preset string) Config {
-	cfg, _, _ := presetConfig(preset)
-	return cfg
+	config, ok := findPreset(preset)
+	if !ok {
+		return defaultConfig
+	}
+	return config
 }
 
 func CreateWriter(fp io.WriteCloser, width int, cfg Config) (*Writer, error) {
@@ -62,7 +74,6 @@ func CreateWriter(fp io.WriteCloser, width int, cfg Config) (*Writer, error) {
 
 func FormatJSON(data any, width int, cfg Config, opt *Options) (string, error) {
 	setupConfig(&cfg, width, opt)
-	var buf bytes.Buffer
 	fp := new(bytes.Buffer)
 	jfw, err := createStream(fp, cfg, opt)
 	if jfw != nil {
@@ -75,28 +86,28 @@ func FormatJSON(data any, width int, cfg Config, opt *Options) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return buf.String(), err
+	return fp.String(), err
 }
 
 func WriteJSON(fp io.Writer, data any, width int, cfg Config, opt *Options) (Stats, error) {
 	setupConfig(&cfg, width, opt)
 	jfw, err := createStream(fp, cfg, opt)
-	if jfw != nil {
-		defer jfw.Close()
-	}
 	var stats Stats
-	if err != nil {
+
+	if jfw == nil {
 		return stats, err
 	}
+	defer jfw.Close()
 
 	err = encodeJSON(jfw, data, nil)
+	jfw.Finish()
+
 	stats = jfw.Stats()
 	return stats, err
 }
 
 func FoldText(text string, width int, cfg Config) (string, error) {
 	setupConfig(&cfg, width, nil)
-	var buf bytes.Buffer
 	fp := new(bytes.Buffer)
 	jfw, err := createStream(fp, cfg, nil)
 	if jfw != nil {
@@ -107,5 +118,5 @@ func FoldText(text string, width int, cfg Config) (string, error) {
 	}
 	jfw.Write([]byte(text))
 	jfw.Close()
-	return buf.String(), err
+	return fp.String(), err
 }

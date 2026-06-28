@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"strconv"
-	"strings"
 
 	jsonfold "jsonfold/formatter"
 )
@@ -124,26 +123,22 @@ func applyConfigArgs(cfg *jsonfold.Config, a args) {
 	// Combined flags first, specific flags second.
 	// Example: --pack-items=8 --pack-obj-items=4 means arrays=8, objects=4.
 
-	if a.packItems.IsSet() {
-		cfg.PackArrayItems = a.packItems.Value()
-		cfg.PackObjItems = a.packItems.Value()
-	}
+	applyOptional(&cfg.Width, a.width)
+
+	applyOptional(&cfg.PackArrayItems, a.packItems)
+	applyOptional(&cfg.PackObjItems, a.packItems)
 	applyOptional(&cfg.PackArrayItems, a.packArrayItems)
 	applyOptional(&cfg.PackObjItems, a.packObjItems)
 	applyOptional(&cfg.PackNesting, a.packNesting)
 
-	if a.foldItems.IsSet() {
-		cfg.FoldArrayItems = a.foldItems.Value()
-		cfg.FoldObjItems = a.foldItems.Value()
-	}
+	applyOptional(&cfg.FoldArrayItems, a.foldItems)
+	applyOptional(&cfg.FoldObjItems, a.foldItems)
 	applyOptional(&cfg.FoldArrayItems, a.foldArrayItems)
 	applyOptional(&cfg.FoldObjItems, a.foldObjItems)
 	applyOptional(&cfg.FoldNesting, a.foldNesting)
 
-	if a.gridItems.IsSet() {
-		cfg.GridArrayItems = a.gridItems.Value()
-		cfg.GridObjItems = a.gridItems.Value()
-	}
+	applyOptional(&cfg.GridArrayItems, a.gridItems)
+	applyOptional(&cfg.GridObjItems, a.gridItems)
 	applyOptional(&cfg.GridArrayItems, a.gridArrayItems)
 	applyOptional(&cfg.GridObjItems, a.gridObjItems)
 	applyOptional(&cfg.GridMinLines, a.gridMinLines)
@@ -151,10 +146,8 @@ func applyConfigArgs(cfg *jsonfold.Config, a args) {
 	applyOptional(&cfg.GridArrayMin, a.gridArrayMin)
 	applyOptional(&cfg.GridObjMin, a.gridObjMin)
 
-	if a.joinItems.IsSet() {
-		cfg.JoinArrayItems = a.joinItems.Value()
-		cfg.JoinObjItems = a.joinItems.Value()
-	}
+	applyOptional(&cfg.JoinArrayItems, a.joinItems)
+	applyOptional(&cfg.JoinObjItems, a.joinItems)
 	applyOptional(&cfg.JoinArrayItems, a.joinArrayItems)
 	applyOptional(&cfg.JoinObjItems, a.joinObjItems)
 	applyOptional(&cfg.JoinNesting, a.joinNesting)
@@ -244,50 +237,33 @@ func openOutput(a args) (io.Writer, func() error, error) {
 	return fp, closeFn, nil
 }
 
-func widthValue(a args) int {
-	if a.width.IsSet() {
-		return a.width.Value()
-	}
-	return 0
-}
-
 func run(a args) error {
 	data, err := readData(a)
 	if err != nil {
 		return err
 	}
 
-	out := os.Stdout
-
-	cfg, enabled, err := jsonfold.PresetConfigWithWidth(a.compact, widthValue(a))
+	cfg, err := jsonfold.LookupConfig(a.compact)
 	if err != nil {
+		fmt.Fprintf(os.Stderr, err.Error())
 		return err
 	}
 
 	applyConfigArgs(&cfg, a)
-
-	var fw *jsonfold.Writer
-	if enabled {
-		fw = jsonfold.NewWriter(out, cfg)
-	} else {
-		fw = jsonfold.NewOffWriter(out)
+	if a.verbose {
+		fmt.Fprintf(os.Stderr, "config: %+v\n", cfg)
 	}
 
-	enc := json.NewEncoder(fw)
-	enc.SetEscapeHTML(false)
-	enc.SetIndent("", strings.Repeat(" ", a.indent))
+	out := os.Stdout
 
-	if err := enc.Encode(data); err != nil {
-		return err
-	}
+	stats, err := jsonfold.WriteJSON(out, data, cfg.Width, cfg, nil)
 
-	if err := fw.Finish(); err != nil {
+	if err != nil {
 		return err
 	}
 
 	if a.verbose {
-		fmt.Fprintf(os.Stderr, "config: %+v\n", cfg)
-		fmt.Fprintf(os.Stderr, "stats: %+v\n", fw.Stats())
+		fmt.Fprintf(os.Stderr, "stats: %+v\n", stats)
 	}
 
 	return nil

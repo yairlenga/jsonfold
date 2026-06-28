@@ -20,15 +20,16 @@ build:
 .PHONY: %.t
 
 run-test:
-	#./api_test.py
+	go test ./...
 	./jsonfold.exe --demo
 	./benchmark.exe 10
 	cd ../tests/unit && ../run_tests.sh -mgo
 	cd ../tests/samples && ../run_tests.sh -mgo
 	cd ../tests/future && ../run_tests.sh -mgo
+	echo "Passed: $@"
 
 test:
-	$(MAKE) run-test > test.log
+	$(MAKE) run-test | tee test.log
 
 package:
 	rm -f dist/jsonfold-$(VERSION)[.-]*

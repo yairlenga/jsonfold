@@ -116,8 +116,7 @@ func runJSONDumpPretty(data any, t0 time.Time) *NullWriter {
 
 func runJSONFoldDump(data any, t0 time.Time, compact string) *NullWriter {
 	w := NewNullWriter(t0)
-	cfg := jsonfold.JsonfoldConfig(compact)
-	_, _ = jsonfold.WriteJSON(w, data, 0, cfg, nil)
+	_, _ = jsonfold.WriteJSON(w, data, 0, jsonfold.JsonfoldConfig(compact), nil)
 	return w
 }
 

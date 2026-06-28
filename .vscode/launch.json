@@ -13,7 +13,7 @@
             "request": "launch",
             "mode": "debug",
             "program": "${workspaceFolder}/go/cmd/jsonfold",
-            "args": [ "--demo", "--verbose"]
+            "args": [ "--input=${workspaceFolder}/tests/unit/010.json", "--compact=pack"]
         },
         {
             "name": "GO Benchmark",

@@ -1,7 +1,5 @@
 package jsonfold
 
-import "fmt"
-
 const (
 	defaultWidth  = 100
 	maxArrayItems = 1000
@@ -34,88 +32,88 @@ type Config struct {
 	JoinNesting    int
 }
 
-func DefaultConfig() Config {
-	return Config{
-		Width: defaultWidth,
+var defaultConfig = Config{
+	Width: defaultWidth,
 
-		PackArrayItems: 10,
-		PackObjItems:   5,
-		PackNesting:    1,
+	PackArrayItems: 10,
+	PackObjItems:   5,
+	PackNesting:    1,
 
-		FoldArrayItems: 10,
-		FoldObjItems:   5,
-		FoldNesting:    2,
+	FoldArrayItems: 10,
+	FoldObjItems:   5,
+	FoldNesting:    2,
 
-		GridArrayItems: maxArrayItems,
-		GridObjItems:   maxObjItems,
-		GridMinLines:   3,
-		GridMaxLines:   100,
-		GridArrayMin:   3,
-		GridObjMin:     3,
+	GridArrayItems: maxArrayItems,
+	GridObjItems:   maxObjItems,
+	GridMinLines:   3,
+	GridMaxLines:   100,
+	GridArrayMin:   3,
+	GridObjMin:     3,
 
-		JoinArrayItems: 8,
-		JoinObjItems:   4,
-		JoinNesting:    1,
-	}
+	JoinArrayItems: 8,
+	JoinObjItems:   4,
+	JoinNesting:    1,
 }
 
-func NoneConfig() Config {
-	return Config{Width: defaultWidth}
+var noneConfig = Config{
+	Width: defaultWidth,
 }
 
-func presetConfig(name string) (Config, bool, error) {
-	base := DefaultConfig()
-	none := NoneConfig()
+var presets = createPresets()
 
-	packMax := func(c Config) Config {
+func createPresets() map[string]Config {
+
+	base := defaultConfig
+	none := noneConfig
+
+	packMax := func(c *Config) {
 		c.PackArrayItems = maxArrayItems
 		c.PackObjItems = maxObjItems
 		c.PackNesting = maxNesting
-		return c
 	}
-	foldMax := func(c Config) Config {
+	foldMax := func(c *Config) {
 		c.FoldArrayItems = maxArrayItems
 		c.FoldObjItems = maxObjItems
 		c.FoldNesting = maxNesting
-		return c
 	}
-	joinMax := func(c Config) Config {
+	joinMax := func(c *Config) {
 		c.JoinArrayItems = maxArrayItems
 		c.JoinObjItems = maxObjItems
 		c.JoinNesting = maxNesting
-		return c
 	}
-	gridMax := func(c Config) Config {
+	gridMax := func(c *Config) {
 		c.GridArrayItems = maxArrayItems
 		c.GridObjItems = maxObjItems
 		c.GridMinLines = 3
 		c.GridMaxLines = maxGridLines
-		return c
 	}
 
-	switch name {
-	case "", "default":
-		return base, true, nil
-	case "off":
-		return Config{}, false, nil
-	case "none":
-		return none, true, nil
-	case "low":
+	p := make(map[string]Config)
+
+	p[""] = base
+	p["default"] = base
+	p["off"] = Config{}
+	p["none"] = none
+
+	{
 		c := base
 		c.FoldNesting = 0
 		c.JoinNesting = 0
 		c.GridMaxLines = 0
-		return c, true, nil
-	case "med":
+		p["low"] = c
+	}
+	{
 		c := base
 		c.JoinNesting = 0
 		c.GridMaxLines = 0
-		return c, true, nil
-	case "classic":
+		p["med"] = c
+	}
+	{
 		c := base
 		c.GridMaxLines = 0
-		return c, true, nil
-	case "high":
+		p["classic"] = c
+	}
+	{
 		c := base
 		c.PackArrayItems = 20
 		c.PackObjItems = 10
@@ -128,50 +126,48 @@ func presetConfig(name string) (Config, bool, error) {
 		c.JoinArrayItems = 16
 		c.JoinObjItems = 8
 		c.JoinNesting = 2
-		return c, true, nil
-	case "max":
+		p["high"] = c
+	}
+	{
 		c := base
 		c.Width = maxWidth
-		c = packMax(c)
-		c = foldMax(c)
-		c = joinMax(c)
-		c = gridMax(c)
+		packMax(&c)
+		foldMax(&c)
+		joinMax(&c)
+		gridMax(&c)
 		c.GridArrayMin = 4
 		c.GridObjMin = 4
-		return c, true, nil
-	case "pack":
-		return packMax(none), true, nil
-	case "fold":
-		return foldMax(none), true, nil
-	case "grid":
+		p["max"] = c
+	}
+	{
 		c := none
-		c = packMax(c)
-		c = foldMax(c)
-		c = gridMax(c)
-		return c, true, nil
-	case "join":
+		packMax(&c)
+		p["pack"] = c
+	}
+	{
 		c := none
-		c = foldMax(c)
+		foldMax(&c)
+		p["fold"] = c
+	}
+	{
+		c := none
+		packMax(&c)
+		foldMax(&c)
+		gridMax(&c)
+		p["grid"] = c
+	}
+	{
+		c := none
+		foldMax(&c)
 		c.JoinArrayItems = maxArrayItems
 		c.JoinObjItems = maxObjItems
 		c.JoinNesting = maxNesting
-		return c, true, nil
-	default:
-		return Config{}, false, fmt.Errorf("unknown JSONFold preset: %s", name)
+		p["join"] = c
 	}
+	return p
 }
 
-func ConfigWithWidth(config Config, width int) Config {
-	if width > 0 {
-		config.Width = width
-	}
-	return config
-}
-
-func PresetConfigWithWidth(name string, width int) (Config, bool, error) {
-	cfg, enabled, err := presetConfig(name)
-	if err != nil || !enabled {
-		return cfg, enabled, err
-	}
-	return ConfigWithWidth(cfg, width), true, nil
+func findPreset(name string) (Config, bool) {
+	cfg, ok := presets[name]
+	return cfg, ok
 }
