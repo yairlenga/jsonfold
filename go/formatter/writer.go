@@ -8,7 +8,7 @@ import (
 
 type Writer struct {
 	fp      io.Writer
-	Stats   Stats
+	stats   Stats
 	cfg     Config
 	enabled bool
 	pending string
@@ -37,10 +37,10 @@ func NewWriterPreset(fp io.Writer, preset string, width int) (*Writer, error) {
 func (w *Writer) Write(p []byte) (int, error) {
 	s := string(p)
 	sLen := len(s)
-	w.Stats.BytesIn += sLen
+	w.stats.BytesIn += sLen
 
 	if !w.enabled {
-		w.Stats.LinesIn += strings.Count(s, "\n")
+		w.stats.LinesIn += strings.Count(s, "\n")
 		_, err := w.writeString(s)
 		if err != nil {
 			return 0, err
@@ -56,7 +56,7 @@ func (w *Writer) Write(p []byte) (int, error) {
 
 	nl2Pos := strings.IndexByte(s[nlPos+1:], '\n')
 	if nl2Pos < 0 {
-		w.Stats.LinesIn++
+		w.stats.LinesIn++
 		s2 := w.pending + s[:nlPos]
 		w.pending = s[nlPos+1:]
 		if err := w.feed(ParseLine(s2)); err != nil {
@@ -66,7 +66,7 @@ func (w *Writer) Write(p []byte) (int, error) {
 	}
 
 	parts := splitLinesKeepEnds(s)
-	w.Stats.LinesIn += len(parts) - 1
+	w.stats.LinesIn += len(parts) - 1
 
 	if w.pending != "" {
 		parts[0] = w.pending + parts[0]
@@ -126,10 +126,14 @@ func (w *Writer) Close() error {
 	return nil
 }
 
+func (w *Writer) Stats() Stats {
+	return w.stats
+}
+
 func (w *Writer) writeString(s string) (int, error) {
 	n, err := io.WriteString(w.fp, s)
-	w.Stats.BytesOut += n
-	w.Stats.LinesOut += strings.Count(s[:n], "\n")
+	w.stats.BytesOut += n
+	w.stats.LinesOut += strings.Count(s[:n], "\n")
 	return n, err
 }
 
@@ -466,10 +470,10 @@ func FoldPrettyText(text string, cfg Config) (string, Stats, error) {
 	var buf bytes.Buffer
 	out := NewWriter(&buf, cfg)
 	if _, err := out.Write([]byte(text)); err != nil {
-		return "", out.Stats, err
+		return "", out.Stats(), err
 	}
 	if err := out.Finish(); err != nil {
-		return "", out.Stats, err
+		return "", out.Stats(), err
 	}
-	return buf.String(), out.Stats, nil
+	return buf.String(), out.Stats(), nil
 }

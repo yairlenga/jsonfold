@@ -117,24 +117,24 @@ func runJSONDumpPretty(data any, t0 time.Time) *NullWriter {
 func runJSONFoldDump(data any, t0 time.Time, compact string) *NullWriter {
 	w := NewNullWriter(t0)
 	cfg, _, _ := jsonfold.PresetConfig(compact)
-	_, _ = jsonfold.WriteJSONWithConfig(w, data, cfg)
+	_, _ = jsonfold.WriteJSON(w, data, 0, cfg, nil)
 	return w
 }
 
 func runCase(data any, name string, t0 time.Time) *NullWriter {
 	switch name {
-	case "base.dumps.plain":
+	case "base.format.plain":
 		b, _ := json.Marshal(data)
 		return writeString(t0, string(b))
 
-	case "base.dumps.pretty":
+	case "base.format.pretty":
 		b, _ := json.MarshalIndent(data, "", "  ")
 		return writeString(t0, string(b))
 
-	case "base.dump.plain":
+	case "base.write.plain":
 		return runJSONDumpPlain(data, t0)
 
-	case "base.dump.pretty":
+	case "base.write.pretty":
 		return runJSONDumpPretty(data, t0)
 	}
 
@@ -142,13 +142,13 @@ func runCase(data any, name string, t0 time.Time) *NullWriter {
 	if len(parts) == 3 && parts[0] == "jf" {
 		compact := parts[2]
 
-		if parts[1] == "dumps" {
+		if parts[1] == "format" {
 			cfg, _, _ := jsonfold.PresetConfig(compact)
-			s, _ := jsonfold.FormatJSONWithConfig(data, cfg)
+			s, _ := jsonfold.FormatJSON(data, 0, cfg, nil)
 			return writeString(t0, s)
 		}
 
-		if parts[1] == "dump" {
+		if parts[1] == "write" {
 			return runJSONFoldDump(data, t0, compact)
 		}
 	}
@@ -210,26 +210,26 @@ func runOneSize(rows int, tests []string) []Result {
 
 	if len(tests) == 0 {
 		tests = []string{
-			"base.dump.plain",
-			"base.dump.pretty",
-			"jf.dump.off",
-			"jf.dump.none",
-			"jf.dump.default",
-			"jf.dump.low",
-			"jf.dump.med",
-			"jf.dump.classic",
-			"jf.dump.high",
-			"jf.dump.max",
-			"jf.dump.pack",
-			"jf.dump.fold",
-			"jf.dump.grid",
-			"jf.dump.join",
-			"base.dumps.plain",
-			"base.dumps.pretty",
-			"jf.dumps.none",
-			"jf.dumps.default",
-			"jf.dumps.high",
-			"jf.dumps.max",
+			"base.write.plain",
+			"base.write.pretty",
+			"jf.write.off",
+			"jf.write.none",
+			"jf.write.default",
+			"jf.write.low",
+			"jf.write.med",
+			"jf.write.classic",
+			"jf.write.high",
+			"jf.write.max",
+			"jf.write.pack",
+			"jf.write.fold",
+			"jf.write.grid",
+			"jf.write.join",
+			"base.format.plain",
+			"base.format.pretty",
+			"jf.format.none",
+			"jf.format.default",
+			"jf.format.high",
+			"jf.format.max",
 		}
 	}
 

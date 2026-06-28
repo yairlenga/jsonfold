@@ -1,7 +1,12 @@
+
+.PHONY: %
+
 default: build
 
 config:
 	sudo apt install golang-go
+#	sudo apt install golang-1.23-go
+	go install github.com/go-delve/delve/cmd/dlv@latest
 
 VERSION := $(shell cat ../VERSION)
 setup:
@@ -9,15 +14,15 @@ setup:
 	sed -i -E 's/^(version *= *")[^"]*(")/\1$(VERSION)\2/' pyproject.toml
 
 build:
-	go build -o jsonfold-cli ./cmd/jsonfold
-	go build -o benchmark ./cmd/benchmark
+	go build -o jsonfold.exe ./cmd/jsonfold
+	go build -o benchmark.exe ./cmd/benchmark
 
 .PHONY: %.t
 
 run-test:
 	#./api_test.py
-	./jsonfold-cli --demo
-	./benchmark 10
+	./jsonfold.exe --demo
+	./benchmark.exe 10
 	cd ../tests/unit && ../run_tests.sh -mgo
 	cd ../tests/samples && ../run_tests.sh -mgo
 	cd ../tests/future && ../run_tests.sh -mgo

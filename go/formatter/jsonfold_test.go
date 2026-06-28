@@ -12,7 +12,7 @@ func TestFormatJSONParsesBack(t *testing.T) {
 		"matrix": []any{[]any{1, 20, "Red", 300}, []any{4000, 50, "Yellow", 6}, []any{70, 800, "Green", 9000}},
 	}
 
-	out, err := FormatJSONWithPreset(data, "default", 100)
+	out, err := FormatJSON(data, 100, DefaultConfig(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -25,7 +25,7 @@ func TestFormatJSONParsesBack(t *testing.T) {
 
 func TestFoldTextBasic(t *testing.T) {
 	cfg := ConfigWithWidth(DefaultConfig(), 80)
-	out, err := FoldTextWithConfig("[\n  1,\n  2,\n  3\n]", cfg)
+	out, err := FoldText("[\n  1,\n  2,\n  3\n]", 0, cfg)
 	if err != nil {
 		t.Fatal(err)
 	}

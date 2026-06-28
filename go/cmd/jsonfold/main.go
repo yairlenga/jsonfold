@@ -160,7 +160,19 @@ func applyConfigArgs(cfg *jsonfold.Config, a args) {
 	applyOptional(&cfg.JoinNesting, a.joinNesting)
 }
 
-func demoData() any {
+func demoData() map[string]any {
+	longArray := make([]any, 50)
+	for i := 0; i < 50; i++ {
+		longArray[i] = fmt.Sprintf("a%d", i+1)
+	}
+
+	wideArray := make([]any, 9)
+	wideObject := make(map[string]any, 9)
+	for i := 1; i <= 9; i++ {
+		wideArray[i-1] = fmt.Sprintf("abcdefghijklmnopqrstuvwxyz%d", i)
+		wideObject[fmt.Sprintf("abcdefghijk%d", i)] = fmt.Sprintf("lmnopqrstuvwxyz%d", i)
+	}
+
 	return map[string]any{
 		"meta": map[string]any{
 			"version": 1,
@@ -168,6 +180,25 @@ func demoData() any {
 			"name":    "jsonfold demo",
 		},
 		"ids": []any{1, 2, 3, 4, 5, 6},
+		"matrix": []any{
+			[]any{1, 20, "Red", 300},
+			[]any{4000, 50, "Yellow", 6},
+			[]any{70, 800, "Green", 9000},
+		},
+		"items": []any{
+			map[string]any{"id": 1, "name": "alpha", "qty": 12, "size": "Medium"},
+			map[string]any{"id": 20, "name": "beta", "qty": 3000, "size": "Large"},
+			map[string]any{"id": 300, "name": "Charlie", "qty": 4, "size": "Tiny"},
+		},
+		"long": []any{
+			"this is a long message that may force the block to stay expanded",
+			"second", "third", "fourth",
+		},
+		"single_array":  []any{1},
+		"single_object": map[string]any{"x": 2},
+		"long_array":    longArray,
+		"wide_array":    wideArray,
+		"wide_object":   wideObject,
 	}
 }
 
@@ -256,7 +287,7 @@ func run(a args) error {
 
 	if a.verbose {
 		fmt.Fprintf(os.Stderr, "config: %+v\n", cfg)
-		fmt.Fprintf(os.Stderr, "stats: %+v\n", fw.Stats)
+		fmt.Fprintf(os.Stderr, "stats: %+v\n", fw.Stats())
 	}
 
 	return nil
