@@ -5,44 +5,44 @@ import (
 	"strings"
 )
 
-type Kind int
+type kind int
 
 const (
-	KindNone Kind = iota
-	KindDict
-	KindList
+	kindNone kind = iota
+	kindDict
+	kindList
 )
 
 var keyRE = regexp.MustCompile(`^\s*(?:"[^"\\]*"|'[^'\\]*'|[A-Za-z_$][A-Za-z0-9_$]*|)\s*:`)
 
-type Line struct {
+type lineType struct {
 	Indent       int
 	Parts        []string
 	PartsLength  int
-	Kind         Kind
+	Kind         kind
 	Items        int
 	Leafs        int
 	ChildNesting int
-	Opener       Kind
-	Closer       Kind
+	Opener       kind
+	Closer       kind
 	CanPack      bool
 	CanJoin      bool
 	CanGrid      bool
 }
 
-func ParseLine(s string) Line {
+func parseLine(s string) lineType {
 	stripped := strings.TrimLeft(s, " \t")
 	body := strings.TrimRight(stripped, " \t\r")
 
-	opener := KindNone
+	opener := kindNone
 	if strings.HasSuffix(body, "{") {
-		opener = KindDict
+		opener = kindDict
 	} else if strings.HasSuffix(body, "[") {
-		opener = KindList
+		opener = kindList
 	}
 
 	closer := closingKind(body)
-	isBodyLine := opener == KindNone && closer == KindNone
+	isBodyLine := opener == kindNone && closer == kindNone
 	items := 0
 	leafs := 0
 	if isBodyLine {
@@ -50,7 +50,7 @@ func ParseLine(s string) Line {
 		leafs = 1
 	}
 
-	return Line{
+	return lineType{
 		Indent:       len(s) - len(stripped),
 		Parts:        []string{body},
 		PartsLength:  len(body),
@@ -64,55 +64,55 @@ func ParseLine(s string) Line {
 	}
 }
 
-func closingKind(s string) Kind {
+func closingKind(s string) kind {
 	switch s {
 	case "}", "},":
-		return KindDict
+		return kindDict
 	case "]", "],":
-		return KindList
+		return kindList
 	default:
-		return KindNone
+		return kindNone
 	}
 }
 
-func (l Line) Raw() string {
-	return strings.Repeat(" ", l.Indent) + strings.Join(l.Parts, " ") + "\n"
+func (line lineType) raw() string {
+	return strings.Repeat(" ", line.Indent) + strings.Join(line.Parts, " ") + "\n"
 }
 
-func (l Line) Width() int {
-	return l.Indent + l.PartsLength
+func (line lineType) width() int {
+	return line.Indent + line.PartsLength
 }
 
-func (l Line) CanMerge(other Line, itemLimit int, widthLimit int) bool {
-	return l.Indent == other.Indent &&
-		l.Items+other.Items <= itemLimit &&
-		l.Indent+l.PartsLength+1+other.PartsLength <= widthLimit
+func (line lineType) canMerge(other lineType, itemLimit int, widthLimit int) bool {
+	return line.Indent == other.Indent &&
+		line.Items+other.Items <= itemLimit &&
+		line.Indent+line.PartsLength+1+other.PartsLength <= widthLimit
 }
 
-func (l *Line) MergeLine(other Line) {
-	l.Parts = append(l.Parts, other.Parts...)
+func (line *lineType) mergeLine(other lineType) {
+	line.Parts = append(line.Parts, other.Parts...)
 	if len(other.Parts) > 0 {
-		l.PartsLength += 1 + other.PartsLength
+		line.PartsLength += 1 + other.PartsLength
 	}
-	l.Items += other.Items
-	l.Leafs += other.Leafs
-	if other.ChildNesting > l.ChildNesting {
-		l.ChildNesting = other.ChildNesting
-		l.CanPack = false
+	line.Items += other.Items
+	line.Leafs += other.Leafs
+	if other.ChildNesting > line.ChildNesting {
+		line.ChildNesting = other.ChildNesting
+		line.CanPack = false
 	}
 }
 
-func (l *Line) SetParts(parts []string) {
-	l.Parts = parts
-	l.PartsLength = calcPartsLength(parts)
+func (line *lineType) setParts(parts []string) {
+	line.Parts = parts
+	line.PartsLength = calcPartsLength(parts)
 }
 
-func (l Line) DictSignature() ([]string, bool) {
-	if len(l.Parts) < 2 {
+func (line lineType) dictSignature() ([]string, bool) {
+	if len(line.Parts) < 2 {
 		return nil, false
 	}
-	signature := make([]string, 0, len(l.Parts)-2)
-	for _, part := range l.Parts[1 : len(l.Parts)-1] {
+	signature := make([]string, 0, len(line.Parts)-2)
+	for _, part := range line.Parts[1 : len(line.Parts)-1] {
 		m := keyRE.FindString(part)
 		if m == "" {
 			return nil, false
@@ -122,9 +122,9 @@ func (l Line) DictSignature() ([]string, bool) {
 	return signature, true
 }
 
-func (l *Line) ApplyGrid(widths []int) {
-	parts := formatParts(l.Parts, widths)
-	l.SetParts(parts)
+func (line *lineType) applyGrid(widths []int) {
+	parts := formatParts(line.Parts, widths)
+	line.setParts(parts)
 }
 
 func calcPartsLength(parts []string) int {

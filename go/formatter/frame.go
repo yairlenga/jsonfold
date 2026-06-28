@@ -1,98 +1,98 @@
 package jsonfold
 
-type Frame struct {
-	Kind         Kind
-	Indent       int
-	Depth        int
-	Lines        []Line
-	PartsLength  int
-	PackLimit    int
-	FoldLimit    int
-	JoinLimit    int
-	GridLimit    int
-	GridMinItems int
+type frame struct {
+	kind         kind
+	indent       int
+	depth        int
+	lines        []lineType
+	partsLength  int
+	packLimit    int
+	foldLimit    int
+	joinLimit    int
+	gridLimit    int
+	gridMinItems int
 
-	ContentLines int
-	Items        int
-	Leafs        int
+	contentLines int
+	items        int
+	leafs        int
 
-	FoldOk       bool
-	GridOk       bool
-	ChildNesting int
+	foldOk       bool
+	gridOk       bool
+	childNesting int
 }
 
-func NewFrame(kind Kind, indent int, depth int, packLimit int, foldLimit int, joinLimit int, gridLimit int, gridMinItems int) Frame {
-	return Frame{
-		Kind:         kind,
-		Indent:       indent,
-		Depth:        depth,
-		PackLimit:    packLimit,
-		FoldLimit:    foldLimit,
-		JoinLimit:    joinLimit,
-		GridLimit:    gridLimit,
-		GridMinItems: gridMinItems,
-		FoldOk:       true,
-		ChildNesting: -1,
+func newFrame(kind kind, indent int, depth int, packLimit int, foldLimit int, joinLimit int, gridLimit int, gridMinItems int) frame {
+	return frame{
+		kind:         kind,
+		indent:       indent,
+		depth:        depth,
+		packLimit:    packLimit,
+		foldLimit:    foldLimit,
+		joinLimit:    joinLimit,
+		gridLimit:    gridLimit,
+		gridMinItems: gridMinItems,
+		foldOk:       true,
+		childNesting: -1,
 	}
 }
 
-func (f *Frame) UpdateStats(line Line) {
-	f.Leafs += line.Leafs
-	f.Items += line.Items
-	if f.PartsLength == 0 {
-		f.PartsLength += line.PartsLength
+func (f *frame) updateStats(ln lineType) {
+	f.leafs += ln.Leafs
+	f.items += ln.Items
+	if f.partsLength == 0 {
+		f.partsLength += ln.PartsLength
 	} else {
-		f.PartsLength += 1 + line.PartsLength
+		f.partsLength += 1 + ln.PartsLength
 	}
-	if line.ChildNesting >= f.ChildNesting {
-		f.ChildNesting = line.ChildNesting + 1
+	if ln.ChildNesting >= f.childNesting {
+		f.childNesting = ln.ChildNesting + 1
 	}
 }
 
-func (f *Frame) AddLine(line Line) {
-	f.Lines = append(f.Lines, line)
-	if line.Opener == KindNone && line.Closer == KindNone {
-		f.ContentLines++
+func (f *frame) addLine(ln lineType) {
+	f.lines = append(f.lines, ln)
+	if ln.Opener == kindNone && ln.Closer == kindNone {
+		f.contentLines++
 	}
-	f.UpdateStats(line)
+	f.updateStats(ln)
 }
 
-func (f Frame) CheckFoldLimits(config Config) bool {
-	if f.PartsLength > config.Width {
+func (f frame) checkFoldLimits(config Config) bool {
+	if f.partsLength > config.Width {
 		return false
 	}
-	if f.Items > f.FoldLimit {
+	if f.items > f.foldLimit {
 		return false
 	}
-	if f.ChildNesting >= config.FoldNesting {
+	if f.childNesting >= config.FoldNesting {
 		return false
 	}
 	return true
 }
 
-func (f *Frame) FoldLines(cfg Config) {
+func (f *frame) foldLines(cfg Config) {
 	parts := make([]string, 0)
-	for _, line := range f.Lines {
-		parts = append(parts, line.Parts...)
+	for _, ln := range f.lines {
+		parts = append(parts, ln.Parts...)
 	}
 
-	line := Line{
-		Indent:       f.Indent,
+	folded_line := lineType{
+		Indent:       f.indent,
 		Parts:        parts,
-		PartsLength:  f.PartsLength,
-		Kind:         f.Kind,
+		PartsLength:  f.partsLength,
+		Kind:         f.kind,
 		Items:        1,
-		Leafs:        f.Leafs,
-		ChildNesting: f.ChildNesting,
+		Leafs:        f.leafs,
+		ChildNesting: f.childNesting,
 		CanPack:      false,
-		CanJoin:      f.ChildNesting < cfg.JoinNesting,
-		CanGrid:      cfg.GridMaxLines > 0 && f.Items <= f.GridLimit,
+		CanJoin:      f.childNesting < cfg.JoinNesting,
+		CanGrid:      cfg.GridMaxLines > 0 && f.items <= f.gridLimit,
 	}
-	f.Lines = []Line{line}
+	f.lines = []lineType{folded_line}
 }
 
-func (f *Frame) JoinLines(cfg Config) {
-	lines := f.Lines
+func (f *frame) joinLines(cfg Config) {
+	lines := f.lines
 	n := len(lines)
 	if n < 2 {
 		return
@@ -102,20 +102,20 @@ func (f *Frame) JoinLines(cfg Config) {
 	writePos := 1
 
 	for readPos := 1; readPos < n; readPos++ {
-		line := lines[readPos]
+		ln := lines[readPos]
 		prev := &lines[prevIndex]
-		if prev.CanJoin && line.CanJoin && prev.CanMerge(line, f.JoinLimit, cfg.Width) {
-			prev.MergeLine(line)
+		if prev.CanJoin && ln.CanJoin && prev.canMerge(ln, f.joinLimit, cfg.Width) {
+			prev.mergeLine(ln)
 			prev.CanPack = false
 		} else {
 			if readPos != writePos {
-				lines[writePos] = line
+				lines[writePos] = ln
 			}
 			prevIndex = writePos
 			writePos++
 		}
 	}
 
-	f.Lines = lines[:writePos]
-	f.ContentLines -= n - writePos
+	f.lines = lines[:writePos]
+	f.contentLines -= n - writePos
 }

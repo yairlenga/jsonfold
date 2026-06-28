@@ -3,12 +3,12 @@ package jsonfold
 import "fmt"
 
 const (
-	DefaultWidth  = 100
-	MaxArrayItems = 1000
-	MaxObjItems   = 1000
-	MaxNesting    = 10
-	MaxGridLines  = 1000
-	MaxWidth      = 255
+	defaultWidth  = 100
+	maxArrayItems = 1000
+	maxObjItems   = 1000
+	maxNesting    = 10
+	maxGridLines  = 1000
+	maxWidth      = 255
 )
 
 type Config struct {
@@ -36,7 +36,7 @@ type Config struct {
 
 func DefaultConfig() Config {
 	return Config{
-		Width: DefaultWidth,
+		Width: defaultWidth,
 
 		PackArrayItems: 10,
 		PackObjItems:   5,
@@ -46,8 +46,8 @@ func DefaultConfig() Config {
 		FoldObjItems:   5,
 		FoldNesting:    2,
 
-		GridArrayItems: MaxArrayItems,
-		GridObjItems:   MaxObjItems,
+		GridArrayItems: maxArrayItems,
+		GridObjItems:   maxObjItems,
 		GridMinLines:   3,
 		GridMaxLines:   100,
 		GridArrayMin:   3,
@@ -60,7 +60,7 @@ func DefaultConfig() Config {
 }
 
 func NoneConfig() Config {
-	return Config{Width: DefaultWidth}
+	return Config{Width: defaultWidth}
 }
 
 func presetConfig(name string) (Config, bool, error) {
@@ -68,28 +68,28 @@ func presetConfig(name string) (Config, bool, error) {
 	none := NoneConfig()
 
 	packMax := func(c Config) Config {
-		c.PackArrayItems = MaxArrayItems
-		c.PackObjItems = MaxObjItems
-		c.PackNesting = MaxNesting
+		c.PackArrayItems = maxArrayItems
+		c.PackObjItems = maxObjItems
+		c.PackNesting = maxNesting
 		return c
 	}
 	foldMax := func(c Config) Config {
-		c.FoldArrayItems = MaxArrayItems
-		c.FoldObjItems = MaxObjItems
-		c.FoldNesting = MaxNesting
+		c.FoldArrayItems = maxArrayItems
+		c.FoldObjItems = maxObjItems
+		c.FoldNesting = maxNesting
 		return c
 	}
 	joinMax := func(c Config) Config {
-		c.JoinArrayItems = MaxArrayItems
-		c.JoinObjItems = MaxObjItems
-		c.JoinNesting = MaxNesting
+		c.JoinArrayItems = maxArrayItems
+		c.JoinObjItems = maxObjItems
+		c.JoinNesting = maxNesting
 		return c
 	}
 	gridMax := func(c Config) Config {
-		c.GridArrayItems = MaxArrayItems
-		c.GridObjItems = MaxObjItems
+		c.GridArrayItems = maxArrayItems
+		c.GridObjItems = maxObjItems
 		c.GridMinLines = 3
-		c.GridMaxLines = MaxGridLines
+		c.GridMaxLines = maxGridLines
 		return c
 	}
 
@@ -131,7 +131,7 @@ func presetConfig(name string) (Config, bool, error) {
 		return c, true, nil
 	case "max":
 		c := base
-		c.Width = MaxWidth
+		c.Width = maxWidth
 		c = packMax(c)
 		c = foldMax(c)
 		c = joinMax(c)
@@ -152,9 +152,9 @@ func presetConfig(name string) (Config, bool, error) {
 	case "join":
 		c := none
 		c = foldMax(c)
-		c.JoinArrayItems = MaxArrayItems
-		c.JoinObjItems = MaxObjItems
-		c.JoinNesting = MaxNesting
+		c.JoinArrayItems = maxArrayItems
+		c.JoinObjItems = maxObjItems
+		c.JoinNesting = maxNesting
 		return c, true, nil
 	default:
 		return Config{}, false, fmt.Errorf("unknown JSONFold preset: %s", name)

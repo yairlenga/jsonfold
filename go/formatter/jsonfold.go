@@ -7,6 +7,13 @@ import (
 	"strings"
 )
 
+type Stats struct {
+	BytesIn  int
+	BytesOut int
+	LinesIn  int
+	LinesOut int
+}
+
 func setupConfig(cfg *Config, width int, opt *Options) {
 	_ = opt // Unused for now
 	if width != 0 {
