@@ -48,6 +48,11 @@ def run_api_test() -> int:
         json.dump(data, fp, indent=2)
     assert json.loads(out.getvalue()) == data
 
+    # fold_text()
+    text = json.dumps(data, indent=2)
+    out = jsonfold.fold_text(text, 80)
+    assert json.loads(out) == data
+
     # dump()
     out = io.StringIO()
     ret = jsonfold.dump(data, out, width=80)

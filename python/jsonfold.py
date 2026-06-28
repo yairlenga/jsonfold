@@ -1135,6 +1135,26 @@ def create_writer(fp: TextIO, width: int, config: JSONFoldConfig | str = "", *, 
     """
     return _stream(fp, _config(config, width=width), do_close=do_close)
 
+def fold_text(text: str, width: int, config: JSONFoldConfig | str = "") -> str:
+    """Format pretty-print JSON text and return the resulting string.
+
+    The text (which MUST be valid pretty-printed JSON), is compacted
+    by JSONFold according to the selected configuration.
+
+    Args:
+        text: pretty-printed JSON
+        width: Maximum output line width.
+        config: JSONFold preset name or configuration object.
+
+    Returns:
+        Compacted formatted JSON text.
+    """
+    with io.StringIO() as str_io:
+        with _stream(str_io, _config(config, width=width)) as out:
+            out.write(text)
+        return str_io.getvalue()
+
+
 # Python json compatible API
 
 def dump(
