@@ -12,11 +12,14 @@ setup:
 build:
 	npm run build --if-present
 
-test:
+run-test:
 	./api_test.js
 	cd ../tests/unit && ../run_tests.sh -mjavascript
 	cd ../tests/samples && ../run_tests.sh -mjavascript
 	cd ../tests/future && ../run_tests.sh -mjavascript
+
+test:
+	$(MAKE) run-test > test.log
 
 benchmark:
 	./run_benchmark.sh

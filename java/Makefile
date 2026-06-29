@@ -19,10 +19,16 @@ setup:
 build:
 	mvn package
 
-test:
+run-test:
+	./run.sh --demo
+	./run.sh d.j.f.Main --demo
+	./run.sh d.j.f.Benchmark 10
 	cd ../tests/unit && ../run_tests.sh -mjava
 	cd ../tests/samples && ../run_tests.sh -mjava
 	cd ../tests/future && ../run_tests.sh -mjava
+
+test:
+	make run-test > test.log
 
 benchmark:
 	./run.sh dev.jsonfold.format.Benchmark | tee bench.out
