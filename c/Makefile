@@ -2,7 +2,7 @@ default: build
 
 CC = gcc -std=c2x
 CFLAGS = -Wall -W
-CFLAGS = -g -D_DEFAULT_SOURCE -Og -march=native -std=c11 -Wall -Wextra -Werror
+CFLAGS = -g -D_DEFAULT_SOURCE -O2 -march=native -std=c11 -Wall -Wextra -Werror
 LDFLAGS =-lm
 
 PROGS = generated.exe jsonfold.exe benchmark.exe
@@ -18,8 +18,13 @@ build: generated.exe jsonfold.exe benchmark.exe
 clean:
 	rm -f *.o *.exe
 
+
 benchmark: benchmark.exe
+	rm -rf prof
+	mkdir prof
 	./benchmark.exe > bench.out
+	cd prof && perf record -g ../benchmark.exe
+	cd prof && ../run_benchmark.sh
 	
 run-test:
 	./jsonfold.exe --demo
