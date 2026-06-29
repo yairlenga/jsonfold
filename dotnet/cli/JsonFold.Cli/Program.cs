@@ -275,5 +275,3 @@ Examples:
 """);
     }
 }
-
-return Main(args);
