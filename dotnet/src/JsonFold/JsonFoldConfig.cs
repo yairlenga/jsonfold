@@ -13,7 +13,7 @@ public sealed record JsonFoldConfig
 
     public int PackArrayItems { get; init; } = 10;
     public int PackObjItems { get; init; } = 5;
-    public int PackNesting { get; init; } = 2;
+    public int PackNesting { get; init; } = 1;
 
     public int FoldArrayItems { get; init; } = 10;
     public int FoldObjItems { get; init; } = 5;
@@ -46,7 +46,7 @@ public sealed record JsonFoldConfig
         name ??= "";
         return name switch
         {
-            "off" => null,
+            "off" => None with {Width = 0},
             "" or "default" => Default,
             "none" => None,
             "classic" => Default with { GridMaxLines = 0 },

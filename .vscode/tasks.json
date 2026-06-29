@@ -1,0 +1,51 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/dotnet/JsonFold.sln",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary;ForceNoAlign"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "publish",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "publish",
+                "${workspaceFolder}/dotnet/JsonFold.sln",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary;ForceNoAlign"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "watch",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "watch",
+                "run",
+                "--project",
+                "${workspaceFolder}/dotnet/JsonFold.sln"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "build-dotnet-cli",
+            "type": "process",
+            "command": "dotnet",
+            "args": [
+                "build",
+                "${workspaceFolder}/dotnet/cli/JsonFold.Cli/JsonFold.Cli.csproj"
+            ],
+            "problemMatcher": "$msCompile"
+            }
+    ]
+}

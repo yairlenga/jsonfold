@@ -31,7 +31,7 @@ public sealed class JsonFoldWriter : TextWriter
         Stats.BytesIn += value.Length;
         Stats.LinesIn += CountNewlines(value);
 
-        if (_cfg is null)
+        if (_cfg is null || _cfg.Width == 0)
         {
             WriteString(value);
             return;
@@ -60,7 +60,7 @@ public sealed class JsonFoldWriter : TextWriter
 
         if (_pending.Length > 0)
         {
-            if (_cfg is null) WriteString(_pending.ToString());
+            if (_cfg is null || _cfg.Width == 0) WriteString(_pending.ToString());
             else Feed(Line.Parse(_pending.ToString()));
             _pending.Clear();
         }
@@ -308,7 +308,6 @@ public sealed class JsonFoldWriter : TextWriter
     private void MarkNoFold()
     {
         foreach (var frame in _stack) frame.FoldOk = false;
-        if (_stack.Count > 0) StreamFrame(_stack[^1]);
     }
 
     private void MarkNoGrid()

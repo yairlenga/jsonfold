@@ -4,9 +4,28 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-        
-
-
+        {
+            "name": "C#: CLI",
+            "type": "coreclr",
+            "request": "launch",
+            "projectPath": "${workspaceFolder}/dotnet//cli/JsonFold.Cli/JsonFold.Cli.csproj",
+        },
+        {
+            "name": "C#: CLI 073",
+            "type": "coreclr",
+            "request": "launch",
+            "program": "dotnet",
+            "args": [
+                "${workspaceFolder}/dotnet/cli/JsonFold.Cli/bin/Debug/net8.0/JsonFold.Cli.dll",
+                "--input=${workspaceFolder}/tests/unit/073.json",
+                "--compact=default",
+                "--verbose"
+            ],
+            "cwd": "${workspaceFolder}/dotnet",
+            "console": "integratedTerminal",
+            "stopAtEntry": false,
+            "preLaunchTask": "build-dotnet-cli"
+        }
         {
             "name": "GO CLI",
             "type": "go",

@@ -10,4 +10,9 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <OutputType>Exe</OutputType>
   </PropertyGroup>
+  <PropertyGroup>
+      <Nullable>enable</Nullable>
+      <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
 </Project>

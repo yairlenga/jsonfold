@@ -5,7 +5,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
-
+  <PropertyGroup>
+      <Nullable>enable</Nullable>
+      <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/JsonFold/JsonFold.csproj" />
     <PackageReference Include="BenchmarkDotNet" Version="0.13.12" />
