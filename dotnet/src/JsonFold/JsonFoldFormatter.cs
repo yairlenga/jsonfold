@@ -1,24 +1,35 @@
-using System.Text.Json;
+namespace JsonFold.Format;
 
-namespace JsonFold;
+using System.Text.Encodings.Web;
+using System.Text.Json;
 
 public sealed class JsonFoldFormatter
 {
-    public int Indent { get; init; } = 2;
+    private int Indent { get; init; } = 2;
     public JsonFoldConfig? Config { get; init; } = JsonFoldConfig.Default;
     public JsonSerializerOptions? SerializerOptions { get; init; }
+    public bool Gold { get; init ; } = true ;
+
+    public bool doClose { get ; init ; } = false ;
 
     public JsonFoldFormatter() { }
 
-    public JsonFoldFormatter(int? width = null, JsonFoldConfig? config = null, JsonSerializerOptions? serializerOptions = null, int indent = 2)
+    public JsonFoldFormatter(int? width = null, JsonFoldConfig? config = null,
+        JsonSerializerOptions? serializerOptions = null,
+        int? indent = null)
     {
         Config = JsonFoldConfig.Resolve(config ?? JsonFoldConfig.Default, width);
-        SerializerOptions = serializerOptions;
-        Indent = indent;
+        SerializerOptions = resolveOptions(serializerOptions);
+        Indent = resolveIndent(indent) ;
     }
 
-    public static JsonFoldFormatter FromPreset(string? preset = "default", int? width = null, JsonSerializerOptions? serializerOptions = null, int indent = 2) =>
-        new() { Config = JsonFoldConfig.Resolve(preset, width), SerializerOptions = serializerOptions, Indent = indent };
+    public JsonFoldFormatter(int? width = null, string? preset = "default",
+        JsonSerializerOptions? serializerOptions = null,
+        int? indent = null) 
+    {
+        Config = JsonFoldConfig.Resolve(preset, width);
+        SerializerOptions = resolveOptions(serializerOptions);
+        Indent = resolveIndent(indent) ;    }
 
     public string FormatJson<T>(T value)
     {
@@ -26,51 +37,63 @@ public sealed class JsonFoldFormatter
         return FoldText(pretty);
     }
 
+    private JsonFoldStats streamTo<T>(T value, TextWriter writer)
+    {
+
+        using var jfw = new JsonFoldWriter(writer, Config, doClose: doClose);
+        using var jfs = new FormatterStream(jfw) ;
+        JsonSerializer.Serialize(jfs, value, SerializerOptions) ;
+        jfs.Flush();
+        jfs.Close() ;
+        jfw.Finish() ;
+        jfw.Flush();
+        jfw.Close() ;
+        return jfw.Stats;
+    }
+
     public JsonFoldStats WriteJson<T>(T value, TextWriter writer)
     {
-        var pretty = SerializePretty(value);
-        if (Config is null)
-        {
-            writer.Write(pretty);
-            return new JsonFoldStats
-            {
-                BytesIn = pretty.Length,
-                BytesOut = pretty.Length,
-                LinesIn = CountNewlines(pretty),
-                LinesOut = CountNewlines(pretty),
-            };
-        }
-
-        using var foldWriter = new JsonFoldWriter(writer, Config, closeBase: false);
-        foldWriter.Write(pretty);
-        foldWriter.Finish();
-        return foldWriter.Stats;
+        return streamTo(value, writer) ;    
     }
 
     public string FoldText(string prettyJson)
     {
         if (Config is null) return prettyJson;
         using var sw = new StringWriter();
-        using var foldWriter = new JsonFoldWriter(sw, Config, closeBase: false);
+        using var foldWriter = new JsonFoldWriter(sw, Config);
         foldWriter.Write(prettyJson);
         foldWriter.Finish();
         return sw.ToString();
     }
 
+    private int resolveIndent(int? indent)
+    {
+        return indent.HasValue ? indent.Value : 2;
+    }
+
+    private JsonSerializerOptions? resolveOptions(JsonSerializerOptions ? options)
+    {
+        if ( options == null)
+        {
+            options = new JsonSerializerOptions {
+                        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+                };
+        }
+        options.WriteIndented = true;
+        return options ;        
+    }
+
     private string SerializePretty<T>(T value)
     {
-        var options = SerializerOptions is null ? new JsonSerializerOptions() : new JsonSerializerOptions(SerializerOptions);
-        options.WriteIndented = true;
-        var text = JsonSerializer.Serialize(value, options);
+        var text = JsonSerializer.Serialize(value, SerializerOptions);
         return text.EndsWith('\n') ? text : text + "\n";
     }
 
     private static int CountNewlines(string s) => s.Count(ch => ch == '\n');
-}
 
-public static class JsonFold
-{
-    public static JsonFoldConfig? Config(string? preset = "default", int? width = null) => JsonFoldConfig.Resolve(preset, width);
+
+
+    public static JsonFoldConfig? JsonfoldConfig(string? preset = "default", int? width = null) => JsonFoldConfig.Resolve(preset, width);
 
     public static JsonFoldWriter CreateWriter(TextWriter writer, int? width = null, JsonFoldConfig? config = null, bool closeBase = false) =>
         new(writer, JsonFoldConfig.Resolve(config ?? JsonFoldConfig.Default, width), closeBase);

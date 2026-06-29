@@ -1,21 +1,21 @@
-using System.Text;
+namespace JsonFold.Format;
 
-namespace JsonFold;
+using System.Text;
 
 public sealed class JsonFoldWriter : TextWriter
 {
     private readonly TextWriter _writer;
     private readonly JsonFoldConfig? _cfg;
-    private readonly bool _closeBase;
+    private readonly bool _doClose;
     private readonly StringBuilder _pending = new();
     private readonly List<Frame> _stack = new();
     private bool _finished;
 
-    public JsonFoldWriter(TextWriter writer, JsonFoldConfig? config = null, bool closeBase = false)
+    public JsonFoldWriter(TextWriter writer, JsonFoldConfig? config = null, bool doClose = false)
     {
         _writer = writer;
         _cfg = config ?? JsonFoldConfig.Default;
-        _closeBase = closeBase;
+        _doClose = doClose ;
     }
 
     public JsonFoldStats Stats { get; } = new();
@@ -42,16 +42,14 @@ public sealed class JsonFoldWriter : TextWriter
         while (true)
         {
             var nl = IndexOfNewline(_pending, start);
-            if (nl < 0)
-            {
-                if (start > 0) _pending.Remove(0, start);
-                if (_pending.Length > _cfg.Width) MarkNoFold();
-                return;
-            }
+            if (nl < 0) break ;
 
             Feed(Line.Parse(_pending.ToString(start, nl - start)));
             start = nl + 1;
         }
+        if (start > 0) _pending.Remove(0, start);
+
+
     }
 
     public void Finish()
@@ -83,7 +81,7 @@ public sealed class JsonFoldWriter : TextWriter
         if (disposing)
         {
             Finish();
-            if (_closeBase) _writer.Dispose();
+            if (_doClose) _writer.Dispose();
             else _writer.Flush();
         }
         base.Dispose(disposing);

@@ -3,11 +3,11 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using JsonFold;
+using JsonFold.Format;
 
 internal static class Program
 {
-    private const int Repeats = 3;
+    private const int Repeats = 5;
 
     private static readonly string[] DefaultTests =
     [
@@ -201,10 +201,11 @@ internal static class Program
     {
         TimedResult? best = null;
 
+        double tot_cpu = 0 ;
+
         for (var i = 0; i < Repeats; i++)
         {
             GcQuietly();
-
             var output = new NullTextWriter();
             var proc = Process.GetCurrentProcess();
 
@@ -213,6 +214,7 @@ internal static class Program
             RunCase(name, data, output);
             var c1 = proc.TotalProcessorTime;
             var t1 = Stopwatch.GetTimestamp();
+            tot_cpu += (c1-c0).TotalMilliseconds;
 
             var current = new TimedResult
             {
@@ -226,6 +228,7 @@ internal static class Program
             if (best is null || current.BestMillis < best.BestMillis)
                 best = current;
         }
+        if ( best != null ) best.CpuMillis = tot_cpu/Repeats ;
 
         return best!;
     }
@@ -296,13 +299,13 @@ internal static class Program
     private static void WriteJsonFoldDump(JsonObject data, TextWriter output, string compact)
     {
         var cfg = JsonFoldConfig.Preset(compact);
-        var formatter = JsonFoldFormatter.FromPreset(compact, serializerOptions: PrettyOptions());
+        var formatter = new JsonFoldFormatter(0, compact);
         formatter.WriteJson(data, output);
     }
 
     private static string JsonFoldString(JsonObject data, string compact)
     {
-        var formatter = JsonFoldFormatter.FromPreset(compact, serializerOptions: PrettyOptions());
+        var formatter = new JsonFoldFormatter(0, compact);
         return formatter.FormatJson(data);
     }
 
@@ -408,7 +411,7 @@ internal static class Program
     private sealed class TimedResult
     {
         public double BestMillis { get; init; }
-        public double CpuMillis { get; init; }
+        public double CpuMillis { get; set; }
         public double TtfbMillis { get; init; }
         public long Bytes { get; init; }
         public long Writes { get; init; }

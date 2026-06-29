@@ -1,4 +1,4 @@
-namespace JsonFold;
+namespace JsonFold.Format;
 
 public sealed class JsonFoldStats
 {

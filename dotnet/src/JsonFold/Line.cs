@@ -1,6 +1,6 @@
-using System.Text.RegularExpressions;
+namespace JsonFold.Format;
 
-namespace JsonFold;
+using System.Text.RegularExpressions;
 
 internal sealed class Line
 {

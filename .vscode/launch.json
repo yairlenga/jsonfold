@@ -5,13 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "C#: CLI",
-            "type": "coreclr",
-            "request": "launch",
-            "projectPath": "${workspaceFolder}/dotnet//cli/JsonFold.Cli/JsonFold.Cli.csproj",
-        },
-        {
-            "name": "C#: CLI 073",
+            "name": "C# CLI",
             "type": "coreclr",
             "request": "launch",
             "program": "dotnet",
@@ -25,7 +19,7 @@
             "console": "integratedTerminal",
             "stopAtEntry": false,
             "preLaunchTask": "build-dotnet-cli"
-        }
+        },
         {
             "name": "GO CLI",
             "type": "go",

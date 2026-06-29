@@ -1,8 +1,9 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using JsonFold;
+using JsonFold.Format;
 
 return JsonFoldMain.Run(args);
+
 
 static class JsonFoldMain
 {
@@ -30,16 +31,10 @@ static class JsonFoldMain
             if (opt.SortKeys)
                 value = SortKeys(value);
 
-            var jsonOptions = new JsonSerializerOptions
-            {
-                WriteIndented = true
-            };
-
-            var formatter = JsonFoldFormatter.FromPreset(
-                opt.Compact,
+            var formatter = new JsonFoldFormatter(
                 opt.Width,
-                jsonOptions,
-                opt.Indent
+                opt.Compact,
+                indent: opt.Indent
             );
 
             var stats = formatter.WriteJson(value, Console.Out);

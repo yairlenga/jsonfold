@@ -1,6 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using JsonFold;
+using JsonFold.Format;
 
 internal static class Program
 {
@@ -39,7 +39,7 @@ internal static class Program
             {
                 Console.Error.WriteLine(config);
             }
-            var formatter = new JsonFoldFormatter(options.Width, config, new JsonSerializerOptions(), indent: options.Indent);
+            var formatter = new JsonFoldFormatter(options.Width, config, indent: options.Indent);
 
             using TextWriter writer = OpenOutput(options.OutputPath);
             JsonFoldStats stats = formatter.WriteJson(node, writer);

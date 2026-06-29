@@ -1,5 +1,4 @@
-namespace JsonFold;
-
+namespace JsonFold.Format;
 internal sealed class Frame
 {
     public Kind Kind { get; }

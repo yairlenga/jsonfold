@@ -11,17 +11,17 @@ setup:
 	TBD
 
 build:
-	dotnet build
+	dotnet build -warnaserror
 
 .PHONY: %.t
 
 run-test:
-	go test ./...
-	./jsonfold.exe --demo
-	./benchmark.exe 10
-	cd ../tests/unit && ../run_tests.sh -mgo
-	cd ../tests/samples && ../run_tests.sh -mgo
-	cd ../tests/future && ../run_tests.sh -mgo
+	src/JsonFold/bin/Debug/net8.0/JsonFold --demo
+	cli/JsonFold.Cli/bin/Debug/net8.0/JsonFold.Cli --demo
+	benchmark/JsonFold.Benchmark/bin/Debug/net8.0/JsonFold.Benchmark 100
+	cd ../tests/unit && ../run_tests.sh -mdotnet
+	cd ../tests/samples && ../run_tests.sh -mdotnet
+	cd ../tests/future && ../run_tests.sh -mdotnet
 	echo "Passed: $@"
 
 test:
@@ -56,6 +56,7 @@ verify:
 publish:
 	twine upload dist/jsonfold-$(VERSION)[.-]*
 
+.PHONY: benchmark
 benchmark:
 	./run_benchmark.sh
 

@@ -1,4 +1,4 @@
-namespace JsonFold;
+namespace JsonFold.Format;
 
 internal enum Kind
 {
