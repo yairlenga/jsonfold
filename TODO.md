@@ -8,3 +8,4 @@
 6. Add print_folded to convenience API - print_folded(fp, text, width, config)
 7. API Test for Perl
 8. Change default for all implementation to generate Uncode and not \u.... sequences
+9. Allow Perl code to take key=>value, or options hash ref for variable argument list.

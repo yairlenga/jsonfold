@@ -10,7 +10,7 @@ my $data = {
         { _id => 205, shipment => "UPS", tracking => "1Z84723" },
         { _id => 101, status => "Preferred", credit => 50000 },
         { _id => 205, invoice => 2048, due => "2026-07-15" },
-        { _id => 318, email => "sales@example.com" },
+        { _id => 318, email => "sales\@example.com" },
         { _id => 101, note => "Renewal due next month" },
     ],
 };

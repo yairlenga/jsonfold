@@ -9,35 +9,45 @@
 5. [Grid Formatting – Aligning Tabular Data](#grid-formatting--aligning-tabular-data)
 6. [Joining – Combining Folded Structures](#joining--combining-folded-structures)
 7. [Using JSONFold in Perl](#using-jsonfold-in-perl)
-8. [Where To find more](#where-to-find-more)
+8. [Where To Find More](#where-to-find-more)
 
 ---
 
 ## Introduction
 
-Built-in JSON serializers give us two choices:
+Perl's JSON modules like `JSON`, `JSON::PP` and `JSON::XS` give us two serialization choices: compact, machine-readable output, and human-readable but hard to scan "pretty-print" output.
 
-The default output is built for machines and optimized for efficiency. It is compact, without any extra whitespace. While technically "text", it feels "binary" - a dense wall of brackets, quotes, commas, and braces that is painful to inspect.
+The default output is built for machines and optimized for efficiency. It is compact, without any extra whitespace. While technically "text", it feels "binary": a dense wall of brackets, quotes, commas, and braces that is painful to inspect.
 
 ```json
 {"request_id":"8f2c1a44-91e2-4f52-8e11-7d2d1d9d52d1","timestamp":"2026-05-19T14:32:11Z","user":{"id":10421,"name":"John Smith","roles":["admin","reviewer","ops"],"preferences":{"theme":"dark","notifications":{"email":true,"sms":false,"push":true}}},"jobs":[{"id":901,"status":"running","targets":["srv-a01","srv-a02","srv-a03"],"metrics":{"cpu":72.4,"mem":68.1,"latency_ms":[12,15,11,18,14]}},{"id":902,"status":"queued","targets":["srv-b17"],"metrics":{"cpu":0,"mem":0,"latency_ms":[]}}],"audit":{"created_by":"system","created_at":"2026-05-19T14:00:00Z","tags":["prod","finance","daily-run","priority-high"]}}
 ```
 
-To solve this problem JSON serializers provide a "Pretty-print" mode, which adds indentation, spacing around tokens and line breaks - making it readable for humans. The problem is that for large documents it often goes too far: A small array of numbers becomes ten lines. A tiny metadata object becomes a block. Deep structures become readable only by making the file much longer.
+To solve this problem JSON serializers provide a "Pretty-print" mode, which adds indentation, spacing around tokens and line breaks, making it readable for humans. The problem is that for large documents it often goes too far: A small array of numbers becomes ten lines. A tiny metadata object becomes a block. Deep structures become readable only by making the file much longer.
 
 That extra formatting is not free. It makes logs larger, diffs noisier, terminal output harder to scan, and requires "speed-scrolling" to review the data sets.
 
 ### Why it exists
 
-What I wanted was a middle ground: JSON that keeps the shape of pretty-printed output, but folds small, simple structures back onto one line when they fit. I wrote a Perl module `JSON::JSONFold` for "compacting" pretty-print JSON data to make it more readable for humans. The level of "compactness" is controlled by parameters, and there are a few preset configurations that can be used to get output with minimal effort.
+What I wanted was a middle ground: JSON that keeps the structure of pretty-printed output, but compacts small, simple structures back onto a single line whenever doing so improves readability.
+
+Instead of writing yet another JSON serializer, I took a different approach. JSON::JSONFold is not a serializer — it's a postprocessor. It operates on serialized JSON text that has been produced by another serializer, such as JSON, JSON::PP, or JSON::XS, reformatting the output without changing the underlying data, while using fixed memory.
+
+This has two important advantages. First, you can continue using the serializer that best fits your application, preserving all of its existing behavior, including custom `TO_JSON` methods, key ordering, filtering, and XS performance. Second, because JSONFold processes serialized JSON text rather than Perl data structures, it can be integrated into existing applications with minimal changes.
+
+The amount of compaction is fully configurable, from preserving traditional pretty-printed output to aggressively folding small structures. For most applications, one of the built-in presets provides a good balance without requiring any tuning.
+
 
 ### How it differs from traditional pretty printers
 
-JSONFold Does not have logic to serialize perl data structures into JSON. There are already many good serializers. JSONFold post process that serialized JSON from other packages - so that all existing custom logic to produce the JSON (e.g., key sorting, tag filtering, blessed objects with `TO_JSON`, ...) can be reused. As a result, it's possible add the JSONFold formatting on top of existing serializers (including XS, etc.)
+JSONFold does not have logic to serialize Perl data structures into JSON. There are already many good serializers. JSONFold postprocesses that serialized JSON from other packages, so that all existing custom logic to produce the JSON (e.g., key sorting, tag filtering, blessed objects with `TO_JSON`, ...) can be reused. As a result, it's possible to add the JSONFold formatting on top of existing serializers (including XS, etc.). 
 
-### How to use:
+JSONFold guarantees that the data represented by its output is identical to the data represented by its input — every key, value, and nesting relationship is preserved exactly, regardless of how aggressively the output is reformatted. Because JSONFold postprocesses already-serialized text rather than re-deriving it from a Perl data structure, it also preserves whatever ordering the underlying serializer produced — key order included — rather than imposing its own.
+By default, JSONFold also sorts object keys (sort_keys) to make output consistent and easy to scan or compare, even when the underlying serializer doesn't guarantee stable key order. Future versions may extend this with additional sort strategies, such as ordering by key length or by key/value length, to further improve scannability.
 
-It's possible to use JSONFold in two ways: sending (pretty-printed) JSON for formatting, or using compatibility functions that work the same way as the existing `JSON` and `JSON::PP` formatters.
+### How to use
+
+It's possible to use JSONFold in two ways: sending (pretty-printed) JSON for formatting, or using compatibility functions that mirror the API provided by `JSON` and `JSON::PP` formatters.
 ```perl
 $data = { map { ("key$_", $_) } 0..10 } ;
 
@@ -77,17 +87,17 @@ Output:
 
 ### How does it work
 
-JSONFold uses multiple transformation to make the data more readable: "pack", "fold", "grid" and "join". They are applied in sequence. Each transformation process the output of the previous step. The following describe each action.
+JSONFold applies multiple transformations to make the data more readable: "pack", "fold", "grid" and "join". They are applied in sequence. Each transformation processes the output of the previous transformation. The following describes each action.
 
-> While it's possible to configure JSONFold for each JSON document, this is usually not necessary: JSONFold comes with few predefined "presets", including a default one, which can handle most documents without having to fine tune the formatting configuration. It's important to remember that every invocation of JSONFold will use a specific line-width and configuration parameters. The "default" setting is configured to produce output no wider than 100 columns.
+> While it's possible to configure JSONFold for each JSON document, this is usually not necessary: JSONFold comes with a few predefined "presets", including a default one, which can handle most documents without having to fine tune the formatting configuration. It's important to remember that every invocation of JSONFold will use a specific line-width and configuration parameters. The "default" setting is configured to produce output no wider than 100 columns.
 
-> The following section includes example that describe the details of each step - using custom configuration to show the impact of each transformation.
+> The following section includes examples that describe the details of each transformation, using custom configuration to show the impact of each transformation.
 
 ## Packing – Reducing Vertical Space
 
 ### Problem
 
-Pretty-printed JSON places every scalar value on its own line. While this makes deeply nested structures easy to follow, it also wastes a significant amount of vertical space for simple arrays and objects. For large document - it means a lot of vertical scrolling.
+Pretty-printed JSON places every scalar value on its own line. While this makes deeply nested structures easy to follow, it also wastes a significant amount of vertical space for simple arrays and objects. For large documents, it means a lot of vertical scrolling.
 
 ### Example Data
 ```json
@@ -127,7 +137,7 @@ my $data = {
     ],
 };
 
-print encode_json($data, { compact => "pack" })
+print encode_json($data, { compact => "pack" }) ;
 ```
 
 ### Output
@@ -143,12 +153,12 @@ print encode_json($data, { compact => "pack" })
     "Rhode_Island", "South_Carolina", "South_Dakota", "Tennessee", "Texas", "Utah", "Vermont",
     "Virginia", "Washington", "West_Virginia", "Wisconsin", "Wyoming"
   ]
-}...
+}
 ```
 
 ### Discussion
 
-The "Pack" works on list or hashes where the values are "simple" (including scalars, null, empty list `[]`, or empty object `{}`). It will try to put as many as possible into the same line, respecting the stated line width.
+Packing works on lists or hashes where the values are "simple" (including scalars, null, empty list `[]`, or empty object `{}`). It will try to put as many as possible into the same line, respecting the stated line width. When one of the elements is larger than the allowed line width, JSONFold will leave this item on its own, without sharing space with the previous or following element.
 
 ---
 
@@ -160,7 +170,7 @@ Even after scalar values have been packed, many JSON objects and arrays still oc
 
 For small containers, these extra lines add visual noise without improving readability. A single property object or a short array is often easier to understand when the entire container appears on one line.
 
-JSONFold detects containers whose contents fit comfortably within the configured line width and folds them into a single logical line, while leaving larger or more complex structures expanded.
+JSONFold detects containers whose contents fit comfortably within the configured line width and folds them into a single logical line, while leaving larger or more complex containers expanded.
 
 ### Example Data
 
@@ -211,7 +221,7 @@ print encode_json($data, { config => jsonfold_config("max", undef, join_nesting 
 
 ### Discussion
 
-With "Fold" Small arrays and objects become single-line containers. Larger structures, that do not fit into a single line remain expanded - spread over multiple lines, with additional indentation for the container content vs. the sounding opener and closer lines.
+With folding, small arrays and objects become single-line containers. Larger containers that do not fit into a single line remain expanded, spread over multiple lines, with additional indentation for the container content vs. the surrounding opener and closer lines.
 
 ---
 
@@ -225,7 +235,7 @@ JSONFold detects collections with a consistent layout and automatically aligns t
 
 ### Example: Array of Arrays
 
-This example uses array of array data sets - which is common output for `DBI` `$ary_ref  = $dbh->selectall_arrayref($statement)`
+This example uses array-of-array data sets, which matches the output of `DBI` `$ary_ref = $dbh->selectall_arrayref($statement)`
 
 ```json
 {
@@ -302,13 +312,13 @@ print encode_json($data, { compact => "grid" } ) ;
 
 ### Example: Array of Objects
 
-This example uses array of array data sets - which is common output for `DBI` `$ary_ref  = $dbh->selectall_hashref($statement)`
+This example uses array-of-hash data sets, which matches the output of `DBI` `$ary_ref = $dbh->selectall_hashref($statement)`
 
 ```json
 {
   "quarterly_sales": [
     {
-      "year": 2023,
+      "yr": 2023,
       "region": "North",
       "product": "Laptop",
       "sales": 1250,
@@ -316,7 +326,7 @@ This example uses array of array data sets - which is common output for `DBI` `$
     },
     // ... Lines removed for brevity ...
     {
-      "year": 2023,
+      "yr": 2023,
       "region": "Southwest",
       "product": "Monitor",
       "sales": 1345,
@@ -360,11 +370,11 @@ print encode_json($data, { compact => "grid" } ) ;
 
 ### Discussion
 
-The grid transformation is different from the other transformations. It does not try to pick a better tradeoff between space and readability. Instead, it will add spaces to the regular pretty-printed output to make data easier to scan. This can result in small increase to the output size. The generated lines will still meet the line-width limit.
+The grid transformation is different from the other transformations. It does not try to pick a better tradeoff between space and readability. Instead, it will add spaces to the regular pretty-printed output to make data easier to scan. This can result in a small increase to the output size. The generated lines will still meet the line-width limit.
 
-The "default" preset enabled grid processing. If the data is known not to have lines with repeated structure, its possible to choose the "classic" preset, which works like the "default" (pack, fold, join), and does not try to identify and align similar lines.
+The "default" preset enables grid processing. If the data is known not to have lines with repeated structure, it's possible to choose the "classic" preset, which works like the "default" (pack, fold, join), and does not try to identify and align similar lines.
 
-Deciding if a structure will benefit from "grid" layout require buffering few lines before making the decision. JSONFold presets limit the buffering to reasonable size (which can be customized if needed).
+> Deciding if a structure will benefit from "grid" layout requires buffering a few lines before making the decision. JSONFold presets limit the buffering to reasonable size (which can be customized if needed).
 
 ---
 
@@ -417,7 +427,7 @@ my $data = {
         { _id => 205, shipment => "UPS", tracking => "1Z84723" },
         { _id => 101, status => "Preferred", credit => 50000 },
         { _id => 205, invoice => 2048, due => "2026-07-15" },
-        { _id => 318, email => "sales@example.com" },
+        { _id => 318, email => "sales\@example.com" },
         { _id => 101, note => "Renewal due next month" },
     ],
 };
@@ -435,7 +445,7 @@ print encode_json($data, { compact => "join" } ) ;
     { "_id": 318, "contact": "Alice", "phone": "555-1234" },
     { "_id": 205, "shipment": "UPS", "tracking": "1Z84723" },
     { "_id": 101, "credit": 50000, "status": "Preferred" },
-    { "_id": 205, "due": "2026-07-15", "invoice": 2048 }, { "_id": 318, "email": "sales.com" },
+    { "_id": 205, "due": "2026-07-15", "invoice": 2048 }, { "_id": 318, "email": "sales@example.com" },
     { "_id": 101, "note": "Renewal due next month" }
   ]
 }
@@ -443,9 +453,9 @@ print encode_json($data, { compact => "join" } ) ;
 
 ### Discussion
 
-With "join" transformation - Adjacent small structures can share the same line. The "join" will not merge
-partial structures into the same line - as this will make it harder to identify complete structures. This
-step Further reduces vertical space while remaining readable.
+The "join" transformation lets adjacent small structures share the same line. The "join" will not merge
+partial structures into the same line, since doing so will make it harder to identify complete structures. This
+transformation further reduces vertical space while remaining readable.
 
 ---
 
@@ -466,18 +476,18 @@ JSONFold provides three APIs for formatting Perl data structures. Choose the one
 The compatibility API mirrors the familiar `JSON` module interface and is the simplest way to get started.
 
 ```perl
-use JSON::JSONFold qw(to_json);
+use JSON::JSONFold qw(encode_json);
 
 # using default configuration
 print encode_json($data);
 
 # Customize using presets + width
-print encode_json($data, { width => 120, compact=>"max"})
+print encode_json($data, { width => 120, compact=>"max"});
 ```
 
 ### Functional API
 
-The functional API exposes JSONFold's formatting options directly, making it convenient when you need more control over the output. The core function is 'format_json'
+The functional API exposes JSONFold's formatting options directly, making it convenient when you need more control over the output. The core function is `format_json`.
 
 ```perl
 use JSON::JSONFold qw(format_json);
@@ -489,8 +499,7 @@ print format_json($data)
 print format_json($data, 120, "high")
 
 # Pass additional options
-print format_json($data, 120, "high", indent=4, )
-
+print format_json($data, 120, "high", indent => 4)
 ```
 
 ### Object-Oriented API
@@ -523,8 +532,7 @@ print write_json($fh, $data)
 print write_json($fh, $data, 120, "high")
 
 # Pass additional options
-print write_json($fh, $data, 120, "high", indent=4, )
-
+print write_json($fh, $data, 120, "high", indent => 4)
 ```
 
 ### Filtering Existing Pretty-Printed JSON
@@ -546,10 +554,14 @@ print fold_text($text) ;
 print fold_text($text, 50, "high") ;
 ```
 
+### Streaming and Large Documents
+
+> JSONFold itself processes its input incrementally and runs in fixed memory regardless of document size — it never has to hold the whole structure in memory to compute its output. In practice, most Perl JSON serializers (JSON, JSON::PP, JSON::XS) build the complete pretty-printed string before returning it, so when used through the compatibility or functional APIs, you inherit that serializer's memory profile rather than JSONFold's. If you have or build a serializer capable of streaming output — e.g., one that emits JSON incrementally to a filehandle — JSONFold's fold_text-style processing can consume that stream directly, keeping the entire pipeline in fixed memory even for very large documents.
+
 ---
 
 ## Where To Find More
 
-CPAN: [JSON::JSONFold - compact, readable JSON formatting](https://metacpan.org/pod/JSON::JSONFold)
-GitHub: [JSONFold Perl](https://github.com/yairlenga/jsonfold/tree/main/perl)
-Website: [[https://jsonfold.dev]](https://jsonfold.dev/) - Online playground
+- CPAN: [JSON::JSONFold - compact, readable JSON formatting](https://metacpan.org/pod/JSON::JSONFold)
+- GitHub: [JSONFold Perl](https://github.com/yairlenga/jsonfold/tree/main/perl)
+- Website: [[https://jsonfold.dev]](https://jsonfold.dev/) - Online playground
