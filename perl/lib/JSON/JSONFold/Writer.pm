@@ -1,4 +1,5 @@
 package JSON::JSONFold::Writer;
+use strict ;
 
 1;
 

@@ -20,7 +20,14 @@ Perl's JSON modules like `JSON`, `JSON::PP` and `JSON::XS` give us two serializa
 The default output is built for machines and optimized for efficiency. It is compact, without any extra whitespace. While technically "text", it feels "binary": a dense wall of brackets, quotes, commas, and braces that is painful to inspect.
 
 ```json
-{"request_id":"8f2c1a44-91e2-4f52-8e11-7d2d1d9d52d1","timestamp":"2026-05-19T14:32:11Z","user":{"id":10421,"name":"John Smith","roles":["admin","reviewer","ops"],"preferences":{"theme":"dark","notifications":{"email":true,"sms":false,"push":true}}},"jobs":[{"id":901,"status":"running","targets":["srv-a01","srv-a02","srv-a03"],"metrics":{"cpu":72.4,"mem":68.1,"latency_ms":[12,15,11,18,14]}},{"id":902,"status":"queued","targets":["srv-b17"],"metrics":{"cpu":0,"mem":0,"latency_ms":[]}}],"audit":{"created_by":"system","created_at":"2026-05-19T14:00:00Z","tags":["prod","finance","daily-run","priority-high"]}}
+{"request_id":"8f2c1a44-91e2-4f52-8e11-7d2d1d9d52d1","timestamp":"2026-05-19T14
+:32:11Z","user":{"id":10421,"name":"John Smith","roles":["admin","reviewer","op
+s"],"preferences":{"theme":"dark","notifications":{"email":true,"sms":false,"pu
+sh":true}}},"jobs":[{"id":901,"status":"running","targets":["srv-a01","srv-a02"
+,"srv-a03"],"metrics":{"cpu":72.4,"mem":68.1,"latency_ms":[12,15,11,18,14]}},{"
+id":902,"status":"queued","targets":["srv-b17"],"metrics":{"cpu":0,"mem":0,"lat
+ency_ms":[]}}],"audit":{"created_by":"system","created_at":"2026-05-19T14:00:00
+Z","tags":["prod","finance","daily-run","priority-high"]}}
 ```
 
 To solve this problem JSON serializers provide a "Pretty-print" mode, which adds indentation, spacing around tokens and line breaks, making it readable for humans. The problem is that for large documents it often goes too far: A small array of numbers becomes ten lines. A tiny metadata object becomes a block. Deep structures become readable only by making the file much longer.
@@ -31,19 +38,9 @@ That extra formatting is not free. It makes logs larger, diffs noisier, terminal
 
 What I wanted was a middle ground: JSON that keeps the structure of pretty-printed output, but compacts small, simple structures back onto a single line whenever doing so improves readability.
 
-Instead of writing yet another JSON serializer, I took a different approach. JSON::JSONFold is not a serializer — it's a postprocessor. It operates on serialized JSON text that has been produced by another serializer, such as JSON, JSON::PP, or JSON::XS, reformatting the output without changing the underlying data, while using fixed memory.
-
-This has two important advantages. First, you can continue using the serializer that best fits your application, preserving all of its existing behavior, including custom `TO_JSON` methods, key ordering, filtering, and XS performance. Second, because JSONFold processes serialized JSON text rather than Perl data structures, it can be integrated into existing applications with minimal changes.
+Instead of writing yet another JSON serializer, I took a different approach. JSON::JSONFold is not a serializer — it's a postprocessor. It operates on serialized JSON text produced by another serializer, such as `JSON`, `JSON::PP`, or `JSON::XS`, reformatting the output without changing the underlying data while using fixed memory. This has two important advantages: you can continue using the serializer that best fits your application, preserving all of its existing behavior — including custom `TO_JSON` methods, key ordering, tag filtering, and XS performance — and because JSONFold works on text rather than Perl data structures, it can be integrated into existing applications with minimal changes.
 
 The amount of compaction is fully configurable, from preserving traditional pretty-printed output to aggressively folding small structures. For most applications, one of the built-in presets provides a good balance without requiring any tuning.
-
-
-### How it differs from traditional pretty printers
-
-JSONFold does not have logic to serialize Perl data structures into JSON. There are already many good serializers. JSONFold postprocesses that serialized JSON from other packages, so that all existing custom logic to produce the JSON (e.g., key sorting, tag filtering, blessed objects with `TO_JSON`, ...) can be reused. As a result, it's possible to add the JSONFold formatting on top of existing serializers (including XS, etc.). 
-
-JSONFold guarantees that the data represented by its output is identical to the data represented by its input — every key, value, and nesting relationship is preserved exactly, regardless of how aggressively the output is reformatted. Because JSONFold postprocesses already-serialized text rather than re-deriving it from a Perl data structure, it also preserves whatever ordering the underlying serializer produced — key order included — rather than imposing its own.
-By default, JSONFold also sorts object keys (sort_keys) to make output consistent and easy to scan or compare, even when the underlying serializer doesn't guarantee stable key order. Future versions may extend this with additional sort strategies, such as ordering by key length or by key/value length, to further improve scannability.
 
 ### How to use
 
@@ -493,13 +490,13 @@ The functional API exposes JSONFold's formatting options directly, making it con
 use JSON::JSONFold qw(format_json);
 
 # Print formatted text, using default config/default width (100 columns)
-print format_json($data)
+print format_json($data) ;
 
 # Print formatted text, using high compaction config, fit to 120 columns
-print format_json($data, 120, "high")
+print format_json($data, 120, "high") ;
 
 # Pass additional options
-print format_json($data, 120, "high", indent => 4)
+print format_json($data, 120, "high", indent => 4);
 ```
 
 ### Object-Oriented API
@@ -512,7 +509,6 @@ use JSON::JSONFold;
 my $jsonfold = JSON::JSONFold->new(
     width     => 80,
     compact   => "default",
-    sort_keys => 1,
 );
 
 for my $data ( ... ) {
@@ -526,18 +522,18 @@ for my $data ( ... ) {
 use JSON::JSONFold qw(write_json);
 
 # Print formatted text, using default config/default width (100 columns)
-print write_json($fh, $data)
+print write_json($fh, $data);
 
 # Print formatted text, using high compaction config, fit to 120 columns
-print write_json($fh, $data, 120, "high")
+print write_json($fh, $data, 120, "high");
 
 # Pass additional options
-print write_json($fh, $data, 120, "high", indent => 4)
+print write_json($fh, $data, 120, "high", indent => 4);
 ```
 
 ### Filtering Existing Pretty-Printed JSON
 
-JSONFold can be applied to pretty-printed JSON text (generated by other Perl, loaded from a file/databases, etc.). Processing the JSON text can save a lot of processing, as there is no need to convert the text into Perl data structure, and to serialize it (which can cause loss of data, reordering of keys, ...).
+JSONFold can be applied to pretty-printed JSON text (generated by other Perl, loaded from files or databases, etc.). Processing the JSON text can save a lot of processing, as there is no need to convert the text into Perl data structure, and to serialize it (which can cause loss of data, reordering of keys, ...).
 
 ```perl
 use JSON::JSONFold qw(fold_text);
@@ -558,10 +554,16 @@ print fold_text($text, 50, "high") ;
 
 > JSONFold itself processes its input incrementally and runs in fixed memory regardless of document size — it never has to hold the whole structure in memory to compute its output. In practice, most Perl JSON serializers (JSON, JSON::PP, JSON::XS) build the complete pretty-printed string before returning it, so when used through the compatibility or functional APIs, you inherit that serializer's memory profile rather than JSONFold's. If you have or build a serializer capable of streaming output — e.g., one that emits JSON incrementally to a filehandle — JSONFold's fold_text-style processing can consume that stream directly, keeping the entire pipeline in fixed memory even for very large documents.
 
+### Data Integrity and Key Ordering
+
+Because JSONFold never touches the underlying data, only its textual layout, it guarantees that the data represented by its output is identical to the data represented by its input — every key, value, and nesting relationship is preserved exactly, regardless of how aggressively the output is reformatted. This also means JSONFold preserves whatever ordering the underlying serializer produced — key order included — rather than imposing its own.
+
+By default, JSONFold sorts object keys (assumes `canonical` mode) to make output consistent and easy to scan or compare. This can be disabled with configuration options, as described in the module perldoc.
+
 ---
 
 ## Where To Find More
 
 - CPAN: [JSON::JSONFold - compact, readable JSON formatting](https://metacpan.org/pod/JSON::JSONFold)
 - GitHub: [JSONFold Perl](https://github.com/yairlenga/jsonfold/tree/main/perl)
-- Website: [[https://jsonfold.dev]](https://jsonfold.dev/) - Online playground
+- Website: [Making JSON readable and compact.](https://jsonfold.dev/) - Online playground

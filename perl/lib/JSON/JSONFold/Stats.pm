@@ -1,4 +1,5 @@
 package JSON::JSONFold::Stats;
+use strict ;
 
 1;
 
