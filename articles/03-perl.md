@@ -6,11 +6,10 @@
 2. [The Problem with Pretty-Printed JSON](#the-problem-with-pretty-printed-json)
 3. [Packing – Reducing Vertical Space](#packing--reducing-vertical-space)
 4. [Folding – Keeping Small Containers Together](#folding--keeping-small-containers-together)
-5. [Joining – Combining Folded Structures](#joining--combining-folded-structures)
-6. [Grid Formatting – Aligning Tabular Data](#grid-formatting--aligning-tabular-data)
+5. [Grid Formatting – Aligning Tabular Data](#grid-formatting--aligning-tabular-data)
+6. [Joining – Combining Folded Structures](#joining--combining-folded-structures)
 7. [Using JSONFold in Perl](#using-jsonfold-in-perl)
-8. [Configuration and Presets](#configuration-and-presets)
-9. [Conclusion](#conclusion)
+8. [Where To find more](#where-to-find-more)
 
 ---
 
@@ -373,69 +372,184 @@ Deciding if a structure will benefit from "grid" layout require buffering few li
 
 ### Problem
 
+Grid formatting is ideal for collections of objects that share a common structure. In practice, however, many JSON arrays contain small objects with different sets of properties. Since there are no common columns to align, grid formatting is not applicable. JSONFold addresses this case by placing multiple folded objects on the same line whenever they fit within the configured width, reducing vertical space while preserving readability.
+
 ### Example Data
+
+```json
+{
+  "activity": [
+    {
+      "_id": 101,
+      "amount": 1250,
+      "event": "Order"
+    },
+    {
+      "_id": 101,
+      "event": "Payment",
+      "invoice": 1045
+    },
+    // ... Lines removed for brevity ...
+    {
+      "_id": 318,
+      "email": "sales@example.com"
+    },
+    {
+      "_id": 101,
+      "note": "Renewal due next month"
+    }
+  ]
+}
+```
 
 ### Perl Code
 
 ```perl
-...
+use JSON::JSONFold qw(encode_json jsonfold_config);
+
+my $data = {
+    activity => [
+        { _id => 101, event => "Order",    amount => 1250 },
+        { _id => 101, event => "Payment",  invoice => 1045 },
+        { _id => 205, note => "Called support" },
+        { _id => 318, address => { city => "Boston", state => "MA" } },
+        { _id => 318, contact => "Alice", phone => "555-1234" },
+        { _id => 205, shipment => "UPS", tracking => "1Z84723" },
+        { _id => 101, status => "Preferred", credit => 50000 },
+        { _id => 205, invoice => 2048, due => "2026-07-15" },
+        { _id => 318, email => "sales@example.com" },
+        { _id => 101, note => "Renewal due next month" },
+    ],
+};
+print encode_json($data, { compact => "join" } ) ;
 ```
 
 ### Output
 
 ```json
-...
+{
+  "activity": [
+    { "_id": 101, "amount": 1250, "event": "Order" },
+    { "_id": 101, "event": "Payment", "invoice": 1045 }, { "_id": 205, "note": "Called support" },
+    { "_id": 318, "address": { "city": "Boston", "state": "MA" } },
+    { "_id": 318, "contact": "Alice", "phone": "555-1234" },
+    { "_id": 205, "shipment": "UPS", "tracking": "1Z84723" },
+    { "_id": 101, "credit": 50000, "status": "Preferred" },
+    { "_id": 205, "due": "2026-07-15", "invoice": 2048 }, { "_id": 318, "email": "sales.com" },
+    { "_id": 101, "note": "Renewal due next month" }
+  ]
+}
 ```
 
 ### Discussion
 
-- Adjacent folded structures share a line.
-- Further reduces vertical space while remaining readable.
+With "join" transformation - Adjacent small structures can share the same line. The "join" will not merge
+partial structures into the same line - as this will make it harder to identify complete structures. This
+step Further reduces vertical space while remaining readable.
 
 ---
 
-
 ## Using JSONFold in Perl
+
+### Installation
+
+```bash
+cpanm JSON::JSONFold
+```
 
 ### Formatting Perl Data
 
+JSONFold provides three APIs for formatting Perl data structures. Choose the one that best matches your coding style.
+
+### Compatibility API
+
+The compatibility API mirrors the familiar `JSON` module interface and is the simplest way to get started.
+
 ```perl
-...
+use JSON::JSONFold qw(to_json);
+
+# using default configuration
+print encode_json($data);
+
+# Customize using presets + width
+print encode_json($data, { width => 120, compact=>"max"})
 ```
 
-### Filtering Existing Pretty-Printed JSON
+### Functional API
+
+The functional API exposes JSONFold's formatting options directly, making it convenient when you need more control over the output. The core function is 'format_json'
 
 ```perl
-...
+use JSON::JSONFold qw(format_json);
+
+# Print formatted text, using default config/default width (100 columns)
+print format_json($data)
+
+# Print formatted text, using high compaction config, fit to 120 columns
+print format_json($data, 120, "high")
+
+# Pass additional options
+print format_json($data, 120, "high", indent=4, )
+
+```
+
+### Object-Oriented API
+
+The object-oriented API lets you configure a formatter once and reuse it for multiple documents.
+
+```perl
+use JSON::JSONFold;
+
+my $jsonfold = JSON::JSONFold->new(
+    width     => 80,
+    compact   => "default",
+    sort_keys => 1,
+);
+
+for my $data ( ... ) {
+    print $jsonfold->format($data);
+}
 ```
 
 ### Writing to a File or Stream
 
 ```perl
-...
+use JSON::JSONFold qw(write_json);
+
+# Print formatted text, using default config/default width (100 columns)
+print write_json($fh, $data)
+
+# Print formatted text, using high compaction config, fit to 120 columns
+print write_json($fh, $data, 120, "high")
+
+# Pass additional options
+print write_json($fh, $data, 120, "high", indent=4, )
+
 ```
 
----
+### Filtering Existing Pretty-Printed JSON
 
-## Configuration and Presets
-
-### Default
-
-### High
-
-### Maximum
-
-### Custom Configuration
+JSONFold can be applied to pretty-printed JSON text (generated by other Perl, loaded from a file/databases, etc.). Processing the JSON text can save a lot of processing, as there is no need to convert the text into Perl data structure, and to serialize it (which can cause loss of data, reordering of keys, ...).
 
 ```perl
-...
+use JSON::JSONFold qw(fold_text);
+
+# Read text from input.json
+open my $fp, "<", "input.json" or die "Error opening input.json: $!";
+my $text = do { local $/ ; <$fp> } ;
+close $fp ;
+
+# Print formatted text, using default config/default width (100 columns)
+print fold_text($text) ;
+
+# Print formatted text, using high compaction config, fit to 120 columns
+print fold_text($text, 50, "high") ;
 ```
 
 ---
 
-## Conclusion
+## Where To Find More
 
-- JSONFold is a post-processing formatter.
-- It works with existing Perl JSON serializers.
-- The output is significantly more compact while preserving readability.
-- Suitable for logs, configuration files, APIs, and debugging.
+CPAN: [JSON::JSONFold - compact, readable JSON formatting](https://metacpan.org/pod/JSON::JSONFold)
+GitHub: [JSONFold Perl](https://github.com/yairlenga/jsonfold/tree/main/perl)
+Website: [[https://jsonfold.dev]](https://jsonfold.dev/) - Online playground
