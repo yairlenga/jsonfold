@@ -1398,7 +1398,7 @@ JSON::JSONFold - compact, readable JSON formatting
 
     my $folded = fold_text($pretty_json, 100, 'default');
 
-    # Object interface
+    # Object Oriented interface
 
     my $fmt = JSON::JSONFold->new(
         width  => 100,
@@ -1498,7 +1498,7 @@ Returns formatting statistics.
 
 Folds existing pretty-printed JSON text and returns the folded result.
 
-=head1 OBJECT INTERFACE
+=head1 OBJECT ORIENTED INTERFACE
 
 =head2 new
 
