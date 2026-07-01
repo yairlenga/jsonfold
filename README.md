@@ -201,8 +201,11 @@ This repository contains language-specific implementations in subdirectories:
 | Python | [python/](./python/) | Ready | YES | YES | YES | YES | wrapper for json.dump(s) API |
 | JavaScript | [javascript/](./javascript/) | Ready | YES | YES | - | YES | wrapper for JSON.stringify |
 | Java | [java/](./java/) | Ready | YES | YES | YES | - | Wrapper for Jackson ObjectMapper |
+| Java | [java/](./java/) | Ready | YES | YES | YES | - | Wrapper for GSON ObjectMapper |
 | Perl | [perl/](./perl/ ) | Beta | YES | YES | - | - | Streaming and wrapper around JSON::encode |
 | C | [c/](./c/) | Beta | YES | YES | - | - | Process pretty-printed JSON text |
+| dotnet | [dotnet/](./dotnet/) | Alpha | YES | YES | Yes | - | USing System.Text.Json.JsonSerializer  |
+| Go | [go/](./go/) | Alpha | YES | YES | YES | - | Using json.NewEncoder |
 
 
 ## Configuration

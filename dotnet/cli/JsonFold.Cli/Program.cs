@@ -42,7 +42,7 @@ internal static class Program
             var formatter = new JsonFoldFormatter(options.Width, config, indent: options.Indent);
 
             using TextWriter writer = OpenOutput(options.OutputPath);
-            JsonFoldStats stats = formatter.WriteJson(node, writer);
+            JsonFoldStats stats = formatter.FormatTo(node, writer);
 
             if (options.Verbose)
             {

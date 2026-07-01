@@ -308,6 +308,41 @@ public class JSONFold {
         return fmt.fold(jsonText) ;
     }
 
+    /**
+     * Fold already pretty-printed JSON text.
+     *
+     * @param jsonText pretty-printed JSON text
+     * @return folded JSON text
+     * @throws IOException if writing fails
+     */
+    public Stats fold_to(String jsonText, Writer writer)
+    throws IOException
+    {
+        try (JSONFoldWriter out = create_writer(writer, width, config, false) )
+        {
+            out.write(jsonText) ;
+            return out.getStats() ;
+        }
+    }
+
+    /**
+     * Fold already pretty-printed JSON text using an explicit width and config.
+     *
+     * @param jsonText pretty-printed JSON text
+     * @param width target maximum line width
+     * @param config folding configuration
+     * @return folded JSON text
+     * @throws IOException if writing fails
+     */
+    public static Stats writeFolded(String jsonText, Writer writer, int width, Config config)
+    throws IOException
+    {
+        JSONFold fmt = new JSONFold(width, config) ;
+        return fmt.fold_to(jsonText, writer) ;
+    }
+
+
+
     // The complete API includes 2 additional methods, and 2 additional static helpers.
     // Those are implemented in the Modules that connect with an actual JSON encoder (Jackson, ...)
 

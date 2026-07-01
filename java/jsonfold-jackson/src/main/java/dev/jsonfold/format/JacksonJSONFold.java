@@ -301,7 +301,7 @@ public final class JacksonJSONFold extends JSONFold implements JFFormatter {
      * @return formatting statistics
      * @throws IOException if Jackson serialization or writing fails
      */
-    public Stats write(Object obj, Writer writer) throws IOException
+    public Stats format_to(Object obj, Writer writer) throws IOException
     {
         ObjectMapper mapper = sortKeys ? SORTED_MAPPER : DEFAULT_MAPPER ;
         PrettyPrinter pp = prettyPrinter(gold, width) ;
@@ -323,7 +323,7 @@ public final class JacksonJSONFold extends JSONFold implements JFFormatter {
     throws IOException
     {
         Writer sw = new StringWriter() ;
-        Stats stats = write(obj, sw) ;
+        Stats stats = format_to(obj, sw) ;
         if ( stats == null ) throw new IOException("Failed to generate JSON string") ;
         return sw.toString();
     }
@@ -342,7 +342,7 @@ public final class JacksonJSONFold extends JSONFold implements JFFormatter {
     throws IOException
     {
         JacksonJSONFold fmt = new JacksonJSONFold(width, config) ;
-        return fmt.write(obj, writer);
+        return fmt.format_to(obj, writer);
     }
 
     /**

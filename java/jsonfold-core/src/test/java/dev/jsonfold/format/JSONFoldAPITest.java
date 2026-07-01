@@ -59,6 +59,14 @@ class JSONFoldApiTest {
         assertNotNull(folded2);
         assertTrue(folded2.contains("\"a\""));
 
+        {
+          StringWriter sw = new StringWriter() ;
+          Stats stats = JSONFold.writeFolded(jsonText, sw, 100, cfg);
+          assertNotEquals(0, stats.getBytesOut());
+          assertNotEquals(0, stats.getLinesOut());
+        }
+
+
         StringWriter sw = new StringWriter();
         Writer filter = JSONFold.create_writer(sw, 100, cfg, false);
         filter.write(jsonText);

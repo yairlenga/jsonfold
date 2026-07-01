@@ -4,9 +4,11 @@
 
 ## Object Oriented API
 - formatter = new (width, config, overrides) -> Formatter
-- formatter->write(data, stream) -> stats
 - formatter->format(data) -> text
+- formatter->format_to(text) -> stats
+- formatter->write(data, stream) -> stats, replacing with format_to
 - formatter->fold(text) -> text
+- formatter->fold_to(text, stream) -> stats
 
 ## Convenience API
 
@@ -16,7 +18,7 @@
 - jsonfold_config(cfg="default", width=None, **overrides) -> cfg
 - fold_text(text, $width, $config) => $text
 - jsonfold_config(base, width, overrides) -> config
-- print_folded(fp, text, width, config)
+- write_folded(text, fp, width, config)
 
 # Implementation Specific
 

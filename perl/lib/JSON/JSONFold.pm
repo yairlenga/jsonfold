@@ -8,7 +8,7 @@ use JSON ();
 use Exporter 'import';
 
 our $VERSION = '0.2.0';
-our @EXPORT = qw(format_json write_json fold_text) ;
+our @EXPORT = qw(format_json write_json fold_text write_folded) ;
 
 our @EXPORT_OK = qw(
 	jsonfold_config
@@ -73,21 +73,31 @@ sub fold {
     return $output ;
 }
 
-sub write {
+sub fold_to {
+    my ($self, $text, $fh) = @_ ;
+
+    my $stream = _stream($fh, $self->{config}, $self->{do_close}) ;
+
+    $stream->write($text);
+    $stream->finish ;
+    $stream->flush ;
+    $stream->close or die "close output: $!" ;
+    my $info = $stream->stats ;
+
+    return $info ;
+}
+
+sub format_to {
     my($self, $data, $fh) = @_ ;
 
-    my $config = $self->{config} ;
+    my $stream = _stream($fh, $self->{config}, $self->{do_close}) ;
 
-    my $do_close = $self->{do_close} ;
-    my $stream = _stream($fh, $config, $do_close) ;
-    my $json = $self->{json} ;
-
-    my $text = $json->encode($data) ;
+    my $text = $self->{json}->encode($data) ;
     $stream->write($text);
     $stream->finish;
     $stream->flush;
     my $info = $stream->stats ;
-    $stream->close() ;
+    $stream->close or die "close output: $!" ;
 
     return $info ;
 }
@@ -119,7 +129,7 @@ sub write_json {
     my($data, $fh, $width, $config, %overrides) = @_ ;
 
     my $fmt = __PACKAGE__->new(width => $width, config => $config, %overrides) ;
-    my $info = $fmt->write($data, $fh) ;
+    my $info = $fmt->format_to($data, $fh) ;
     return $info ;
 }
 
@@ -129,6 +139,14 @@ sub fold_text {
 
     return $fmt->fold($text) ;
 }
+
+sub write_folded {
+    my($text, $fh, $width, $config) = @_ ;
+    my $fmt = __PACKAGE__->new(width => $width, config => $config) ;
+
+    return $fmt->fold_to($text, $fh) ;
+}
+
 
 sub create_writer {
     my($fh, $width, $config, %overrides) = @_ ;
@@ -956,6 +974,7 @@ sub close {
     $self->finish;
     $self->flush;
     $self->[W_FH]->close if $self->[W_DO_CLOSE] ;
+    return 1;
 }
 
 sub _feed {
@@ -1414,6 +1433,8 @@ JSON::JSONFold - compact, readable JSON formatting
 
     my $folded = fold_text($pretty_json, 100, 'default');
 
+    write_folded($text, \*STDOUT, 100, 'default');
+
     # Object Oriented interface
 
     my $fmt = JSON::JSONFold->new(
@@ -1422,6 +1443,9 @@ JSON::JSONFold - compact, readable JSON formatting
     );
 
     my $text = $fmt->format($data);
+    $fmt->format_to($data, $fh);
+    my $text = $fmt->fold($text_pp) ;
+    $fmt->fold_to($text_pp, $fh) ;
 
     # JSON-compatible interface
 
@@ -1474,13 +1498,14 @@ The following functions are exported by default:
     format_json
     write_json
     fold_text
-    encode_json
-    to_json
+    write_folded
 
 The following functions are exported on request:
 
     jsonfold_config
     create_writer
+    encode_json
+    to_json
 
 
 =head1 FUNCTIONAL INTERFACE
@@ -1513,6 +1538,12 @@ Returns formatting statistics.
     my $text = fold_text($pretty_json, $width, $config);
 
 Folds existing pretty-printed JSON text and returns the folded result.
+
+=head2 write_fold
+
+    my $text = fold_text($pretty_json, $fh, $width, $config);
+
+Folds existing pretty-printed JSON and writes the folded JSON to C<$fh>
 
 =head1 OBJECT ORIENTED INTERFACE
 
@@ -1564,9 +1595,9 @@ Formats a Perl data structure and returns folded JSON text.
 
 Folds existing pretty-printed JSON text.
 
-=head2 write
+=head2 format_to
 
-    my $stats = $fmt->write($data, $fh);
+    my $stats = $fmt->format_to($data, $fh);
 
 Formats a Perl data structure and writes the result to C<$fh>.
 

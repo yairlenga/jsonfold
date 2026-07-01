@@ -37,7 +37,7 @@ static class JsonFoldMain
                 indent: opt.Indent
             );
 
-            var stats = formatter.WriteJson(value, Console.Out);
+            var stats = formatter.FormatTo(value, Console.Out);
 
             if (opt.Verbose)
                 Console.Error.WriteLine(stats);

@@ -31,10 +31,10 @@ public sealed class JsonFoldFormatter
         SerializerOptions = resolveOptions(serializerOptions);
         Indent = resolveIndent(indent) ;    }
 
-    public string FormatJson<T>(T value)
+    public string Format<T>(T value)
     {
         var pretty = SerializePretty(value);
-        return FoldText(pretty);
+        return Fold(pretty);
     }
 
     private JsonFoldStats streamTo<T>(T value, TextWriter writer)
@@ -51,19 +51,27 @@ public sealed class JsonFoldFormatter
         return jfw.Stats;
     }
 
-    public JsonFoldStats WriteJson<T>(T value, TextWriter writer)
+    public JsonFoldStats FormatTo<T>(T value, TextWriter writer)
     {
         return streamTo(value, writer) ;    
     }
 
-    public string FoldText(string prettyJson)
+    public string Fold(string prettyJson)
     {
-        if (Config is null) return prettyJson;
         using var sw = new StringWriter();
         using var foldWriter = new JsonFoldWriter(sw, Config);
         foldWriter.Write(prettyJson);
         foldWriter.Finish();
         return sw.ToString();
+    }
+
+    public JsonFoldStats FoldTo(string prettyJson, TextWriter writer)
+    {
+        using var jfw = new JsonFoldWriter(writer, Config);
+        jfw.Write(prettyJson);
+        jfw.Finish();
+        return jfw.Stats;
+
     }
 
     private int resolveIndent(int? indent)
@@ -99,11 +107,14 @@ public sealed class JsonFoldFormatter
         new(writer, JsonFoldConfig.Resolve(config ?? JsonFoldConfig.Default, width), closeBase);
 
     public static string FoldText(string prettyJson, int? width = null, JsonFoldConfig? config = null) =>
-        new JsonFoldFormatter(width, config ?? JsonFoldConfig.Default).FoldText(prettyJson);
+        new JsonFoldFormatter(width, config ?? JsonFoldConfig.Default).Fold(prettyJson);
+
+    public static JsonFoldStats WriteFolded(string prettyJson, TextWriter writer, int? width = null, JsonFoldConfig? config = null) =>
+        new JsonFoldFormatter(width, config ?? JsonFoldConfig.Default).FoldTo(prettyJson, writer);
 
     public static string FormatJson<T>(T value, int? width = null, JsonFoldConfig? config = null, JsonSerializerOptions? serializerOptions = null) =>
-        new JsonFoldFormatter(width, config ?? JsonFoldConfig.Default, serializerOptions).FormatJson(value);
+        new JsonFoldFormatter(width, config ?? JsonFoldConfig.Default, serializerOptions).Format(value);
 
     public static JsonFoldStats WriteJson<T>(T value, TextWriter writer, int? width = null, JsonFoldConfig? config = null, JsonSerializerOptions? serializerOptions = null) =>
-        new JsonFoldFormatter(width, config ?? JsonFoldConfig.Default, serializerOptions).WriteJson(value, writer);
+        new JsonFoldFormatter(width, config ?? JsonFoldConfig.Default, serializerOptions).FormatTo(value, writer);
 }

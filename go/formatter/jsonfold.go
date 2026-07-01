@@ -120,3 +120,21 @@ func FoldText(text string, width int, cfg Config) (string, error) {
 	jfw.Close()
 	return fp.String(), err
 }
+
+func WriteFolded(text string, fp io.Writer, width int, cfg Config, opt *Options) (Stats, error) {
+	setupConfig(&cfg, width, opt)
+	jfw, err := createStream(fp, cfg, opt)
+	var stats Stats
+
+	if jfw == nil {
+		return stats, err
+	}
+	defer jfw.Close()
+
+	jfw.Write([]byte(text))
+	jfw.Finish()
+	stats = jfw.Stats()
+	jfw.Close()
+
+	return stats, err
+}

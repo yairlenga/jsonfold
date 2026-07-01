@@ -14,6 +14,8 @@ build:
 
 run-test:
 	./api_test.js
+	node cli.js --demo
+	node benchmark.js 10
 	cd ../tests/unit && ../run_tests.sh -mjavascript
 	cd ../tests/samples && ../run_tests.sh -mjavascript
 	cd ../tests/future && ../run_tests.sh -mjavascript

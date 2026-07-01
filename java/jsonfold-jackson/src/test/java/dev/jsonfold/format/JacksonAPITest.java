@@ -153,7 +153,7 @@ class JacksonApiTest {
         assertTrue(json.contains("\"id\""));
 
         StringWriter sw = new StringWriter();
-        Stats stats = fmt.write(data, sw);
+        Stats stats = fmt.format_to(data, sw);
         assertNotNull(stats);
         assertFalse(sw.toString().isEmpty());
         assertTrue(stats.getBytesIn() > 0);

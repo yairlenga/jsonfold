@@ -987,7 +987,7 @@ export class JSONFold {
     return buff  
   }
 
-  write(data, fp)
+  format_to(data, fp)
   {
     const text = this.json.stringify(data, this.replacer, this.indent)
     if ( typeof text != "string" ) return text
@@ -1010,6 +1010,16 @@ export class JSONFold {
     return buff  
   }
 
+  fold_to(text, fp)
+  {
+    const out = new JSONFoldFilter(fp, { config: this.config })
+    out.write(text);
+    const stats = out.stats
+    out.close()
+    return stats
+  }
+
+
   // Public API - Helpers
 
 }
@@ -1022,10 +1032,15 @@ export function create_writer(fp, { width=undefined, config= "", doClose= false}
   return new JSONFoldFilter( fp , { config: cfg, doClose})
 }
 
+export function jsonfold_config(config, width, overrides)
+{
+  return JSONFoldConfig.resolve(config, width, overrides)
+}
+
 export function write_json(data, fp, width, config = "", ...args)
 {
   const fmt = new JSONFold(width, config, ...args )
-  const stats = fmt.write(data, fp)
+  const stats = fmt.format_to(data, fp)
   return stats
 }
 
@@ -1035,16 +1050,17 @@ export function format_json(data, width, config = "", ...args)
   return fmt.format(data)
 }
 
-export function jsonfold_config(config, width, overrides)
-{
-  return JSONFoldConfig.resolve(config, width, overrides)
-}
-
 export function fold_text(text, width, config = "")
 {
   const fmt = new JSONFold(width, config)
   const output = fmt.fold(text)
   return output
+}
+
+export function write_folded(text, fp, width, config="", ...args)
+{
+  const fmt = new JSONFold( width, config, ...args)
+  return fmt.fold_to(text, fp)
 }
 
 // Compatability API

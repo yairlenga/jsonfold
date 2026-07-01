@@ -300,13 +300,13 @@ internal static class Program
     {
         var cfg = JsonFoldConfig.Preset(compact);
         var formatter = new JsonFoldFormatter(0, compact);
-        formatter.WriteJson(data, output);
+        formatter.FormatTo(data, output);
     }
 
     private static string JsonFoldString(JsonObject data, string compact)
     {
         var formatter = new JsonFoldFormatter(0, compact);
-        return formatter.FormatJson(data);
+        return formatter.Format(data);
     }
 
     private static JsonSerializerOptions PrettyOptions() => new()

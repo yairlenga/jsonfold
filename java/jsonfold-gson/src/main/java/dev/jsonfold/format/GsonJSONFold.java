@@ -116,6 +116,18 @@ public final class GsonJSONFold extends JSONFold implements JFFormatter {
         return sw.toString();
     }
 
+    @Override
+    public Stats format_to(Object obj, Writer writer) throws IOException {
+        StringWriter sw = new StringWriter();
+        Stats stats = write(obj, sw);
+        if (stats == null) {
+            throw new IOException("Failed to generate JSON string");
+        }
+        return stats ;
+    }
+
+
+
     public static Stats writeJson(
             Object obj,
             Writer writer,

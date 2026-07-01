@@ -1153,7 +1153,13 @@ def fold_text(text: str, width: int, config: JSONFoldConfig | str = "") -> str:
         with _stream(str_io, _config(config, width=width)) as out:
             out.write(text)
         return str_io.getvalue()
+    
 
+def write_folded(text: str, fp: TextIO, width: int, config: JSONFoldConfig | str = "") -> JSONFoldStats:
+    with _stream(fp, _config(config, width=width)) as out:
+        out.write(text)
+        out.close
+    return out.stats
 
 # Python json compatible API
 

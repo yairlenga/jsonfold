@@ -14,8 +14,9 @@ import java.io.Writer;
 public interface JFFormatter {
 
     public String fold(String jsonText) throws IOException;
-    public Stats write(Object obj, Writer writer) throws IOException ;
+    public Stats fold_to(String jsonText, Writer writer) throws IOException;
     public String format(Object obj) throws IOException;
+    public Stats format_to(Object obj, Writer writer) throws IOException ;
 
     // Static methods expected:
     // public static Writer createWriter(Writer base, int width, Config config, boolean close_fp);
