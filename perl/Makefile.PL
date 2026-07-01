@@ -12,6 +12,7 @@ WriteMakefile(
     MIN_PERL_VERSION => '5.014',
 
     PREREQ_PM    => {
+	'JSON'      => 0,
         'JSON::PP'  => 0,
         'Exporter'  => 0,
     },

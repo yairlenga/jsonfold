@@ -6,6 +6,7 @@ use 5.014;
 use FindBin;
 use lib "$FindBin::Bin/lib", "$FindBin::Bin/../lib", "lib";
 use JSON::JSONFold ;
+use JSON;
 
 use Getopt::Long qw(GetOptionsFromArray);
 use Time::HiRes qw(time clock_gettime CLOCK_PROCESS_CPUTIME_ID);
@@ -91,7 +92,7 @@ sub make_data {
     my ($rows) = @_;
 
     return {
-        meta     => { version => 1, ok => JSON::PP::true, name => 'jsonfold benchmark' },
+        meta     => { version => 1, ok => JSON::true, name => 'jsonfold benchmark' },
         long_ids => [ 0 .. 99 ],
         long_obj => { map { ("k$_" => $_) } 0 .. 49 },
         rows     => [
@@ -100,7 +101,7 @@ sub make_data {
                 +{
                     id     => $i,
                     name   => "name_$i",
-                    active => ($i % 3 == 0 ? JSON::PP::true : JSON::PP::false),
+                    active => ($i % 3 == 0 ? JSON::true : JSON::false),
                     score  => $i * 1.25,
                     tags   => [qw(alpha beta gamma delta)],
                     pos    => { x => $i, y => $i + 1, z => $i + 2 },
@@ -117,13 +118,13 @@ sub mem_units { round1($_[0] / 1024.0) }
 sub round1    { int($_[0] * 10 + 0.5) / 10 }
 
 sub json_plain_encoder {
-    return JSON::PP->new->allow_nonref;
+    return JSON->new->allow_nonref;
 }
 
 sub json_pretty_encoder {
     # JSON::PP / JSON::MaybeXS use indent + space_before/after for readable
     # pretty output. This is close to Python json.dumps(..., indent=2).
-    return JSON::PP->new
+    return JSON->new
         ->allow_nonref
         ->pretty
         ->indent_length(2);
@@ -150,7 +151,7 @@ sub run_case {
 
     my ($kind, $func, $compact) = split /\./, $name;
 
-    if (defined($kind) && $kind eq 'jsonfold') {
+    if (defined($kind) && $kind eq 'jf') {
         if (defined($func) && $func eq 'dumps') {
             return sub {
                 run_jsonfold_dumps($data, $compact, $show);
@@ -342,22 +343,22 @@ sub default_tests {
     return qw(
         base.dump.plain
         base.dump.pretty
-        jsonfold.dump.off
-        jsonfold.dump.none
-        jsonfold.dump.default
-        jsonfold.dump.low
-        jsonfold.dump.med
-        jsonfold.dump.high
-        jsonfold.dump.max
-        jsonfold.dump.pack
-        jsonfold.dump.fold
-        jsonfold.dump.join
+        jf.dump.off
+        jf.dump.none
+        jf.dump.default
+        jf.dump.low
+        jf.dump.med
+        jf.dump.high
+        jf.dump.max
+        jf.dump.pack
+        jf.dump.fold
+        jf.dump.join
         base.dumps.plain
         base.dumps.pretty
-        jsonfold.dumps.none
-        jsonfold.dumps.default
-        jsonfold.dumps.high
-        jsonfold.dumps.max
+        jf.dumps.none
+        jf.dumps.default
+        jf.dumps.high
+        jf.dumps.max
     );
 }
 
@@ -399,11 +400,11 @@ usage: benchmark.pl [--show] [--repeat=N] [TEST ...] [ROWS ...] [-]
 Examples:
   perl benchmark.pl
   perl benchmark.pl 100 1000
-  perl benchmark.pl jsonfold.dump.default jsonfold.dump.max 1000
-  perl benchmark.pl jsonfold.dumps.default --show 3
+  perl benchmark.pl jf.dump.default jf.dump.max 1000
+  perl benchmark.pl jf.dumps.default --show 3
 
 Arguments match benchmark.py:
-  TEST    case name, e.g. base.dump.pretty or jsonfold.dump.default
+  TEST    case name, e.g. base.dump.pretty or jf.dump.default
   ROWS    row count; runs the current test filter for that size
   -       clears the current test filter
 

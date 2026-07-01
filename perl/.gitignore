@@ -6,3 +6,4 @@ MYMETA.*
 pm_to_blib
 JSON-JSONFold-*/
 *.tar.gz
+*.old
