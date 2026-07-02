@@ -1,9 +1,34 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+        {
+            "arg": [
+                "--input=${workspaceFolder}/tests/unit/001.json"
+            ],
+            "name": "Lua JSONFold",
+            "program": "${workspaceFolder}/lua/cli.lua",
+            "request": "launch",
+            "stopOnEntry": true,
+            "type": "lua",
+            "env": {
+                "LUA_PATH": "/home/user/.luarocks/share/lua/5.1/?.lua;/home/user/.luarocks/share/lua/5.1/?/init.lua;;",
+                "LUA_CPATH": "/home/user/.luarocks/lib/lua/5.1/?.so;;"
+            }
+        },
+        {
+            "name": "Lua2 JSONFold",
+            "type": "lua",
+            "request": "launch",
+            "program": "${workspaceFolder}/lua/jsonfold.lua",
+            "arg": [
+                "--input=${workspaceFolder}/tests/unit/001.json"
+            ],
+            "stopOnEntry": true,
+            "runtimeArgs": [
+                "-e",
+                "package.path='/home/user/.luarocks/share/lua/5.1/?.lua;/home/user/.luarocks/share/lua/5.1/?/init.lua;'..package.path; package.cpath='/home/user/.luarocks/lib/lua/5.1/?.so;'..package.cpath"
+            ]
+        },
         {
             "name": "C# CLI",
             "type": "coreclr",
@@ -26,7 +51,10 @@
             "request": "launch",
             "mode": "debug",
             "program": "${workspaceFolder}/go/cmd/jsonfold",
-            "args": [ "--input=${workspaceFolder}/tests/unit/010.json", "--compact=pack"]
+            "args": [
+                "--input=${workspaceFolder}/tests/unit/010.json",
+                "--compact=pack"
+            ]
         },
         {
             "name": "GO Benchmark",
@@ -34,7 +62,7 @@
             "request": "launch",
             "mode": "debug",
             "program": "${workspaceFolder}/go/cmd/benchmark",
-            "args": [ ]
+            "args": []
         },
         {
             "name": "Node cli",
@@ -43,7 +71,11 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "args": [ "--verbose", "--input=tests/unit/071.json", "--compact=off" ],
+            "args": [
+                "--verbose",
+                "--input=tests/unit/071.json",
+                "--compact=off"
+            ],
             "type": "node"
         },
         {
@@ -51,7 +83,11 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/c/jsonfold.exe",
-            "args": [ "--verbose", "--input=tests/unit/028.json", "--compact=high" ],
+            "args": [
+                "--verbose",
+                "--input=tests/unit/028.json",
+                "--compact=high"
+            ],
             "stopAtEntry": true,
             "cwd": "${workspaceFolder}",
             "environment": [],
@@ -78,7 +114,11 @@
                 "<node_internals>/**"
             ],
             "type": "node",
-            "args": [ "--input=tests/misc/webdemo.json", "--width=100", "-v"]
+            "args": [
+                "--input=tests/misc/webdemo.json",
+                "--width=100",
+                "-v"
+            ]
         },
         {
             "type": "perl",
@@ -87,9 +127,13 @@
             "cwd": "${workspaceFolder}/perl",
             "program": "${workspaceFolder}/perl/lib/JSON/JSONFold.pm",
             "stopOnEntry": false,
-            "args": [ "--verbose", "--demo", "--compact=off", "--width=10" ]
+            "args": [
+                "--verbose",
+                "--demo",
+                "--compact=off",
+                "--width=10"
+            ]
         },
-
         {
             "type": "perl",
             "request": "launch",
@@ -97,7 +141,11 @@
             "cwd": "${workspaceFolder}/perl",
             "program": "${workspaceFolder}/perl/script/jsonfold.pl",
             "stopOnEntry": true,
-            "args": [ "--verbose", "--demo", "--compact=high" ]
+            "args": [
+                "--verbose",
+                "--demo",
+                "--compact=high"
+            ]
         },
         {
             "type": "perl",
@@ -106,7 +154,7 @@
             "cwd": "${workspaceFolder}/perl",
             "program": "${workspaceFolder}/perl/script/benchmark.pl",
             "stopOnEntry": true,
-            "args": [  ]
+            "args": []
         },
         {
             "type": "java",
@@ -116,14 +164,17 @@
             "projectName": "jsonfold-cli",
             "args": "--demo --verbose"
         },
-
         {
             "type": "java",
             "name": "Java - Jackson Unit",
             "request": "launch",
             "mainClass": "dev.jsonfold.format.Main",
             "projectName": "jsonfold-cli",
-            "args": [ "--input=tests/unit/074.json", "--compact=high", "--width=100"]
+            "args": [
+                "--input=tests/unit/074.json",
+                "--compact=high",
+                "--width=100"
+            ]
         },
         {
             "type": "java",
@@ -131,9 +182,13 @@
             "request": "launch",
             "mainClass": "dev.jsonfold.format.GsonMain",
             "projectName": "jsonfold-gson",
-            "args": [ "--demo", "--verbose", "--sort-keys" ]
+            "args": [
+                "--demo",
+                "--verbose",
+                "--sort-keys"
+            ]
         },
-                {
+        {
             "type": "java",
             "name": "Java benchmark",
             "request": "launch",
@@ -146,16 +201,19 @@
             "type": "debugpy",
             "request": "launch",
             "program": "python/benchmark.py",
-            "args": [ "--show=100"]
+            "args": [
+                "--show=100"
+            ]
         },
-
         {
             "name": "Python CLI",
             "type": "debugpy",
             "request": "launch",
             "program": "python/cli.py",
             "args": [
-                "-v", "--input=tests/unit/071.json", "--compact=off"
+                "-v",
+                "--input=tests/unit/071.json",
+                "--compact=off"
             ]
         },
         {
@@ -164,7 +222,10 @@
             "request": "launch",
             "program": "python/cli.py",
             "args": [
-                "--input=tests/future/109.json", "-v", "--compact=max", "--join-obj-items=5"
+                "--input=tests/future/109.json",
+                "-v",
+                "--compact=max",
+                "--join-obj-items=5"
             ]
         },
         {
@@ -172,6 +233,14 @@
             "type": "debugpy",
             "request": "launch",
             "program": "${file}"
+        },
+        {
+            "type": "perl",
+            "name": "Launch",
+            "request": "launch",
+            "program": "${workspaceFolder}/${relativeFile}",
+            "stopOnEntry": true,
+            "debug": true
         }
     ]
 }

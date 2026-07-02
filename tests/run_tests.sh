@@ -13,6 +13,7 @@ case "${1-}" in
 	-mc) shift ; mode=c ; JSONFOLD="$root/c/jsonfold.exe" ;;
 	-mdotnet) shift ; mode=dotnet ; JSONFOLD="$root/dotnet/run.sh" ;;
 	-mgo) shift ; mode=go ; JSONFOLD="$root/go/jsonfold.exe" ;;
+	-mlua) shift ; mode=lua ; JSONFOLD="$root/lua/cli.lua" ;;
 esac
 
 echo "Using: JSONFOLD=${JSONFOLD?No JSONFOLD}"
