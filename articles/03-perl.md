@@ -54,7 +54,7 @@ use JSON qw();
 print "// Compact:\n", JSON::encode_json($data), "\n" ;
 
 # Pretty-Printed JSON
-print "// Pretty-Printed:\n", JSON->new->pretty->encode($data), "\n" ;
+print "// Pretty-Printed:\n", JSON::PP->new->pretty->encode($data), "\n" ;
 
 # With JSONFold
 use JSON::JSONFold qw();

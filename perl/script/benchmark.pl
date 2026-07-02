@@ -6,7 +6,7 @@ use 5.014;
 use FindBin;
 use lib "$FindBin::Bin/lib", "$FindBin::Bin/../lib", "lib";
 use JSON::JSONFold ;
-use JSON;
+use JSON::PP ;
 
 use Getopt::Long qw(GetOptionsFromArray);
 use Time::HiRes qw(time clock_gettime CLOCK_PROCESS_CPUTIME_ID);
@@ -19,17 +19,7 @@ use constant MEM_FRACTION => 0.10;
 use Carp qw(confess cluck);
 
 BEGIN {
-    $SIG{__DIE__} = sub {
-        return if $^S;
-        local $SIG{__DIE__};
-        Carp::confess(@_);
-    };
 
-
-    $SIG{__WARN__} = sub {
-        local $SIG{__WARN__};
-#        Carp::cluck(@_);
-    };
 }
 
 # ----------------------------------------------------------------------
@@ -92,7 +82,7 @@ sub make_data {
     my ($rows) = @_;
 
     return {
-        meta     => { version => 1, ok => JSON::true, name => 'jsonfold benchmark' },
+        meta     => { version => 1, ok => JSON::PP::true, name => 'jsonfold benchmark' },
         long_ids => [ 0 .. 99 ],
         long_obj => { map { ("k$_" => $_) } 0 .. 49 },
         rows     => [
@@ -101,7 +91,7 @@ sub make_data {
                 +{
                     id     => $i,
                     name   => "name_$i",
-                    active => ($i % 3 == 0 ? JSON::true : JSON::false),
+                    active => ($i % 3 == 0 ? JSON::PP::true : JSON::PP::false),
                     score  => $i * 1.25,
                     tags   => [qw(alpha beta gamma delta)],
                     pos    => { x => $i, y => $i + 1, z => $i + 2 },
@@ -118,13 +108,13 @@ sub mem_units { round1($_[0] / 1024.0) }
 sub round1    { int($_[0] * 10 + 0.5) / 10 }
 
 sub json_plain_encoder {
-    return JSON->new->allow_nonref;
+    return JSON::PP->new->allow_nonref;
 }
 
 sub json_pretty_encoder {
     # JSON::PP / JSON::MaybeXS use indent + space_before/after for readable
     # pretty output. This is close to Python json.dumps(..., indent=2).
-    return JSON->new
+    return JSON::PP->new
         ->allow_nonref
         ->pretty
         ->indent_length(2);
@@ -134,6 +124,18 @@ sub json_pretty_encoder {
 # Case dispatch: same names as benchmark.py.
 # ----------------------------------------------------------------------
 sub run_case {
+    
+    local $SIG{__DIE__} = sub {
+        return if $^S;
+        local $SIG{__DIE__};
+        Carp::confess(@_);
+    };
+
+    local $SIG{__WARN__} = sub {
+        local $SIG{__WARN__};
+        Carp::cluck(@_);
+    };
+
     my ($data, $name, $show) = @_;
 
     if ($name eq 'base.dumps.plain') {
@@ -368,6 +370,10 @@ sub run_one_size {
 
     my @tests = @$tests ? @$tests : default_tests();
     my @results;
+
+    my $backend = $JSON::JSONFold::BACKEND || "-" ;
+    my $count = scalar(@tests) ;
+    print STDERR "Becnharming $count tests, repeat=$REPEATS, Backend='$backend'\n" ;
 
     for my $name (@tests) {
         print STDERR "$name ($rows)... ";

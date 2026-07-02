@@ -3,12 +3,27 @@ package JSON::JSONFold ;
 use strict;
 use warnings;
 use 5.014 ;
-use JSON ();
+use JSON::PP qw();
 
 use Exporter 'import';
 
 our $VERSION = '0.2.0';
 our @EXPORT = qw(format_json write_json fold_text write_folded) ;
+our $BACKEND ;
+
+BEGIN {
+    return if defined($BACKEND) ;
+    my $backend = $ENV{JSONFOLD_BACKEND} ;
+    if ( defined($backend)) {
+        $backend = "JSON::$backend" if $backend =~ /^\w+/ ;
+    } else {
+        $backend = JSON::MaybeXS::JSON() if eval { require JSON::MaybeXS } ;
+    }
+    if ( $backend ) {
+        eval "require $backend" or die "cannot load '$backend'";
+    }
+    $BACKEND = $backend || 'JSON::PP' ;
+}
 
 our @EXPORT_OK = qw(
 	jsonfold_config
@@ -170,23 +185,16 @@ sub _stream {
 sub _json_coder {
     my ($gold, $indent, %opt) = @_;
     # Must have valid indent, otherwise cannot parse the data
-    my $json = JSON->new->pretty ;
+    my $json = ($BACKEND || 'JSON::PP')->new->pretty ;
     if ( $gold ) {
         my $sort_keys = $opt{sort_keys} // 1 ;
-        $indent //=2 unless $json->backend->isa('JSON::XS') ;
+        $indent //=2 ;
         $json->allow_nonref->canonical($sort_keys);
         $json->space_before(0)->space_after(1);
     }
-    # JSON::XS does not support indent, and JSON will produce a warning
-    $json->indent_length($indent) if $indent ;
-
-#    if ( $indent ) {
-#        if ( !$json->backend->isa('JSON::XS' )) {
-#            $json->indent_length($indent) ;
-#        } else {
-#            warn "ident($indent) ignored\n" ;
-#        }
-#    }
+    # JSON has a bug with XS implementatio, may want to 
+    #   $json->indent_length($indent) if $indent && ! ($json->is('JSON') && $json->is_XS()) ;
+    $json->indent_length($indent) ;
     return $json;
 }
 
@@ -1298,7 +1306,7 @@ sub setup {
 
 sub demo_data {
     return {
-        meta  => { version => 1, ok => JSON::true, name => "jsonfold demo" },
+        meta  => { version => 1, ok => JSON::PP::true, name => "jsonfold demo" },
         ids => [ 1, 2, 3, 4, 5, 6 ],
         items => [ { id => 1, name => "alpha" }, { id => 2, name => "beta" }, ],
         matrix => [ [ 1, 2 ], [ 3, 4 ], [ 5, 6 ] ],
@@ -1366,7 +1374,7 @@ sub read_input {
         $json_text = <STDIN>;
     }
 
-    return JSON->new->allow_nonref->decode($json_text);
+    return JSON::PP->new->allow_nonref->decode($json_text);
 }
 
 sub show_verbose {
@@ -1398,14 +1406,7 @@ sub run {
 
     show_verbose("config", { $config->as_hash } ) if $verbose ;
 
-    my $json ;
-    unless ( $ENV{PERL_JSON_BACKEND} ) {
-        require 'JSON::PP' ;
-        $json = JSON::PP::new->allow_nonref->pretty ;
-        $json->indent_length($opt->{indent}) if $opt->{indent} ;
-    }
-
-    my $info = JSON::JSONFold::write_json($data, \*STDOUT, $opt->{width}, $config, sort_keys => $opt->{sort_keys}, json=>$json);
+    my $info = JSON::JSONFold::write_json($data, \*STDOUT, $opt->{width}, $config, sort_keys => $opt->{sort_keys}, indent => $opt->{indent} );
 
     show_verbose("stats", { % $info }) if $verbose ;
     return 0;
